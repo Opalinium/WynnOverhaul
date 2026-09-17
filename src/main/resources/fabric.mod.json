@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "overwatch",
+  "version": "${version}",
+  "name": "Overwatch",
+  "description": "A client-side Wynncraft mod with a custom HUD, weapon animations, an entity tracker, a Content Book replacement and quality-of-life tools. Unofficial and not affiliated with Wynncraft.",
+  "authors": [
+    "Opal"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Opalinium/WynnOverhaul",
+    "sources": "https://github.com/Opalinium/WynnOverhaul",
+    "issues": "https://github.com/Opalinium/WynnOverhaul/issues"
+  },
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "opal.dev.overwatch.client.OverwatchClient",
+      "opal.dev.overwatch.client.AutoFishClient",
+      "opal.dev.overwatch.client.PanicShutdown",
+      "opal.dev.overwatch.client.EntityTrackerClient",
+      "opal.dev.overwatch.client.WynnQolClient",
+      "opal.dev.overwatch.client.DiscordRichPresence",
+      "opal.dev.overwatch.client.ContentBookInterceptor"
+    ],
+    "main": [
+      "opal.dev.overwatch.Overwatch"
+    ],
+    "modmenu": [
+      "opal.dev.overwatch.client.OverwatchModMenu"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "overwatch.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version_min}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "voxy": "*"
+  }
+}

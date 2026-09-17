@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "opal.dev.overwatch.mixin.client",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "FishingHookAccessor",
+    "MinecraftUseItemMixin",
+    "ClientLevelParticleMixin",
+    "ScrollWheelHandlerMixin",
+    "TextDisplayAccessor",
+    "ItemDisplayAccessor",
+    "QuestBeaconRenderMixin",
+    "SoundManagerMixin",
+    "HudEffectsMixin",
+    "PartyFriendNametagMixin",
+    "ContainerScreenHoveredSlotAccessor",
+    "EditBoxTextCenterMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
