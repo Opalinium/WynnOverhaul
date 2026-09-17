@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "overwatch",
+  "version": "${version}",
+  "name": "Overwatch",
+  "description": "Client-side automation for a server you control: humanized hold-to-attack combat, auto-fishing with hotspot detection, an entity/chest/gathering-node tracker, small Wynncraft QoL tweaks, an optional Discord Rich Presence, and a panic shutdown that disables everything on teleport, dimension change, or an inexplicable view snap.",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "opal.dev.overwatch.client.OverwatchClient",
+      "opal.dev.overwatch.client.AutoFishClient",
+      "opal.dev.overwatch.client.PanicShutdown",
+      "opal.dev.overwatch.client.EntityTrackerClient",
+      "opal.dev.overwatch.client.WynnQolClient",
+      "opal.dev.overwatch.client.DiscordRichPresence",
+      "opal.dev.overwatch.client.ContentBookInterceptor"
+    ],
+    "main": [
+      "opal.dev.overwatch.Overwatch"
+    ],
+    "modmenu": [
+      "opal.dev.overwatch.client.OverwatchModMenu"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "overwatch.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version_min}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "voxy": "*"
+  }
+}
