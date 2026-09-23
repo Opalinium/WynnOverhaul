@@ -2,12 +2,9 @@ package opal.dev.overwatch.client
 
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.FormattedText
-import net.minecraft.network.chat.Style
 import net.minecraft.world.scores.DisplaySlot
 import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
-import java.util.Optional
 
 object WynnScoreboardTracker {
 
@@ -19,12 +16,20 @@ object WynnScoreboardTracker {
     var sidebarText: String = ""
         private set
 
+    var sidebarTitle: String = ""
+        private set
+
+    var sidebarLines: List<String> = emptyList()
+        private set
+
     fun tick(mc: Minecraft) {
         val scoreboard = mc.level?.scoreboard
         val objective = scoreboard?.getDisplayObjective(DisplaySlot.SIDEBAR)
         if (scoreboard == null || objective == null) {
             current = null
             sidebarText = ""
+            sidebarTitle = ""
+            sidebarLines = emptyList()
             return
         }
 
@@ -36,6 +41,9 @@ object WynnScoreboardTracker {
 
         val texts = lines.map { clean(it.string) }
         sidebarText = joinWrapped(texts)
+        val rawTitle = clean(objective.displayName.string)
+        sidebarTitle = if (SERVER_BRAND_PATTERN.matches(rawTitle)) "" else rawTitle
+        sidebarLines = texts.filter { it.isNotEmpty() }
 
         val headerIndex = texts.indexOfFirst { HEADER_PATTERN.matches(it) }
         if (headerIndex < 0) {
@@ -59,7 +67,8 @@ object WynnScoreboardTracker {
             i++
         }
 
-        current = Tracked(type, joinWrapped(nameParts), joinWrapped(taskParts))
+        val name = joinWrapped(nameParts)
+        current = Tracked(type, name, joinWrapped(taskParts))
     }
 
     private fun clean(text: String): String {
@@ -90,25 +99,12 @@ object WynnScoreboardTracker {
         return sb.toString()
     }
 
-    private fun startsWhite(component: Component): Boolean {
-        var result = false
-        var seen = false
-        component.visit(
-            FormattedText.StyledContentConsumer<Unit> { style, string ->
-                if (!seen && string.isNotEmpty()) {
-                    seen = true
-                    result = style.color?.value == WHITE_RGB
-                }
-                Optional.empty()
-            },
-            Style.EMPTY,
-        )
-        return result
-    }
+    private fun startsWhite(component: Component): Boolean = component.string.startsWith(WHITE_LEGACY_CODE)
 
-    private const val WHITE_RGB = 0xFFFFFF
+    private const val WHITE_LEGACY_CODE = "§f"
     private const val LEGACY_CODE_PREFIX = '§'
     private const val SIDEBAR_SPACER = 'À'
     private val HEADER_PATTERN = Regex("^Tracked (.+):$")
     private val SPACER_PATTERN = Regex("""[^a-zA-Z\[\d-].*""")
+    private val SERVER_BRAND_PATTERN = Regex("""(?i)^([a-z0-9-]+\.)*wynncraft\.(com|net)$""")
 }

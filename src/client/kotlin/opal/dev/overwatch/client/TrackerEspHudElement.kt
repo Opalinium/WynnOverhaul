@@ -18,6 +18,7 @@ class TrackerEspHudElement : HudElement {
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
         try {
+            if (!OverwatchGate.inGame) return
             val config = OverwatchConfig.current
             val waypoints = TrackerEsp.waypoints
             if (waypoints.isEmpty()) return
@@ -159,7 +160,7 @@ class TrackerEspHudElement : HudElement {
         const val PATH_DASH_LEN = 6f
         const val PATH_GAP_LEN = 5f
         const val PATH_ALPHA = 0x70000000
-        const val BG_COLOR = 0xB0000000.toInt()
-        const val TEXT_COLOR = 0xFFEEEEEE.toInt()
+        const val BG_COLOR = 0xB0140F0A.toInt()
+        val TEXT_COLOR = OwTheme.TEXT
     }
 }

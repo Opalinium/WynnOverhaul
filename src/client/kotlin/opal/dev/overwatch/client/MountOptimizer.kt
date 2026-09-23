@@ -24,6 +24,8 @@ data class MountShoppingList(
     val allMaxed: Boolean,
     val noMaterialsAvailable: Boolean,
     val rawH: Int,
+    val maxUnknown: Boolean = false,
+    val trainable: List<String> = emptyList(),
 )
 
 object MountOptimizer {

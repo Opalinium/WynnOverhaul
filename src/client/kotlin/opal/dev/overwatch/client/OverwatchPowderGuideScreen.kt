@@ -84,10 +84,10 @@ class OverwatchPowderGuideScreen(parent: Screen) : OwScreen(Component.literal("O
     private companion object {
         const val LINE_HEIGHT = 12
         val ROMAN = listOf("I", "II", "III", "IV", "V", "VI", "VII")
-        val WHITE = 0xFFFFFFFF.toInt()
-        val GRAY = 0xFFAAAAAA.toInt()
-        val LIGHT_GRAY = 0xFFCCCCCC.toInt()
-        val DARK_GRAY = 0xFF777777.toInt()
-        val HEADER = 0xFFE0C060.toInt()
+        val WHITE = OwTheme.TEXT
+        val GRAY = OwTheme.TEXT_DIM
+        val LIGHT_GRAY = OwTheme.TEXT
+        val DARK_GRAY = OwTheme.TEXT_FAINT
+        val HEADER = OwTheme.ACCENT
     }
 }

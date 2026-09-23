@@ -9,9 +9,10 @@ object MountTooltipFeature {
     fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
             val config = OverwatchConfig.current
-            if (config.mountTooltipEnabled) {
+            if (config.mountTooltipEnabled && OverwatchGate.inGame) {
                 val reading = MountTooltipParser.parse(stack)
                 if (reading != null) {
+                    MountRegistry.note(reading)
                     val result = MountFeedingSummary.compute(reading)
                     if (result != null) lines.addAll(format(result))
                 }
@@ -22,6 +23,13 @@ object MountTooltipFeature {
     private fun format(result: MountShoppingList): List<Component> {
         val lines = ArrayList<Component>()
         lines.add(Component.literal(""))
+        if (result.maxUnknown) {
+            if (result.trainable.isNotEmpty()) {
+                lines.add(Component.literal("Trainable by riding: ${result.trainable.joinToString(", ")}").withStyle(ChatFormatting.GRAY))
+            }
+            lines.add(Component.literal("Open in the feeder for the feeding plan").withStyle(ChatFormatting.DARK_GRAY))
+            return lines
+        }
         if (result.allMaxed) {
             lines.add(Component.literal("All stats maxed!").withStyle(ChatFormatting.GREEN))
             return lines

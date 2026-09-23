@@ -3,7 +3,7 @@
   "id": "overwatch",
   "version": "${version}",
   "name": "Overwatch",
-  "description": "Client-side automation for a server you control: humanized hold-to-attack combat, auto-fishing with hotspot detection, an entity/chest/gathering-node tracker, small Wynncraft QoL tweaks, an optional Discord Rich Presence, and a panic shutdown that disables everything on teleport, dimension change, or an inexplicable view snap.",
+  "description": "Client-side automation for a server you control: humanized hold-to-attack combat, an entity/chest/gathering-node tracker, small Wynncraft QoL tweaks and an optional Discord Rich Presence.",
   "authors": [],
   "contact": {},
   "license": "All-Rights-Reserved",
@@ -11,8 +11,6 @@
   "entrypoints": {
     "client": [
       "opal.dev.overwatch.client.OverwatchClient",
-      "opal.dev.overwatch.client.AutoFishClient",
-      "opal.dev.overwatch.client.PanicShutdown",
       "opal.dev.overwatch.client.EntityTrackerClient",
       "opal.dev.overwatch.client.WynnQolClient",
       "opal.dev.overwatch.client.DiscordRichPresence",

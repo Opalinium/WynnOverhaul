@@ -9,7 +9,6 @@ import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
-import opal.dev.overwatch.Overwatch
 
 class OverwatchClient : ClientModInitializer {
 
@@ -40,17 +39,19 @@ class OverwatchClient : ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(::onTick)
         LevelRenderEvents.START_MAIN.register { _ -> onRenderFrame() }
-
-        Overwatch.LOGGER.info("Overwatch client initialized (enabled={})", config.enabled)
     }
 
     private fun onTick(client: Minecraft) {
         val config = OverwatchConfig.current
-        if (client.level != null) SpellComboGuard.tick(client)
-
         while (configKey.consumeClick()) {
             client.setScreenAndShow(OverwatchHubScreen())
         }
+        OverwatchGate.refresh(client)
+        if (!OverwatchGate.inGame) {
+            attackGate.reset()
+            return
+        }
+        if (client.level != null) SpellComboGuard.tick(client)
 
         while (toggleKey.consumeClick()) {
             config.enabled = !config.enabled
@@ -71,6 +72,7 @@ class OverwatchClient : ClientModInitializer {
     private fun onRenderFrame() {
         val client = Minecraft.getInstance()
         val config = OverwatchConfig.current
+        if (!OverwatchGate.inGame) return
         if (!config.enabled || client.gui.screen() != null || client.level == null) return
         val player = client.player ?: return
         if (!client.options.keyAttack.isDown) return

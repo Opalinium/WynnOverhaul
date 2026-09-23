@@ -4,8 +4,6 @@
   "package": "opal.dev.overwatch.mixin.client",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "FishingHookAccessor",
-    "MinecraftUseItemMixin",
     "ClientLevelParticleMixin",
     "ScrollWheelHandlerMixin",
     "TextDisplayAccessor",
@@ -15,7 +13,15 @@
     "HudEffectsMixin",
     "PartyFriendNametagMixin",
     "ContainerScreenHoveredSlotAccessor",
-    "EditBoxTextCenterMixin"
+    "EditBoxTextCenterMixin",
+    "TabListFooterMixin",
+    "BossBarMixin",
+    "BossBarSuppressionMixin",
+    "BossHealthOverlayAccessor",
+    "BossHealthUpdateGuardMixin",
+    "HudSuppressionMixin",
+    "ChatChannelButtonsMixin",
+    "ItemDebugCopyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

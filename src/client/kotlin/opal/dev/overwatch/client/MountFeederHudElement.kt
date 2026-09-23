@@ -25,60 +25,85 @@ class MountFeederHudElement : HudElement {
     }
 
     private fun render(graphics: GuiGraphicsExtractor) {
+        if (!OverwatchGate.inGame) return
         val config = OverwatchConfig.current
         if (!config.mountFeederHudEnabled) return
         val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return
         if (!screen.title.string.contains(MOUNT_FEEDER_TITLE_MARKER)) return
-        val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`overwatch$getHoveredSlot`() ?: return
-        val reading = MountTooltipParser.parse(hoveredSlot.item) ?: return
-        val result = MountFeedingSummary.compute(reading) ?: return
+        val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`overwatch$getHoveredSlot`()
+        val readings = LinkedHashMap<String, MountReading>()
+        hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { MountTooltipParser.parse(it) }?.let {
+            readings[MountRegistry.keyOf(it.typeName, it.name, it.potential)] = it
+        }
+        Minecraft.getInstance().player?.containerMenu?.slots?.forEach { slot ->
+            if (slot.item.isEmpty) return@forEach
+            val parsed = MountTooltipParser.parse(slot.item) ?: return@forEach
+            readings.putIfAbsent(MountRegistry.keyOf(parsed.typeName, parsed.name, parsed.potential), parsed)
+        }
+        if (readings.isEmpty()) return
+        readings.values.forEach { MountRegistry.note(it) }
 
         val font = Minecraft.getInstance().font
-        val contentW = PANEL_W - PAD * 2
+        val textW = HudLayoutManager.boxSize(ID).first - PAD * 2
         val wrapped = ArrayList<Pair<String, Int>>()
 
         fun addLine(text: String, color: Int) {
-            for (w in wrap(font, text, contentW)) wrapped.add(w to color)
+            for (w in wrap(font, text, textW)) wrapped.add(w to color)
         }
 
-        addLine(reading.name, HEADER_COLOR)
-        when {
-            result.allMaxed -> addLine("All stats maxed!", GREEN)
-            result.noMaterialsAvailable -> addLine("Train to at least level 1 first", GRAY)
-            else -> {
-                for (phase in result.phases) {
-                    if (phase.isTraining) {
-                        addLine(phase.label, GOLD)
-                        continue
+        readings.values.forEachIndexed { index, reading ->
+            if (index > 0) addLine("", WHITE)
+            val result = MountFeedingSummary.compute(reading) ?: return@forEachIndexed
+            addLine(reading.name, HEADER_COLOR)
+            when {
+                result.maxUnknown -> {
+                    if (result.trainable.isNotEmpty()) {
+                        addLine("Trainable by riding: ${result.trainable.joinToString(", ")}", GRAY)
                     }
-                    for ((name, count) in phase.feedCounts.entries.sortedByDescending { it.value }) {
-                        val mat = MountMaterials.ALL.first { it.name == name }
-                        val raises = mat.points.indices.filter { mat.points[it] > 0 }
-                            .joinToString(", ") { "${MountMaterials.STATS[it]} +${mat.points[it]}" }
-                        addLine("$name x$count", WHITE)
-                        addLine("  $raises", DARK_GRAY)
+                    addLine("Feeding plan needs max values", DARK_GRAY)
+                }
+                result.allMaxed -> addLine("All stats maxed!", GREEN)
+                result.noMaterialsAvailable -> addLine("Train to at least level 1 first", GRAY)
+                else -> {
+                    for (phase in result.phases) {
+                        if (phase.isTraining) {
+                            addLine(phase.label, GOLD)
+                            continue
+                        }
+                        for ((name, count) in phase.feedCounts.entries.sortedByDescending { it.value }) {
+                            val mat = MountMaterials.ALL.first { it.name == name }
+                            val raises = mat.points.indices.filter { mat.points[it] > 0 }
+                                .joinToString(", ") { "${MountMaterials.STATS[it]} +${mat.points[it]}" }
+                            addLine("$name x$count", WHITE)
+                            addLine("  $raises", DARK_GRAY)
+                        }
+                    }
+                    addLine("Total: ${result.grandTotal} feeds", YELLOW)
+                    if (result.unsolvable.isNotEmpty()) {
+                        addLine("Can't max: ${result.unsolvable.joinToString(", ") { MountMaterials.STATS[it] }}", RED)
                     }
                 }
-                addLine("Total: ${result.grandTotal} feeds", YELLOW)
-                if (result.unsolvable.isNotEmpty()) {
-                    addLine("Can't max: ${result.unsolvable.joinToString(", ") { MountMaterials.STATS[it] }}", RED)
-                }
+            }
+            val limits = IntArray(8) { reading.stats.getValue(MountMaterials.STATS[it]).limit }
+            val avgExact = limits.sum() / 8.0
+            val avgUp = kotlin.math.ceil(avgExact).toInt()
+            val feedTime = MountFeedingData.feedTimeFor(avgUp)
+            addLine("Feed time: ~${feedTime.third} each (avg limit $avgUp)", GRAY)
+            if (avgExact >= MountFeedingData.BREEDING_AVERAGE_LIMIT) {
+                addLine("Breeding-ready (avg limit ${"%.1f".format(avgExact)})", GREEN)
+            } else {
+                addLine("Avg limit ${"%.1f".format(avgExact)} / ${MountFeedingData.BREEDING_AVERAGE_LIMIT} for breeding", GRAY)
             }
         }
 
-        val panelX = graphics.guiWidth() - PANEL_W - MARGIN
-        val panelY = MARGIN
-        val panelH = wrapped.size * LINE_H + PAD * 2
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, HudLayoutManager.boxSize(ID).first, wrapped.size * LINE_H + PAD * 2)
+        val (panelX, panelY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
-        graphics.fill(panelX, panelY, panelX + PANEL_W, panelY + panelH, BG_COLOR)
-        graphics.fill(panelX, panelY, panelX + PANEL_W, panelY + 1, BORDER_COLOR)
-        graphics.fill(panelX, panelY + panelH - 1, panelX + PANEL_W, panelY + panelH, BORDER_COLOR)
-        graphics.fill(panelX, panelY, panelX + 1, panelY + panelH, BORDER_COLOR)
-        graphics.fill(panelX + PANEL_W - 1, panelY, panelX + PANEL_W, panelY + panelH, BORDER_COLOR)
+        OwTheme.hudPanel(graphics, panelX, panelY, boxW, boxH)
 
         var y = panelY + PAD
         for ((text, color) in wrapped) {
-            graphics.text(font, text, panelX + PAD, y, color)
+            graphics.text(font, text, panelX + PAD, y, color, true)
             y += LINE_H
         }
     }
@@ -105,19 +130,16 @@ class MountFeederHudElement : HudElement {
 
     private companion object {
         const val MOUNT_FEEDER_TITLE_MARKER = "󏿭"
-        const val PANEL_W = 230
-        const val MARGIN = 6
+        const val ID = "mount_feeder"
         const val PAD = 6
         const val LINE_H = 10
-        val BG_COLOR = 0xE0121016.toInt()
-        val BORDER_COLOR = 0xFF4A4658.toInt()
-        val HEADER_COLOR = 0xFFE0C060.toInt()
-        val WHITE = 0xFFFFFFFF.toInt()
-        val GRAY = 0xFFAAAAAA.toInt()
-        val DARK_GRAY = 0xFF777777.toInt()
-        val GREEN = 0xFF55FF55.toInt()
-        val YELLOW = 0xFFFFFF55.toInt()
-        val GOLD = 0xFFE0C060.toInt()
-        val RED = 0xFFFF5555.toInt()
+        val HEADER_COLOR = OwTheme.ACCENT
+        val WHITE = OwTheme.TEXT
+        val GRAY = OwTheme.TEXT_DIM
+        val DARK_GRAY = OwTheme.TEXT_FAINT
+        val GREEN = OwTheme.GOOD
+        val YELLOW = OwTheme.WARN
+        val GOLD = OwTheme.ACCENT
+        val RED = OwTheme.BAD
     }
 }

@@ -49,6 +49,43 @@ object ContentBookCache {
     fun find(type: ActivityType, name: String): Boolean =
         snapshot?.any { it.name == name && (it.type == type || (type.isQuest && it.type.isQuest)) } == true
 
+    fun markCompleted(name: String): List<ActivityInfo>? {
+        val current = snapshot ?: return null
+        var changed = false
+        val updated = current.map { info ->
+            if (info.type.isQuest && info.name == name && info.status != ActivityStatus.COMPLETED) {
+                changed = true
+                info.copy(
+                    status = ActivityStatus.COMPLETED,
+                    trackingState = if (info.trackingState == ActivityTrackingState.TRACKED) ActivityTrackingState.TRACKABLE else info.trackingState,
+                )
+            } else {
+                info
+            }
+        }
+        if (!changed) return null
+        snapshot = updated
+        persist()
+        return updated
+    }
+
+    fun reconcileLiveTracked(liveName: String): List<ActivityInfo>? {
+        val current = snapshot ?: return null
+        if (current.any { it.trackingState == ActivityTrackingState.TRACKED && it.name == liveName }) return null
+        val matchIndex = current.indexOfFirst { it.name == liveName && it.trackingState != ActivityTrackingState.UNTRACKABLE }
+        if (matchIndex < 0) return null
+        val updated = current.mapIndexed { index, info ->
+            when {
+                index == matchIndex -> info.copy(trackingState = ActivityTrackingState.TRACKED)
+                info.trackingState == ActivityTrackingState.TRACKED -> info.copy(trackingState = ActivityTrackingState.TRACKABLE)
+                else -> info
+            }
+        }
+        snapshot = updated
+        persist()
+        return updated
+    }
+
     fun applyTrackToggle(type: ActivityType, name: String): List<ActivityInfo>? {
         val current = snapshot ?: return null
         val updated = current.map { info ->

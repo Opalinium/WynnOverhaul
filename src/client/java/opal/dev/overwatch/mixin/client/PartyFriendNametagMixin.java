@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import opal.dev.overwatch.client.OverwatchGate;
 import opal.dev.overwatch.client.PartyFriendNametags;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,6 +16,7 @@ public abstract class PartyFriendNametagMixin {
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void overwatch$decoratePlayerNametag(Entity entity, EntityRenderState renderState, float partialTick, CallbackInfo ci) {
+        if (!OverwatchGate.INSTANCE.isInGame()) return;
         if (renderState.nameTag == null) return;
         if (!(entity instanceof Player player)) return;
         renderState.nameTag = PartyFriendNametags.INSTANCE.decorate(player, renderState.nameTag);

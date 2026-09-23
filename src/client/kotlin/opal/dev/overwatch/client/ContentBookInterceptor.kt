@@ -7,164 +7,91 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
+import net.minecraft.world.inventory.ContainerInput
+import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.item.ItemStack
+import opal.dev.overwatch.Overwatch
 
 class ContentBookInterceptor : ClientModInitializer {
 
     override fun onInitializeClient() {
         OverwatchConfig.ensureLoaded()
-        ScreenEvents.BEFORE_INIT.register { client, screen, _, _ ->
+        ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
+            if (!OverwatchGate.inGame) return@register
             if (!OverwatchConfig.current.contentBookOverrideEnabled) return@register
             if (screen !is AbstractContainerScreen<*>) return@register
             if (!screen.title.string.contains(CONTENT_BOOK_TITLE_MARKER)) return@register
-
-            val menu = screen.menu
-            openMenu = menu
-            val toggle = pendingTrackToggle
-            pendingTrackToggle = null
-            val refreshTarget = pendingRefreshScreen
-            pendingRefreshScreen = null
-
-            when {
-                toggle != null -> startTrackToggle(client, menu, toggle.first, toggle.second)
-                refreshTarget != null -> {
-                    client.setScreenAndShow(refreshTarget)
-                    enumerate(client, menu, refreshTarget)
-                }
-                else -> startOpen(client, menu)
-            }
+            pendingMenu = screen.menu
         }
     }
 
     companion object {
-        const val CONTENT_BOOK_TITLE_MARKER = "󏿮"
+        const val CONTENT_BOOK_TITLE_MARKER = "\uDAFF\uDFEE"
 
-        var pendingTrackToggle: Pair<ActivityType, String>? = null
+        var pendingJournalHost: OverwatchInventoryScreen? = null
 
-        private var pendingRefreshScreen: OverwatchContentBookScreen? = null
-        private var openMenu: AbstractContainerMenu? = null
-        private var pendingToggleKey: Pair<ActivityType, String>? = null
+        fun tick(client: Minecraft) {
+            val menu = pendingMenu ?: return
+            pendingMenu = null
+            if (!OverwatchGate.inGame) return
+            val player = client.player ?: return
+            if (player.containerMenu !== menu) return
+            val host = pendingJournalHost ?: OverwatchInventoryScreen(player.inventoryMenu, OverwatchInventoryScreen.InvTab.JOURNAL)
+            pendingJournalHost = null
+            host.attachJournalMenu(menu)
+            if (client.gui.screen() !== host) client.setScreenAndShow(host)
+        }
 
-        fun toggleTracking(client: Minecraft, screen: OverwatchContentBookScreen, activity: ActivityInfo): String? {
-            val key = activity.type to activity.name
-            if (pendingToggleKey != null) {
-                return if (pendingToggleKey == key) null else "Still working on the last tracking change"
-            }
+        fun openJournalContainer(client: Minecraft, host: OverwatchInventoryScreen, menuSlot: Int): String? {
             val player = client.player ?: return "No player"
-            val menu = openMenu
-            if (menu != null && player.containerMenu === menu) {
-                pendingToggleKey = key
-                if (ContentBookQuery.isEnumerating) ContentBookCache.commitIfFirstEver(ContentBookQuery.currentResults())
-                ContentBookQuery.cancel()
-                ContentBookQuery.startTrackToggle(
-                    menu = menu,
-                    type = activity.type,
-                    name = activity.name,
-                    onFound = { pendingToggleKey = null; screen.applyTrackToggle(activity) },
-                    onFailed = { pendingToggleKey = null; screen.showMessage("Couldn't find ${activity.name} in the book") },
-                )
-                return null
+            if (ContentBookQuery.isActive) return "Still working on the book -- try again in a moment"
+            if (player.containerMenu !== player.inventoryMenu) return "Close the current container first"
+            val hand = contentBookHand(player)
+            if (hand != null) {
+                client.gameMode?.useItem(player, hand)
+            } else {
+                if (menuSlot !in 0 until player.inventoryMenu.slots.size) return "Couldn't find the Content Book in your inventory"
+                client.gameMode?.handleContainerInput(player.inventoryMenu.containerId, menuSlot, RIGHT_CLICK_BUTTON, ContainerInput.PICKUP, player)
             }
-            val hand = contentBookHand(player) ?: return "Hold the Content Book item to change tracking"
-            pendingToggleKey = key
-            pendingTrackToggle = key
-            client.gameMode?.useItem(player, hand)
+            pendingJournalHost = host
             return null
         }
 
-        fun requestRefresh(client: Minecraft, screen: OverwatchContentBookScreen) {
-            val player = client.player ?: return
-            val menu = openMenu
-            if (menu != null && player.containerMenu === menu) {
-                enumerate(client, menu, screen)
-                return
-            }
+        private fun triggerOpen(client: Minecraft, player: Player): Boolean {
             val hand = contentBookHand(player)
-            if (hand == null) {
-                screen.showMessage("Hold the Content Book item to refresh")
-                return
+            if (hand != null) {
+                client.gameMode?.useItem(player, hand)
+                return true
             }
-            pendingRefreshScreen = screen
-            client.gameMode?.useItem(player, hand)
+            val items = player.inventory.nonEquipmentItems
+            val slot = items.indices.firstOrNull { isContentBook(items[it]) } ?: return false
+            val menuSlot = if (slot < HOTBAR_SIZE) USE_ROW_SLOT_START + slot else slot
+            client.gameMode?.handleContainerInput(player.inventoryMenu.containerId, menuSlot, RIGHT_CLICK_BUTTON, ContainerInput.PICKUP, player)
+            return true
         }
 
-        private fun startOpen(client: Minecraft, menu: AbstractContainerMenu) {
-            val cached = ContentBookCache.snapshot
-            if (cached != null) {
-                val screen = OverwatchContentBookScreen(cached)
-                if (ContentBookCache.needsRefresh()) {
-                    client.setScreenAndShow(screen)
-                    enumerate(client, menu, screen)
-                } else {
-                    client.player?.closeContainer()
-                    openMenu = null
-                    client.setScreenAndShow(screen)
-                }
-            } else {
-                client.setScreenAndShow(OverwatchContentBookLoadingScreen())
-                enumerate(client, menu)
+        fun findBookSlot(player: Player): Int? {
+            if (contentBookHand(player) != null) return -2
+            val items = player.inventory.nonEquipmentItems
+            items.indices.firstOrNull { isContentBook(items[it]) }?.let {
+                return if (it < HOTBAR_SIZE) USE_ROW_SLOT_START + it else it
             }
-        }
-
-        private fun startTrackToggle(client: Minecraft, menu: AbstractContainerMenu, type: ActivityType, name: String) {
-            val cached = ContentBookCache.snapshot
-            if (cached != null && ContentBookCache.find(type, name)) {
-                val screen = OverwatchContentBookScreen(cached)
-                client.setScreenAndShow(screen)
-                ContentBookQuery.startTrackToggle(
-                    menu = menu,
-                    type = type,
-                    name = name,
-                    onFound = {
-                        pendingToggleKey = null
-                        val updated = ContentBookCache.applyTrackToggle(type, name) ?: cached
-                        screen.updateActivities(updated)
-                        restoreOrClose(client, screen)
-                    },
-                    onFailed = {
-                        pendingToggleKey = null
-                        restoreOrClose(client, screen)
-                    },
-                )
-            } else {
-                pendingToggleKey = null
-                client.setScreenAndShow(OverwatchContentBookLoadingScreen())
-                enumerate(client, menu)
+            val open = player.containerMenu
+            if (open !== player.inventoryMenu) {
+                scanMirror(open, ::isContentBook)?.let { return it }
             }
+            return null
         }
 
-        private fun restoreOrClose(client: Minecraft, restoreTo: OverwatchContentBookScreen?) {
-            val before = client.gui.screen()
-            client.player?.closeContainer()
-            openMenu = null
-            val target = if (before != null && before !is OverwatchContentBookLoadingScreen) before else restoreTo
-            if (target != null) client.setScreenAndShow(target) else client.gui.setScreen(null)
-        }
+        fun mirrorSlotToMenu(mirrorIdx: Int): Int = if (mirrorIdx < 27) 9 + mirrorIdx else 36 + (mirrorIdx - 27)
 
-        private fun enumerate(client: Minecraft, menu: AbstractContainerMenu, initial: OverwatchContentBookScreen? = null) {
-            var shown: OverwatchContentBookScreen? = initial
-            val silent = initial != null
-            ContentBookQuery.start(
-                menu = menu,
-                seed = initial?.currentActivities() ?: emptyList(),
-                onProgress = { activities ->
-                    val current = shown
-                    if (current == null) {
-                        val screen = OverwatchContentBookScreen(activities)
-                        shown = screen
-                        client.setScreenAndShow(screen)
-                    } else if (!silent) {
-                        current.updateActivities(activities)
-                    }
-                },
-                onComplete = { activities ->
-                    ContentBookCache.commit(activities)
-                    val current = shown
-                    current?.updateActivities(activities)
-                    restoreOrClose(client, current ?: OverwatchContentBookScreen(activities))
-                },
-                onFailed = { restoreOrClose(client, shown) },
-            )
+        fun scanMirror(menu: AbstractContainerMenu, pred: (ItemStack) -> Boolean): Int? {
+            if (menu.slots.size <= PLAYER_MIRROR_SIZE) return null
+            val base = menu.slots.size - PLAYER_MIRROR_SIZE
+            for (i in 35 downTo 0) {
+                if (pred(menu.slots[base + i].item)) return mirrorSlotToMenu(i)
+            }
+            return null
         }
 
         private fun contentBookHand(player: Player): InteractionHand? = when {
@@ -173,12 +100,19 @@ class ContentBookInterceptor : ClientModInitializer {
             else -> null
         }
 
-        private fun isContentBook(stack: ItemStack): Boolean {
+        fun isContentBook(stack: ItemStack): Boolean {
             if (stack.isEmpty) return false
             val name = stack.hoverName.string
             if (name.contains(CONTENT_BOOK_TITLE_MARKER)) return true
             val letters = name.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
             return letters.contains("Content Book", ignoreCase = true)
         }
+
+        private var pendingMenu: AbstractContainerMenu? = null
+
+        private const val HOTBAR_SIZE = 9
+        private const val USE_ROW_SLOT_START = 36
+        private const val RIGHT_CLICK_BUTTON = 1
+        private const val PLAYER_MIRROR_SIZE = 36
     }
 }

@@ -14,8 +14,6 @@ class EntityTrackerHudElement : HudElement {
     private var cachedShowDistance = false
     private var cachedTexts: List<String> = emptyList()
     private var cachedHidden = 0
-    private var cachedContentW = 0
-    private var cachedContentH = 0
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
         try {
@@ -29,6 +27,7 @@ class EntityTrackerHudElement : HudElement {
     }
 
     private fun render(graphics: GuiGraphicsExtractor) {
+        if (!OverwatchGate.inGame) return
         val config = OverwatchConfig.current
         if (!config.trackerEnabled) return
         val rows = EntityTrackerHudState.rows
@@ -52,22 +51,15 @@ class EntityTrackerHudElement : HudElement {
             }
             if (cachedHidden > 0) texts.add("+$cachedHidden more")
             cachedTexts = texts
-            cachedContentW = texts.maxOf { font.width(it) } + CHIP_SIZE + 4
-            cachedContentH = LINE_HEIGHT * texts.size
         }
         val texts = cachedTexts
         val hidden = cachedHidden
 
-        val scale = config.trackerHudScale.toFloat().coerceIn(0.5f, 2.5f)
+        val scale = HudLayoutManager.scale(ID)
         val lineH = LINE_HEIGHT
-        val contentW = cachedContentW
-        val contentH = cachedContentH
+        HudLayoutManager.stableSize(ID, cachedTexts.maxOf { font.width(it) } + CHIP_SIZE + 4, lineH * cachedTexts.size)
 
-        val corner = config.trackerHudCorner
-        val right = corner.endsWith("RIGHT")
-        val bottom = corner.startsWith("BOTTOM")
-        val baseX = if (right) graphics.guiWidth() - MARGIN - (contentW * scale).toInt() else MARGIN
-        val baseY = if (bottom) graphics.guiHeight() - MARGIN - (contentH * scale).toInt() else MARGIN
+        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
         val scaled = scale != 1f
         if (scaled) {
@@ -79,24 +71,24 @@ class EntityTrackerHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         var y = oy
-        graphics.text(font, texts[0], ox + CHIP_SIZE + 4, y, HEADER_COLOR)
+        graphics.text(font, texts[0], ox + CHIP_SIZE + 4, y, HEADER_COLOR, true)
         y += lineH
         for (i in shown.indices) {
             graphics.fill(ox, y + 1, ox + CHIP_SIZE, y + 1 + CHIP_SIZE, shown[i].colorArgb)
-            graphics.text(font, texts[i + 1], ox + CHIP_SIZE + 4, y, ROW_COLOR)
+            graphics.text(font, texts[i + 1], ox + CHIP_SIZE + 4, y, ROW_COLOR, true)
             y += lineH
         }
-        if (hidden > 0) graphics.text(font, texts.last(), ox + CHIP_SIZE + 4, y, ROW_COLOR)
+        if (hidden > 0) graphics.text(font, texts.last(), ox + CHIP_SIZE + 4, y, ROW_COLOR, true)
 
         if (scaled) graphics.pose().popMatrix()
     }
 
     private companion object {
-        const val MARGIN = 4
+        const val ID = "tracker"
         const val LINE_HEIGHT = 10
         const val CHIP_SIZE = 7
         const val MAX_ROWS = 12
-        const val HEADER_COLOR = 0xFFFFFFFF.toInt()
-        const val ROW_COLOR = 0xFFDDDDDD.toInt()
+        val HEADER_COLOR = OwTheme.ACCENT
+        val ROW_COLOR = OwTheme.TEXT
     }
 }

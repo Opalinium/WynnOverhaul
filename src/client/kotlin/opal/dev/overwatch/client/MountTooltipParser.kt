@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.core.component.DataComponents
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import opal.dev.overwatch.Overwatch
 
 data class MountStatReading(val current: Int, val limit: Int, val max: Int?)
 
@@ -30,7 +29,6 @@ object MountTooltipParser {
 
         val loreLines = stack.get(DataComponents.LORE)?.lines()?.map { clean(it.string) } ?: return null
         if (loreLines.isEmpty()) return null
-        logLoreOnce(name, loreLines)
 
         var potential: Int? = null
         var primaryColor: String? = null
@@ -57,7 +55,8 @@ object MountTooltipParser {
 
             val statMatch = STAT_LINE.find(line)
             if (statMatch != null) {
-                val statName = MountFeedingData.STAT_KEYS.firstOrNull { line.startsWith(it) } ?: statMatch.groupValues[1]
+                val rawName = MountFeedingData.STAT_KEYS.firstOrNull { line.startsWith(it) } ?: statMatch.groupValues[1]
+                val statName = if (rawName == "Jump Height") "Altitude" else rawName
                 val current = statMatch.groupValues[2].toIntOrNull()
                 val cap = statMatch.groupValues[3].toIntOrNull()
                 val max = statMatch.groupValues[4].toIntOrNull()
@@ -77,14 +76,6 @@ object MountTooltipParser {
         }
 
         return MountReading(name, typeName, potential, primaryColor, secondaryColor, currentEnergy, energyCap, stats)
-    }
-
-    private var lastLoggedName: String? = null
-
-    private fun logLoreOnce(name: String, lore: List<String>) {
-        if (name == lastLoggedName) return
-        lastLoggedName = name
-        Overwatch.LOGGER.info("Overwatch mount tooltip lore for '{}': {}", name, lore)
     }
 
     private fun parseSuffixedInt(text: String): Int? {
@@ -107,6 +98,6 @@ object MountTooltipParser {
     private val COLOR_LINE = Regex("""^(.+)-(.+)$""")
     private val ENERGY_LINE = Regex("""^Energy (\d+)/(\d+)$""")
     private val STAT_LINE = Regex(
-        "^(" + MountFeedingData.STAT_KEYS.joinToString("|") { Regex.escape(it) } + """).*?(\d+)/(\d+)(?:\s*\((\d+)\))?""",
+        "^(" + (MountFeedingData.STAT_KEYS + "Jump Height").joinToString("|") { Regex.escape(it) } + """).*?(\d+)/(\d+)(?:\s*\((\d+)\))?""",
     )
 }

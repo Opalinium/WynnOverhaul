@@ -39,11 +39,9 @@ abstract class OwScreen(
     private fun drawChrome(graphics: GuiGraphicsExtractor) {
         val left = panelLeft
         val top = panelTop
-        graphics.fill(left, top, left + panelWidth, top + panelHeight, OwTheme.PANEL)
-        graphics.fill(left, top, left + panelWidth, top + OwTheme.TITLE_BAR_H, OwTheme.PANEL_RAISED)
-        graphics.fill(left, top + OwTheme.TITLE_BAR_H - 1, left + panelWidth, top + OwTheme.TITLE_BAR_H, OwTheme.ACCENT)
-        graphics.outline(left, top, panelWidth, panelHeight, OwTheme.BORDER)
-        graphics.centeredText(Minecraft.getInstance().font, title, left + panelWidth / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
+        OwTheme.drawPage(graphics, left, top, panelWidth, panelHeight)
+        graphics.fill(left, top + OwTheme.TITLE_BAR_H - 1, left + panelWidth, top + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)
+        graphics.centeredText(Minecraft.getInstance().font, title.string.uppercase(), left + panelWidth / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
     }
 
     override fun onClose() {
@@ -51,25 +49,14 @@ abstract class OwScreen(
         if (p != null) Minecraft.getInstance().setScreenAndShow(p) else Minecraft.getInstance().gui.setScreen(null)
     }
 
+    private val panelList = OwPanelList({ addRenderableWidget(it) })
+
+    override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+        if (panelList.handleMouseScrolled(mouseX, mouseY, scrollX, scrollY)) return true
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
+    }
+
     protected fun installScrollList(rows: List<Pair<AbstractWidget, Int>>, x: Int, y: Int, width: Int, height: Int) {
-        val panel = OwScrollPanel(x, y, width, height)
-        panel.totalContentHeight = rows.sumOf { it.second }
-        val reserved = OwTheme.SCROLLBAR_W + OwTheme.GAP
-        for ((widget, _) in rows) {
-            val rightEdge = widget.x + widget.width
-            if (rightEdge > x + width - reserved) widget.width = (x + width - reserved - widget.x).coerceAtLeast(1)
-        }
-        panel.onReposition = {
-            val offset = panel.scrollAmount().toInt()
-            var cy = y
-            for ((widget, rowHeight) in rows) {
-                val wy = cy - offset
-                widget.y = wy
-                widget.visible = wy + widget.height > y && wy < y + height
-                cy += rowHeight
-            }
-        }
-        addRenderableWidget(panel)
-        rows.forEach { addRenderableWidget(it.first) }
+        panelList.install(rows, x, y, width, height)
     }
 }
