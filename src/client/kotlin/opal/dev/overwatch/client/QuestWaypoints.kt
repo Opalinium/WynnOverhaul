@@ -113,7 +113,9 @@ object QuestWaypoints {
         val all = stage.goals.orEmpty()
         val primary = all.filter { it.role == ROLE_TASK || it.role == ROLE_DEST }
         if (primary.isNotEmpty()) return GoalSet(primary.take(MAX_GOALS), approximate = false)
-        all.firstOrNull { it.role == ROLE_PROSE }?.let { return GoalSet(listOf(it), approximate = true) }
+        val prose = all.filter { it.role == ROLE_PROSE }
+        if (prose.size in 2..MAX_PROSE_GROUP) return GoalSet(prose, approximate = true)
+        prose.firstOrNull()?.let { return GoalSet(listOf(it), approximate = true) }
         if (all.isEmpty() && stage.hasCoord) return GoalSet(listOf(Goal(stage.x!!, stage.y!!, stage.z!!)), approximate = false)
         return GoalSet(emptyList(), approximate = false)
     }
@@ -188,6 +190,7 @@ object QuestWaypoints {
     const val ROLE_PROSE = "prose"
 
     private const val MAX_GOALS = 6
+    private const val MAX_PROSE_GROUP = 6
     private const val MIN_SCORE = 0.40
     private const val TIE_MARGIN = 0.04
     private const val BACKWARD_PENALTY = 0.9

@@ -47,7 +47,7 @@ object WynnQuestCompletionTracker {
             if (screen is OverwatchInventoryScreen) screen.updateBookActivities(updated)
         }
         if (toast) {
-            OverwatchToastQueue.show(OverwatchToastQueue.Toast("Quest Completed", name, TOAST_COLOR))
+            OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.QUEST, "Quest Completed", name, TOAST_COLOR))
         }
     }
 

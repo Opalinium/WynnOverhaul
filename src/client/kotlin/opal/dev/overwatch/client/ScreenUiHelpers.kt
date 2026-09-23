@@ -2,7 +2,15 @@ package opal.dev.overwatch.client
 
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.components.EditBox
+import net.minecraft.client.gui.screens.Screen
 import kotlin.math.roundToInt
+
+fun Screen.isTextInputFocused(): Boolean = (focused as? EditBox)?.isFocused == true
+
+fun Screen.releaseTextInputFocus() {
+    setFocused(null)
+}
 
 fun truncateToWidth(font: Font, text: String, maxWidth: Int): String {
     if (maxWidth <= 0) return ""

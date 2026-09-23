@@ -19,6 +19,8 @@ object WynnRegionBarTracker : ClientboundBossEventPacket.Handler {
     fun clear() {
         active = null
         activeId = null
+        WynnLocationToasts.reset()
+        OverwatchToastQueue.clear()
     }
 
     override fun add(
@@ -61,8 +63,10 @@ object WynnRegionBarTracker : ClientboundBossEventPacket.Handler {
     }
 
     private fun adopt(id: UUID, state: RegionState) {
+        val previous = active?.name
         activeId = id
         active = state
+        if (previous != state.name) WynnLocationToasts.onRegionChanged(previous, state.name)
     }
 
     private fun confirmed(name: String): Boolean {

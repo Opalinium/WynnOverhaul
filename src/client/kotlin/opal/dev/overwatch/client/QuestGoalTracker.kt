@@ -105,8 +105,10 @@ object QuestGoalTracker {
         val source = if (result.approximate) Source.WIKI_APPROX else Source.WIKI
         val total = result.goals.size
         val work = QuestWaypoints.isWorkStage(result.stage)
+        val labels = result.goals.map { it.label?.trim().orEmpty() }
+        val useLabels = labels.all { it.isNotEmpty() && it.length <= MAX_LABEL } && labels.toSet().size == labels.size
         val candidates = result.goals.mapIndexed { index, g ->
-            Goal(g.x, g.y, g.z, wikiLabel(g.label, index, total), source)
+            Goal(g.x, g.y, g.z, wikiLabel(if (useLabels) labels[index] else null, index, total), source)
         }
 
         if (total > 1 && !work) {
