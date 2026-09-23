@@ -30,6 +30,7 @@ class WynnQolClient : ClientModInitializer {
         MountSettingsInterceptor.register()
         WynnQuestCompletionTracker.register()
         WynnLevelUpToastOverride.register()
+        WynnLocationToasts.register()
         MountTooltipFeature.register()
         registerHudLayouts()
         HudElementRegistry.addLast(
@@ -138,6 +139,7 @@ class WynnQolClient : ClientModInitializer {
         ContentBookQuery.tick(client)
         ContentBookInterceptor.tick(client)
         OverwatchInventory.tick(client)
+        ActiveWeapon.tick(client)
         CharacterInfo.tick(client)
         MountSettingsInterceptor.tick(client)
         (client.gui.screen() as? OverwatchInventoryScreen)?.pollPendingFire()

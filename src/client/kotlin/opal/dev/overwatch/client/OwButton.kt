@@ -19,6 +19,7 @@ class OwButton(
     private val icon: ItemStack? = null,
     private val iconScale: Float = 1f,
     private val enabled: () -> Boolean = { true },
+    private val swatch: Int? = null,
     private val onPress: () -> Unit,
 ) : AbstractWidget(x, y, width, height, label) {
 
@@ -43,6 +44,16 @@ class OwButton(
             else -> textColor ?: OwTheme.TEXT
         }
         val font = Minecraft.getInstance().font
+        if (swatch != null) {
+            val inset = SWATCH_INSET
+            val left = x + inset
+            val top = y + inset
+            val right = x + width - inset
+            val bottom = y + height - inset
+            graphics.fill(left - 1, top - 1, right + 1, bottom + 1, SWATCH_OUTLINE)
+            graphics.fill(left, top, right, bottom, swatch or SWATCH_OPAQUE)
+            return
+        }
         val hasIcon = icon != null && !icon.isEmpty
         val iconW = if (hasIcon) ICON_SIZE + ICON_GAP else 0
         val text = truncateToWidth(font, message.string, width - 6 - iconW)
@@ -66,6 +77,9 @@ class OwButton(
 
     private companion object {
         const val ICON_SIZE = 16
+        const val SWATCH_INSET = 5
+        const val SWATCH_OUTLINE = 0xFF000000.toInt()
+        const val SWATCH_OPAQUE = 0xFF000000.toInt()
         const val ICON_PAD = 4
         const val ICON_GAP = 4
     }

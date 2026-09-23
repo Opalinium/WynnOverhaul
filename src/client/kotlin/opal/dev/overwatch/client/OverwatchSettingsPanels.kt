@@ -294,8 +294,10 @@ class OverwatchSettingsPanels(private val host: Host) {
         host.addPanelWidget(typeButton)
         x += 88
 
-        val colorButton = OwButton(x, y2, 40, 18, Component.literal("████").withColor(rule.colorArgb.toInt())) {
-            rule.colorArgb = PALETTE[(PALETTE.indexOf(rule.colorArgb).coerceAtLeast(0) + 1).mod(PALETTE.size)]
+        val colorButton = OwButton(x, y2, 40, 18, Component.literal("Colour"), swatch = rule.colorArgb.toInt()) {
+            val current = PALETTE.indexOf(rule.colorArgb)
+            rule.colorArgb = PALETTE[if (current < 0) 0 else (current + 1).mod(PALETTE.size)]
+            OverwatchConfig.current.save()
             host.rebuildPanels()
         }
         colorButton.setTooltip(Tooltip.create(Component.literal("Highlight box + label colour")))
@@ -567,6 +569,13 @@ class OverwatchSettingsPanels(private val host: Host) {
             config.customPartyNametagsEnabled,
         ) { config.customPartyNametagsEnabled = it }
 
+        header("Gear")
+        checkbox(
+            "Equipped item comparison",
+            "Shows the tooltip of your currently equipped item beside the hovered armor piece, accessory or weapon in the Overwatch inventory.",
+            config.equipComparisonEnabled,
+        ) { config.equipComparisonEnabled = it }
+
         header("Mounts")
         checkbox(
             "Feeding info on item tooltips",
@@ -830,17 +839,68 @@ class OverwatchSettingsPanels(private val host: Host) {
         )
         rows += voxyCheckbox to OwTheme.ROW_H
 
-        val questToastCheckbox = OwCheckbox(left, 0, w, Component.literal("Quest completion as toast"), config.questCompletionToastEnabled) {
-            config.questCompletionToastEnabled = it
-        }
-        questToastCheckbox.setTooltip(Tooltip.create(Component.literal("Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead.")))
-        rows += questToastCheckbox to OwTheme.ROW_H
+        rows += OwSectionHeader(left, 0, w, "Toasts") to 18
 
-        val levelUpToastCheckbox = OwCheckbox(left, 0, w, Component.literal("Level up as toast"), config.levelUpToastEnabled) {
-            config.levelUpToastEnabled = it
+        fun toastType(
+            label: String,
+            tooltip: String,
+            enabled: Boolean,
+            onToggle: (Boolean) -> Unit,
+            style: () -> String,
+            onStyle: (String) -> Unit,
+        ) {
+            val box = OwCheckbox(left, 0, w, Component.literal(label), enabled) { onToggle(it) }
+            box.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += box to OwTheme.ROW_H
+            val styleButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("    Style: ${ToastStyle.parse(style()).label}")) {
+                onStyle(ToastStyle.parse(style()).next().name)
+                config.save()
+                host.rebuildPanels()
+            }
+            styleButton.setTooltip(Tooltip.create(Component.literal("Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.")))
+            rows += styleButton to OwTheme.ROW_H
         }
-        levelUpToastCheckbox.setTooltip(Tooltip.create(Component.literal("Blocks level-up chat messages and shows a HUD toast instead.")))
-        rows += levelUpToastCheckbox to OwTheme.ROW_H
+
+        toastType(
+            "Quest completion toast",
+            "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead.",
+            config.questCompletionToastEnabled, { config.questCompletionToastEnabled = it },
+            { config.questToastStyle }, { config.questToastStyle = it },
+        )
+        toastType(
+            "Level up toast",
+            "Blocks level-up chat messages and shows a HUD toast instead.",
+            config.levelUpToastEnabled, { config.levelUpToastEnabled = it },
+            { config.levelUpToastStyle }, { config.levelUpToastStyle = it },
+        )
+        toastType(
+            "Area discovery toast",
+            "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead.",
+            config.discoveryToastEnabled, { config.discoveryToastEnabled = it },
+            { config.discoveryToastStyle }, { config.discoveryToastStyle = it },
+        )
+        toastType(
+            "Location change toast",
+            "Shows a HUD toast with the region name when you enter a new area.",
+            config.locationToastEnabled, { config.locationToastEnabled = it },
+            { config.locationToastStyle }, { config.locationToastStyle = it },
+        )
+
+        val textScaleSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.75, 4.0, 2, config.toastTextScale, "Classic text scale") { config.toastTextScale = it }
+        textScaleSlider.setTooltip(Tooltip.create(Component.literal("Size of the text and panel on Classic toasts.")))
+        rows += textScaleSlider to OwTheme.ROW_H
+
+        val soulsScaleSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.5, 4.0, 2, config.soulsToastScale, "Souls text scale") { config.soulsToastScale = it }
+        soulsScaleSlider.setTooltip(Tooltip.create(Component.literal("Size of the large centred text on Souls-style toasts.")))
+        rows += soulsScaleSlider to OwTheme.ROW_H
+
+        val durationSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 1.5, 12.0, 1, config.toastDurationSeconds, "Toast duration (s)") { config.toastDurationSeconds = it }
+        durationSlider.setTooltip(Tooltip.create(Component.literal("How long a Classic toast stays up. Souls toasts last 1.5x as long.")))
+        rows += durationSlider to OwTheme.ROW_H
+
+        val previewButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Preview toasts")) { OverwatchToastQueue.preview() }
+        previewButton.setTooltip(Tooltip.create(Component.literal("Shows one sample of each toast type using your current settings. Position them from the HUD designer.")))
+        rows += previewButton to OwTheme.ROW_H
 
         rows += OwSectionHeader(left, 0, w, "Reference Tools") to 18
         rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {

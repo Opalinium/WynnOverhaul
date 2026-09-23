@@ -5,7 +5,10 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.Component
+
+private const val KEY_ESCAPE = 256
 
 abstract class OwScreen(
     title: Component,
@@ -42,6 +45,14 @@ abstract class OwScreen(
         OwTheme.drawPage(graphics, left, top, panelWidth, panelHeight)
         graphics.fill(left, top + OwTheme.TITLE_BAR_H - 1, left + panelWidth, top + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)
         graphics.centeredText(Minecraft.getInstance().font, title.string.uppercase(), left + panelWidth / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
+    }
+
+    override fun keyPressed(event: KeyEvent): Boolean {
+        if (isTextInputFocused() && event.key() == KEY_ESCAPE) {
+            releaseTextInputFocus()
+            return true
+        }
+        return super.keyPressed(event)
     }
 
     override fun onClose() {

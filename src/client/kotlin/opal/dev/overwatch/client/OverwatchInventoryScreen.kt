@@ -1181,6 +1181,7 @@ class OverwatchInventoryScreen(
         if (stack.isEmpty) return
         if (!menu.carried.isEmpty) return
         graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
+        EquipCompareTooltip.draw(graphics, font, stack, mouseX, mouseY)
     }
 
 
@@ -1992,12 +1993,16 @@ class OverwatchInventoryScreen(
 
     override fun keyPressed(event: KeyEvent): Boolean {
         val client = Minecraft.getInstance()
+        if (isTextInputFocused()) {
+            if (event.key() == KEY_ESCAPE) {
+                releaseTextInputFocus()
+                return true
+            }
+            return super.keyPressed(event)
+        }
         if (event.key() == KEY_ESCAPE || client.options.keyInventory.matches(event)) {
             onClose()
             return true
-        }
-        if (searchField?.isFocused == true || journalSearchField?.isFocused == true) {
-            return super.keyPressed(event)
         }
         val activeHover = if (invTab == InvTab.CHARACTER) hoveredChar else hoveredSlot
         if (invTab != InvTab.SETTINGS && invTab != InvTab.JOURNAL && event.key() in KEY_1..KEY_9 && activeHover >= 0) {

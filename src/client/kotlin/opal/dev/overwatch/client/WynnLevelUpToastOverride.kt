@@ -25,7 +25,7 @@ object WynnLevelUpToastOverride {
         }
         PERSONAL_PROFESSION.matchEntire(text)?.let { m ->
             val profession = m.groupValues[2].replace(Regex("^[^A-Za-z]+"), "").trim()
-            OverwatchToastQueue.show(OverwatchToastQueue.Toast("Level Up!", "You reached $profession level ${m.groupValues[1]}!", TOAST_COLOR))
+            OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, "Level Up!", "You reached $profession level ${m.groupValues[1]}!", TOAST_COLOR))
             return false
         }
         PERSONAL_GENERIC.matchEntire(text)?.let { m ->
@@ -34,7 +34,7 @@ object WynnLevelUpToastOverride {
             if (name == Minecraft.getInstance().player?.name?.string) {
                 personalToast(level)
             } else {
-                OverwatchToastQueue.show(OverwatchToastQueue.Toast(name, "reached $level", OTHER_TOAST_COLOR))
+                OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, name, "reached $level", OTHER_TOAST_COLOR))
             }
             return false
         }
@@ -47,7 +47,7 @@ object WynnLevelUpToastOverride {
                     personalToast(level)
                 }
             } else {
-                OverwatchToastQueue.show(OverwatchToastQueue.Toast(name, "reached $level", OTHER_TOAST_COLOR))
+                OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, name, "reached $level", OTHER_TOAST_COLOR))
             }
             return false
         }
@@ -57,7 +57,7 @@ object WynnLevelUpToastOverride {
     private fun personalToast(level: String) {
         lastPersonalLevel = level
         lastPersonalAt = System.currentTimeMillis()
-        OverwatchToastQueue.show(OverwatchToastQueue.Toast("Level Up!", "You reached $level!", TOAST_COLOR))
+        OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, "Level Up!", "You reached $level!", TOAST_COLOR))
     }
 
     private fun richLevelUpToast(lines: List<String>) {
@@ -67,7 +67,7 @@ object WynnLevelUpToastOverride {
         val subtitle = rewards.ifEmpty {
             lines.getOrNull(lines.indexOf(RICH_HEADER) + 1)?.takeIf { it != RICH_HEADER } ?: "Level up!"
         }
-        OverwatchToastQueue.show(OverwatchToastQueue.Toast(RICH_HEADER, subtitle, TOAST_COLOR))
+        OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, RICH_HEADER, subtitle, TOAST_COLOR))
     }
 
     private fun clean(text: String): String {
