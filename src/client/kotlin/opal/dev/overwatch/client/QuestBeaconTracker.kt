@@ -33,11 +33,7 @@ object QuestBeaconTracker {
         if (entity.id in hiddenEntityIds) return true
         return when (entity) {
             is Display.ItemDisplay -> questKindOf(entity) != null
-            is Display.TextDisplay -> {
-                if (!isMarkerFont(entity)) return false
-                val pos = entity.position()
-                nearBeacon(pos) || current.any { withinMarkerProximity(pos, it.center()) }
-            }
+            is Display.TextDisplay -> isMarkerFont(entity)
             else -> false
         }
     }
@@ -53,6 +49,7 @@ object QuestBeaconTracker {
     fun tick(client: Minecraft) {
         val config = OverwatchConfig.current
         if (!config.questWaypointOverrideEnabled) {
+            QuestGoalTracker.reset()
             if (current.isNotEmpty()) current = emptyList()
             if (hiddenEntityIds.isNotEmpty()) hiddenEntityIds = emptySet()
             return
@@ -60,12 +57,14 @@ object QuestBeaconTracker {
         val player = client.player
         val level = client.level
         if (player == null || level == null) {
+            QuestGoalTracker.reset()
             if (current.isNotEmpty()) current = emptyList()
             if (hiddenEntityIds.isNotEmpty()) hiddenEntityIds = emptySet()
             return
         }
 
-        val matches = liveTextCoordinates().ifEmpty { listOfNotNull(wikiFallback() ?: wikiCoordFallback()) }
+        val goals = QuestGoalTracker.update(player.x, player.y, player.z, WynnScoreboardTracker.current)
+        val matches = goals.map { goalMatch(it) }.ifEmpty { listOfNotNull(wikiCoordFallback()) }
         if (matches.isEmpty()) {
             if (current.isNotEmpty()) current = emptyList()
             if (hiddenEntityIds.isNotEmpty()) hiddenEntityIds = emptySet()
@@ -101,36 +100,14 @@ object QuestBeaconTracker {
         hiddenEntityIds = hiddenIds
     }
 
-    private fun liveTextCoordinates(): List<EntityTracker.Match> {
-        val nextTask = WynnScoreboardTracker.current?.nextTask
-        if (nextTask.isNullOrEmpty()) return emptyList()
-        val coordMatches = COORD_IN_TEXT.findAll(nextTask).toList()
-        if (coordMatches.isEmpty()) return emptyList()
-        return coordMatches.mapIndexedNotNull { index, m ->
-            val x = m.groupValues[1].toIntOrNull() ?: return@mapIndexedNotNull null
-            val y = m.groupValues[2].toIntOrNull() ?: return@mapIndexedNotNull null
-            val z = m.groupValues[3].toIntOrNull() ?: return@mapIndexedNotNull null
-            val item = ITEM_BEFORE_COORD.find(nextTask.substring(0, m.range.first))?.groupValues?.get(1)?.trim()
-            val label = when {
-                item != null -> "Quest: $item"
-                coordMatches.size > 1 -> "Quest ${index + 1}/${coordMatches.size}"
-                else -> "Quest"
-            }
-            waypointMatch(x, y, z, label, QUEST_WAYPOINT_COLOR)
-        }
+    private fun goalMatch(goal: QuestGoalTracker.Goal): EntityTracker.Match = when (goal.source) {
+        QuestGoalTracker.Source.LIVE -> waypointMatch(goal.x, goal.y, goal.z, goal.label, QUEST_WAYPOINT_COLOR)
+        QuestGoalTracker.Source.WIKI -> waypointMatch(goal.x, goal.y, goal.z, wikiLabel("Quest (wiki)", goal.label), WIKI_WAYPOINT_COLOR)
+        QuestGoalTracker.Source.WIKI_APPROX ->
+            waypointMatch(goal.x, goal.y, goal.z, wikiLabel("Quest (wiki, approx.)", goal.label), WIKI_WAYPOINT_COLOR)
     }
 
-    private fun wikiFallback(): EntityTracker.Match? {
-        val tracked = WynnScoreboardTracker.current ?: return null
-        val quest = WynncraftQuests.findTracked(tracked.name) ?: return null
-        val result = QuestWaypoints.findStageWaypoint(quest.name, tracked.nextTask) ?: return null
-        val stage = result.stage
-        val x = stage.x ?: return null
-        val y = stage.y ?: return null
-        val z = stage.z ?: return null
-        val label = if (result.approximate) "Quest (wiki, approx.)" else "Quest (wiki)"
-        return waypointMatch(x, y, z, label, WIKI_WAYPOINT_COLOR)
-    }
+    private fun wikiLabel(base: String, tag: String): String = if (tag.isEmpty()) base else "$base: $tag"
 
     private fun wikiCoordFallback(): EntityTracker.Match? {
         val tracked = WynnScoreboardTracker.current ?: return null
@@ -158,10 +135,6 @@ object QuestBeaconTracker {
         val markerBox = AABB(x - 0.15, y.toDouble(), z - 0.15, x + 0.15, y + 1.6, z + 0.15)
         return EntityTracker.Match(anchor = null, blockBox = markerBox, label = label, colorArgb = colorArgb, throughWalls = true)
     }
-
-    private val COORD_IN_TEXT = Regex("""\[\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*]""")
-
-    private val ITEM_BEFORE_COORD = Regex("""\[([^\[\]]+)]\s*from\s*$""")
 
     private fun isMarkerFont(entity: Display.TextDisplay): Boolean {
         val text = (entity as TextDisplayAccessor).`overwatch$getText`()

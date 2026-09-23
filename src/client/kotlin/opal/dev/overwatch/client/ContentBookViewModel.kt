@@ -12,7 +12,6 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
     var activities: List<ActivityInfo> = initialActivities
         private set
     var query: String = ""
-    var page: Int = 0
 
     var filter: String? = initialActivities.firstOrNull { it.trackingState == ActivityTrackingState.TRACKED }?.type?.filterName
         ?: OverwatchConfig.current.contentBookFilter.ifEmpty { null }
@@ -40,22 +39,6 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
         return result
     }
 
-    fun pageCount(): Int {
-        val n = results().size
-        return maxOf(1, (n + PER_PAGE - 1) / PER_PAGE)
-    }
-
-    fun coercePage() {
-        page = page.coerceIn(0, pageCount() - 1)
-    }
-
-    fun pageItems(): List<ActivityInfo> {
-        coercePage()
-        val r = results()
-        val start = page * PER_PAGE
-        return r.subList(start, minOf(r.size, start + PER_PAGE))
-    }
-
     fun statusLine(): String = actionMessage ?: if (ContentBookQuery.isEnumerating) {
         "${activities.size} activities (refreshing...)"
     } else {
@@ -70,11 +53,8 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
         saveViewPrefs()
     }
 
-    fun cycleFilter() {
-        val options = filterOptions()
-        val i = options.indexOf(filter).coerceAtLeast(0)
-        filter = options[(i + 1) % options.size]
-        page = 0
+    fun selectFilter(value: String?) {
+        filter = value
         actionMessage = null
         saveViewPrefs()
     }
@@ -100,11 +80,7 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
     }
 
     companion object {
-        const val COLS = 9
-        const val ROWS = 5
-        const val SLOT_SIZE = 20
-        const val SLOT_GAP = 4
-        const val SLOT_PITCH = SLOT_SIZE + SLOT_GAP
-        const val PER_PAGE = COLS * ROWS
+        const val ROW_H = 18
+        const val LIST_COLS = 3
     }
 }

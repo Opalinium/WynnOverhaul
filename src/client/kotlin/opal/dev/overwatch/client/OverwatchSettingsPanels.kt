@@ -422,11 +422,12 @@ class OverwatchSettingsPanels(private val host: Host) {
 
         checkbox(
             "Draw waypoints",
-            "Xaero-style marker on each match: a tag with name + distance when it's on screen, " +
-                "or an arrow pointing the way when it's off screen or behind you. Turn off for HUD list + ping only.",
+            "Xaero-style marker on each match: a coloured icon with the initial, plus name + distance " +
+                "boxes when you look near it, or an arrow pointing the way when it's off screen or behind you. " +
+                "Turn off for HUD list + ping only.",
             config.trackerWaypointsEnabled,
         ) { config.trackerWaypointsEnabled = it }
-        slider("Waypoint scale", 0.5, 2.5, 2, config.trackerWaypointScale, "Size of the on-screen waypoint tags/arrows.") {
+        slider("Waypoint scale", 0.5, 2.5, 2, config.trackerWaypointScale, "Size of the on-screen waypoint icons, labels and arrows.") {
             config.trackerWaypointScale = it
         }
 
@@ -481,7 +482,7 @@ class OverwatchSettingsPanels(private val host: Host) {
         rows += chestRangeRows
 
         val chestGuidanceTooltip = Tooltip.create(
-            Component.literal("How close a discovered chest needs to be before it gets an on-screen tag / arrow and a path. Farther than this it's list-only -- capped to the range above."),
+            Component.literal("How close a discovered chest needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
         )
         val chestGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredChestGuidanceRange) {
             config.trackerDiscoveredChestGuidanceRange = it
@@ -512,7 +513,7 @@ class OverwatchSettingsPanels(private val host: Host) {
         rows += nodeRangeRows
 
         val nodeGuidanceTooltip = Tooltip.create(
-            Component.literal("How close a discovered node needs to be before it gets an on-screen tag / arrow and a path. Farther than this it's list-only -- capped to the range above."),
+            Component.literal("How close a discovered node needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
         )
         val nodeGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredNodeGuidanceRange) {
             config.trackerDiscoveredNodeGuidanceRange = it

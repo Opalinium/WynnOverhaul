@@ -9,8 +9,8 @@ import opal.dev.overwatch.Overwatch
 import org.joml.Matrix3x2fStack
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.hypot
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 class TrackerEspHudElement : HudElement {
 
@@ -37,8 +37,8 @@ class TrackerEspHudElement : HudElement {
                 if (wp.onScreen) {
                     val px = halfW + rawX
                     val py = halfH + rawY
-                    if (wp.isChest) drawPath(graphics, pose, halfW, halfH * 2f, px, py, wp.argb)
-                    drawTag(graphics, pose, font, px, py, wp.label, distText, wp.argb, scale)
+                    val lookedAt = hypot(rawX, rawY) <= halfH * LOOK_RADIUS
+                    drawMarker(graphics, pose, font, px, py, wp.label, distText, wp.argb, scale, lookedAt)
                 } else {
                     val edgeHalfW = halfW - EDGE_MARGIN
                     val edgeHalfH = halfH - EDGE_MARGIN
@@ -65,7 +65,7 @@ class TrackerEspHudElement : HudElement {
         }
     }
 
-    private fun drawTag(
+    private fun drawMarker(
         g: GuiGraphicsExtractor,
         pose: Matrix3x2fStack,
         font: Font,
@@ -75,21 +75,45 @@ class TrackerEspHudElement : HudElement {
         dist: String,
         argb: Int,
         scale: Float,
+        lookedAt: Boolean,
     ) {
         pose.pushMatrix()
         pose.translate(px, py)
         if (scale != 1f) pose.scale(scale)
 
-        diamond(g, DIAMOND_R, argb)
+        val rgb = argb and 0x00FFFFFF
+        g.fill(ICON_LEFT, ICON_TOP, ICON_RIGHT, 0, ICON_BORDER_ALPHA or shade(rgb, ICON_BORDER_SHADE))
+        g.fill(ICON_LEFT + 1, ICON_TOP + 1, ICON_RIGHT - 1, -1, ICON_FILL_ALPHA or rgb)
+        val initial = initialOf(label)
+        g.text(font, initial, -font.width(initial) / 2, ICON_TOP + 1, TEXT_COLOR)
 
-        val text = "$label  $dist"
-        val tw = font.width(text)
-        val tx = -tw / 2
-        val ty = -DIAMOND_R - TEXT_GAP - LINE_H
-        g.fill(tx - PAD, ty - PAD, tx + tw + PAD, ty + LINE_H, BG_COLOR)
-        g.text(font, text, tx, ty, TEXT_COLOR)
+        if (lookedAt) {
+            var y = LABEL_GAP
+            y = drawLabel(g, font, label, y)
+            drawLabel(g, font, dist, y)
+        }
 
         pose.popMatrix()
+    }
+
+    private fun drawLabel(g: GuiGraphicsExtractor, font: Font, text: String, y: Int): Int {
+        val tw = font.width(text)
+        val left = -tw / 2
+        g.fill(left - LABEL_PAD_X, y, left + tw + LABEL_PAD_X, y + LABEL_H, LABEL_BG)
+        g.text(font, text, left, y + 1, TEXT_COLOR)
+        return y + LABEL_H + LABEL_GAP
+    }
+
+    private fun initialOf(label: String): String {
+        val c = label.firstOrNull { it.isLetterOrDigit() } ?: return "?"
+        return c.uppercaseChar().toString()
+    }
+
+    private fun shade(rgb: Int, factor: Float): Int {
+        val r = (((rgb shr 16) and 0xFF) * factor).toInt()
+        val gr = (((rgb shr 8) and 0xFF) * factor).toInt()
+        val b = ((rgb and 0xFF) * factor).toInt()
+        return (r shl 16) or (gr shl 8) or b
     }
 
     private fun drawArrow(
@@ -118,31 +142,6 @@ class TrackerEspHudElement : HudElement {
         pose.popMatrix()
     }
 
-    private fun drawPath(g: GuiGraphicsExtractor, pose: Matrix3x2fStack, screenCenterX: Float, screenBottom: Float, px: Float, py: Float, argb: Int) {
-        val dx = px - screenCenterX
-        val dy = py - screenBottom
-        val len = sqrt(dx * dx + dy * dy)
-        if (len < 1f) return
-        val color = (argb and 0x00FFFFFF) or PATH_ALPHA
-        pose.pushMatrix()
-        pose.translate(screenCenterX, screenBottom)
-        pose.rotate(atan2(dy, dx))
-        var t = 0f
-        while (t < len) {
-            val end = (t + PATH_DASH_LEN).coerceAtMost(len)
-            g.fill(t.roundToInt(), 0, end.roundToInt(), 1, color)
-            t += PATH_DASH_LEN + PATH_GAP_LEN
-        }
-        pose.popMatrix()
-    }
-
-    private fun diamond(g: GuiGraphicsExtractor, r: Int, argb: Int) {
-        for (i in -r..r) {
-            val half = r - abs(i)
-            g.fill(-half, i, half + 1, i + 1, argb)
-        }
-    }
-
     private fun triangle(g: GuiGraphicsExtractor, argb: Int) {
         for (i in 0..ARROW_R) {
             val half = (ARROW_R - i) / 2
@@ -151,16 +150,19 @@ class TrackerEspHudElement : HudElement {
     }
 
     private companion object {
-        const val DIAMOND_R = 4
+        const val ICON_LEFT = -5
+        const val ICON_RIGHT = 4
+        const val ICON_TOP = -9
+        const val ICON_FILL_ALPHA = 0xFF000000.toInt()
+        const val ICON_BORDER_ALPHA = 0xFF000000.toInt()
+        const val ICON_BORDER_SHADE = 0.52f
+        const val LABEL_H = 9
+        const val LABEL_GAP = 2
+        const val LABEL_PAD_X = 3
+        const val LABEL_BG = 0x5A000000
+        const val LOOK_RADIUS = 0.3f
         const val ARROW_R = 7
-        const val TEXT_GAP = 2
-        const val LINE_H = 9
-        const val PAD = 2
         const val EDGE_MARGIN = 14f
-        const val PATH_DASH_LEN = 6f
-        const val PATH_GAP_LEN = 5f
-        const val PATH_ALPHA = 0x70000000
-        const val BG_COLOR = 0xB0140F0A.toInt()
-        val TEXT_COLOR = OwTheme.TEXT
+        const val TEXT_COLOR = -1
     }
 }
