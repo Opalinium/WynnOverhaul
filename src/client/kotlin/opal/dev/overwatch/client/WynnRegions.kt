@@ -45,7 +45,6 @@ object WynnRegions {
                     list.add(Region(entry.key, minOf(x1, x2), maxOf(x1, x2), minOf(z1, z2), maxOf(z1, z2)))
                 }
                 regions = list
-                Overwatch.LOGGER.info("Overwatch: loaded {} Wynncraft regions for Discord RPC", list.size)
             } catch (t: Throwable) {
                 if (!loggedError) {
                     loggedError = true

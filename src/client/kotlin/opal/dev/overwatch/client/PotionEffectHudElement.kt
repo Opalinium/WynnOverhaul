@@ -27,6 +27,7 @@ class PotionEffectHudElement : HudElement {
     }
 
     private fun render(graphics: GuiGraphicsExtractor) {
+        if (!OverwatchGate.inGame) return
         val config = OverwatchConfig.current
         if (!config.customPotionHudEnabled) return
         val player = Minecraft.getInstance().player
@@ -43,15 +44,10 @@ class PotionEffectHudElement : HudElement {
         if (rows.isEmpty()) return
 
         val font = Minecraft.getInstance().font
-        val contentW = rows.maxOf { font.width(it.text) } + ICON_SIZE + 4
-        val contentH = LINE_HEIGHT * rows.size
+        HudLayoutManager.stableSize(ID, rows.maxOf { font.width(it.text) } + ICON_SIZE + 4, LINE_HEIGHT * rows.size)
 
-        val scale = config.customPotionHudScale.toFloat().coerceIn(0.5f, 2.5f)
-        val corner = config.customPotionHudCorner
-        val right = corner.endsWith("RIGHT")
-        val bottom = corner.startsWith("BOTTOM")
-        val baseX = if (right) graphics.guiWidth() - MARGIN - (contentW * scale).toInt() else MARGIN
-        val baseY = if (bottom) graphics.guiHeight() - MARGIN - (contentH * scale).toInt() else MARGIN
+        val scale = HudLayoutManager.scale(ID)
+        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
         val scaled = scale != 1f
         if (scaled) {
@@ -67,7 +63,7 @@ class PotionEffectHudElement : HudElement {
             if (row.sprite != null) {
                 graphics.blitSprite(RenderPipelines.GUI_TEXTURED, row.sprite, ox, y, ICON_SIZE, ICON_SIZE)
             }
-            graphics.text(font, row.text, ox + ICON_SIZE + 4, y + TEXT_Y_OFFSET, row.color)
+            graphics.text(font, row.text, ox + ICON_SIZE + 4, y + TEXT_Y_OFFSET, row.color, true)
             y += LINE_HEIGHT
         }
 
@@ -104,14 +100,14 @@ class PotionEffectHudElement : HudElement {
     }
 
     private companion object {
-        const val MARGIN = 4
+        const val ID = "potion_effects"
         const val LINE_HEIGHT = 18
         const val ICON_SIZE = 18
         const val TEXT_Y_OFFSET = 5
         const val INFINITE_SYMBOL = "∞"
-        const val COLOR_BENEFICIAL = 0xFF55FF55.toInt()
-        const val COLOR_HARMFUL = 0xFFFF5555.toInt()
-        const val COLOR_NEUTRAL = 0xFFDDDDDD.toInt()
+        val COLOR_BENEFICIAL = OwTheme.GOOD
+        val COLOR_HARMFUL = OwTheme.BAD
+        val COLOR_NEUTRAL = OwTheme.TEXT_DIM
         val ROMAN = listOf("", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
     }
 }

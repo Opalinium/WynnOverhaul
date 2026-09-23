@@ -1,4 +1,4 @@
-package opal.dev.overwatch.mixin.client;
+package opal.dev.overwatch.client;
 
 public interface OwCenteredTextField {
 }

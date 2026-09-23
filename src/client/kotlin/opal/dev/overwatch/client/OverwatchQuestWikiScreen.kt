@@ -13,10 +13,35 @@ class OverwatchQuestWikiScreen(
     private val page: QuestWikiFetcher.WikiPage? = QuestWikiFetcher.find(activityType, activityName)
     private val revealedSpoilers = HashSet<Int>()
     private val collapsedSections = HashSet<Int>()
+    private var collapsedInitialized = false
 
     override fun init() {
         super.init()
+        if (!collapsedInitialized) {
+            collapsedInitialized = true
+            initializeCollapsedSections()
+        }
         rebuildLines()
+    }
+
+    private fun initializeCollapsedSections() {
+        if (!activityType.isQuest) return
+        val sections = page?.sections ?: return
+        val expandIndex = currentStageSectionIndex()
+        for (index in sections.indices) {
+            if (index != expandIndex) collapsedSections.add(index)
+        }
+    }
+
+    private fun currentStageSectionIndex(): Int? {
+        val tracked = WynnScoreboardTracker.current
+        if (tracked == null) return null
+        if (!tracked.name.equals(activityName, ignoreCase = true)) return null
+        val stage = QuestWaypoints.findCurrentStage(activityName, tracked.nextTask) ?: return null
+        val title = "Stage ${stage.stage}"
+        val index = page?.sections?.indexOfFirst { it.title == title } ?: -1
+        if (index < 0) return null
+        return index
     }
 
     private fun rebuildLines() {
@@ -107,12 +132,12 @@ class OverwatchQuestWikiScreen(
 
     private companion object {
         const val LINE_HEIGHT = 12
-        val WHITE = 0xFFFFFFFF.toInt()
-        val GRAY = 0xFFAAAAAA.toInt()
-        val DARK_GRAY = 0xFF555555.toInt()
-        val DIALOGUE = 0xFF7A9BAF.toInt()
+        val WHITE = OwTheme.TEXT
+        val GRAY = OwTheme.TEXT_DIM
+        val DARK_GRAY = OwTheme.TEXT_FAINT
+        val DIALOGUE = 0xFF9BAF7A.toInt()
         val SPOILER_TEXT = 0xFFD9B38C.toInt()
-        val SPOILER_LABEL = 0xFFF2665C.toInt()
-        val GOLD = 0xFFE0C060.toInt()
+        val SPOILER_LABEL = OwTheme.BAD
+        val GOLD = OwTheme.ACCENT
     }
 }

@@ -9,23 +9,43 @@ object WynnLevelTracker {
     var level: Int? = null
         private set
 
+    @Volatile
+    var iconText: String? = null
+        private set
+
+    val HEXAGON_CHAR = 0xE00A.toChar()
+
     fun register() {
-        ClientReceiveMessageEvents.GAME.register { message, overlay -> if (overlay) onActionBar(message) }
+        ClientReceiveMessageEvents.GAME.register { message, _ -> onActionBar(message) }
+    }
+
+    fun clear() {
+        level = null
+        iconText = null
     }
 
     private fun onActionBar(message: Component) {
         val raw = message.string
-        val match = LEVEL_PATTERN.find(raw) ?: return
-        val full = match.value
-        if (full.length < 2) return
-        if (full[0] != SPACER || full[full.length - 2] != SPACER) return
-        val levelGroup = match.groups["level"]?.value ?: return
+        val parsed = findLevel(raw) ?: return
+        level = parsed
+        OverwatchGate.noteActionBar()
+    }
+
+    fun findLevel(raw: String): Int? {
+        val match = LEVEL_PATTERN.findAll(raw).lastOrNull { m ->
+            val v = m.value
+            v.length >= 2 && v[0] == SPACER && v[v.length - 2] == SPACER
+        } ?: return null
+        val levelGroup = match.groups["level"]?.value ?: return null
         val digits = levelGroup.replace(SEPARATOR, "")
         val sb = StringBuilder()
         for (ch in digits) {
             if (ch in LEVEL_CHAR_START..LEVEL_CHAR_END) sb.append(ch - LEVEL_CHAR_START)
         }
-        level = sb.toString().toIntOrNull() ?: level
+        val parsed = sb.toString().toIntOrNull() ?: return null
+        if (parsed !in 1..200) return null
+        iconText = levelGroup
+        return parsed
     }
 
     private const val SPACER = '\uDAFF'

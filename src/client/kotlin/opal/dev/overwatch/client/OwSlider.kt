@@ -35,12 +35,12 @@ class OwSlider(
     }
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        graphics.fill(x, y, x + width, y + height, OwTheme.PANEL_ALT)
+        graphics.fill(x, y, x + width, y + height, OwTheme.TILE_BG)
         val fillWidth = (width * value).toInt().coerceIn(0, width)
         if (fillWidth > 0) {
             graphics.fill(x, y, x + fillWidth, y + height, if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM)
         }
-        graphics.outline(x, y, width, height, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.BORDER)
+        graphics.outline(x, y, width, height, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
         val font = Minecraft.getInstance().font
         val text = truncateToWidth(font, message.string, width - 6)
         graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2, OwTheme.TEXT)

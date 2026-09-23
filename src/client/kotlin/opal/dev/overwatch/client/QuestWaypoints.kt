@@ -10,9 +10,13 @@ object QuestWaypoints {
         val hasCoord: Boolean get() = x != null && y != null && z != null
     }
 
+    data class WaypointResult(val stage: Stage, val approximate: Boolean)
+
     private val byQuest: Map<String, List<Stage>> by lazy { load() }
 
-    fun findStageWaypoint(questName: String, liveTaskText: String): Stage? {
+    fun hasQuest(questName: String): Boolean = byQuest.containsKey(questName)
+
+    fun findCurrentStage(questName: String, liveTaskText: String): Stage? {
         val stages = byQuest[questName] ?: return null
         if (liveTaskText.isBlank()) return null
         val liveWords = significantWords(liveTaskText)
@@ -21,7 +25,7 @@ object QuestWaypoints {
         var best: Stage? = null
         var bestScore = 0
         for (stage in stages) {
-            if (!stage.hasCoord || stage.task.isNullOrBlank()) continue
+            if (stage.task.isNullOrBlank()) continue
             val score = significantWords(stage.task).intersect(liveWords).size
             if (score > bestScore) {
                 bestScore = score
@@ -29,6 +33,14 @@ object QuestWaypoints {
             }
         }
         return if (bestScore >= MIN_MATCH_WORDS) best else null
+    }
+
+    fun findStageWaypoint(questName: String, liveTaskText: String): WaypointResult? {
+        val stages = byQuest[questName] ?: return null
+        val current = findCurrentStage(questName, liveTaskText) ?: return null
+        if (current.hasCoord) return WaypointResult(current, approximate = false)
+        val nearest = stages.filter { it.hasCoord }.minByOrNull { kotlin.math.abs(it.stage - current.stage) } ?: return null
+        return WaypointResult(nearest, approximate = true)
     }
 
     private fun significantWords(text: String): Set<String> =

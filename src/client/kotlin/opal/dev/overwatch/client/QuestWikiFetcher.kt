@@ -84,7 +84,6 @@ object QuestWikiFetcher {
                 val mapType = object : TypeToken<Map<String, WikiPage>>() {}.type
                 Gson().fromJson<Map<String, WikiPage>>(reader, mapType) ?: emptyMap()
             }
-            Overwatch.LOGGER.info("Overwatch activity wiki bundle loaded: {} entries", loaded.size)
             loaded
         } catch (t: Throwable) {
             Overwatch.LOGGER.error("Failed to load bundled activity wiki data", t)

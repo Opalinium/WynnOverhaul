@@ -22,6 +22,7 @@ class LootrunHudElement : HudElement {
     }
 
     private fun render(graphics: GuiGraphicsExtractor) {
+        if (!OverwatchGate.inGame) return
         val config = OverwatchConfig.current
         if (!config.lootrunEnabled || !config.lootrunHudEnabled) return
         if (LootrunModel.state == LootrunModel.State.NOT_RUNNING) return
@@ -39,20 +40,14 @@ class LootrunHudElement : HudElement {
         }
 
         val font = Minecraft.getInstance().font
-        val contentW = lines.maxOf { font.width(it.first) } + PAD * 2
-        val contentH = lines.size * LINE_H + PAD * 2
-        val x = MARGIN
-        val y = MARGIN
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, lines.maxOf { font.width(it.first) } + PAD * 2, lines.size * LINE_H + PAD * 2)
+        val (x, y) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
-        graphics.fill(x, y, x + contentW, y + contentH, BG_COLOR)
-        graphics.fill(x, y, x + contentW, y + 1, BORDER_COLOR)
-        graphics.fill(x, y + contentH - 1, x + contentW, y + contentH, BORDER_COLOR)
-        graphics.fill(x, y, x + 1, y + contentH, BORDER_COLOR)
-        graphics.fill(x + contentW - 1, y, x + contentW, y + contentH, BORDER_COLOR)
+        OwTheme.hudPanel(graphics, x, y, boxW, boxH)
 
         var ly = y + PAD
         for ((text, color) in lines) {
-            graphics.text(font, text, x + PAD, ly, color)
+            graphics.text(font, text, x + PAD, ly, color, true)
             ly += LINE_H
         }
     }
@@ -72,13 +67,11 @@ class LootrunHudElement : HudElement {
     }
 
     private companion object {
-        const val MARGIN = 6
+        const val ID = "lootrun"
         const val PAD = 6
         const val LINE_H = 10
-        val BG_COLOR = 0xE0121016.toInt()
-        val BORDER_COLOR = 0xFF4A4658.toInt()
-        val STATE_COLOR = 0xFFE0C060.toInt()
-        val TEXT_COLOR = 0xFFFFFFFF.toInt()
-        val DIM_COLOR = 0xFF888888.toInt()
+        val STATE_COLOR = OwTheme.ACCENT
+        val TEXT_COLOR = OwTheme.TEXT
+        val DIM_COLOR = OwTheme.TEXT_DIM
     }
 }

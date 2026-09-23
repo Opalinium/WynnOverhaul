@@ -11,6 +11,8 @@ run/
 .idea/
 *.iml
 .vscode/
+bin/
+.kotlin/
 
 # OS / misc
 *.class

@@ -272,7 +272,7 @@ object EntityTracker {
 
         val rangeSqr = config.trackerDiscoveredNodeRange * config.trackerDiscoveredNodeRange
         val pos = player.position()
-        val out = ArrayList<Match>()
+        val candidates = ArrayList<BlockPos>()
         for ((key, record) in confirmedNodes) {
             if (key in shown) continue
             val rule = nodeRules.firstOrNull {
@@ -281,12 +281,23 @@ object EntityTracker {
             if (onCooldown(record.availableAtMillis) && !rule.alwaysDisplay) continue
             val bp = BlockPos.of(key)
             if (pos.distanceToSqr(bp.x + 0.5, bp.y + 0.5, bp.z + 0.5) > rangeSqr) continue
+            candidates.add(bp)
+        }
+        candidates.sortBy { pos.distanceToSqr(it.x + 0.5, it.y + 0.5, it.z + 0.5) }
 
+        val out = ArrayList<Match>()
+        val kept = ArrayList<BlockPos>()
+        for (bp in candidates) {
+            if (kept.any { it.distSqr(bp) <= NODE_MERGE_DISTANCE_SQR }) continue
+            kept.add(bp)
+            val record = confirmedNodes[bp.asLong()] ?: continue
+            val rule = nodeRules.firstOrNull {
+                it.nodeProfession.isBlank() || record.profession.isBlank() || it.nodeProfession.equals(record.profession, ignoreCase = true)
+            } ?: continue
             val box = AABB(bp.x.toDouble(), bp.y.toDouble(), bp.z.toDouble(), bp.x + 1.0, bp.y + 1.0, bp.z + 1.0)
             val label = if (rule.alwaysDisplay) withCooldownSuffix(record.label, record.availableAtMillis) else record.label
             out.add(Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls))
         }
-        out.sortBy { player.distanceToSqr(it.center()) }
         return out
     }
 
@@ -749,6 +760,7 @@ object EntityTracker {
 
     private const val FALLBACK_CHEST_LABEL = "Chest"
     private const val FALLBACK_NODE_LABEL = "Gathering node"
+    private const val NODE_MERGE_DISTANCE_SQR = 9.0
     private const val MOB_REDIRECT_RADIUS = 2.5
     private const val MOB_REDIRECT_DOWN = 4.0
     private const val MOB_REDIRECT_UP = 1.0

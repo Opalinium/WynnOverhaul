@@ -57,7 +57,6 @@ class DiscordRichPresence : ClientModInitializer {
             sessionStartEpochSeconds = Instant.now().epochSecond
             nextUpdateNanos = 0L
             loggedConnectError = false
-            Overwatch.LOGGER.info("Overwatch Discord RPC connected")
         } catch (t: Throwable) {
             if (!loggedConnectError) {
                 loggedConnectError = true
@@ -85,8 +84,14 @@ class DiscordRichPresence : ClientModInitializer {
         assets.addProperty("large_text", server ?: "Overwatch")
         activity.add("assets", assets)
 
+        val onWynncraft = player != null && mc.level != null && isOnWynncraft(mc)
+        if (!onWynncraft) WynnLevelTracker.clear()
+
         if (player == null || mc.level == null) {
             activity.addProperty("details", "In the main menu")
+        } else if (!onWynncraft) {
+            activity.addProperty("details", "Playing Minecraft")
+            activity.addProperty("state", server ?: "Not on Wynncraft")
         } else {
             if (config.discordShowRegion) WynnRegions.ensureLoaded()
 
@@ -120,9 +125,13 @@ class DiscordRichPresence : ClientModInitializer {
                 LootrunModel.State.NOT_RUNNING -> "On a Lootrun"
             }
         }
-        if (OverwatchConfig.current.fishingToggleActive) return "Fishing"
         WynnScoreboardTracker.current?.let { return "${it.type}: ${it.name}" }
         return "Adventuring"
+    }
+
+    private fun isOnWynncraft(mc: Minecraft): Boolean {
+        val ip = mc.currentServer?.ip ?: return false
+        return ip.contains("wynncraft", ignoreCase = true)
     }
 
     private fun disconnect() {

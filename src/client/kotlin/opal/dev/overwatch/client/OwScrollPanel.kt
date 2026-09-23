@@ -3,6 +3,7 @@ package opal.dev.overwatch.client
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractScrollArea
 import net.minecraft.client.gui.narration.NarrationElementOutput
+import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 
 class OwScrollPanel(
@@ -17,10 +18,17 @@ class OwScrollPanel(
 
     override fun contentHeight(): Int = totalContentHeight
 
+    override fun isMouseOver(mouseX: Double, mouseY: Double): Boolean = isOverScrollbar(mouseX, mouseY)
+
+    override fun mouseClicked(event: MouseButtonEvent, doubled: Boolean): Boolean {
+        if (!isOverScrollbar(event.x(), event.y())) return false
+        return super.mouseClicked(event, doubled)
+    }
+
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         onReposition?.invoke()
-        graphics.fill(x, y, x + width, y + height, OwTheme.PANEL_ALT)
-        graphics.outline(x, y, width, height, OwTheme.BORDER)
+        graphics.fill(x, y, x + width, y + height, OwTheme.TILE_BG)
+        graphics.outline(x, y, width, height, OwTheme.HAIRLINE)
         extractScrollbar(graphics, mouseX, mouseY)
     }
 

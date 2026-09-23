@@ -9,7 +9,6 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 data class OverwatchConfig(
-    var panicShutdownEnabled: Boolean = true,
     var enabled: Boolean = true,
     var maxCps: Double = 8.0,
     var requireEntityTarget: Boolean = true,
@@ -20,6 +19,7 @@ data class OverwatchConfig(
     var wynnCombatEnabled: Boolean = false,
     var wynnAttackSpeed: Boolean = true,
     var qolPreventHotbarOverscroll: Boolean = false,
+    var debugItemCopyEnabled: Boolean = false,
     var mythicAlertEnabled: Boolean = false,
     var mythicAlertMinRarity: String = "MYTHIC",
     var mythicAlertSound: Boolean = true,
@@ -37,35 +37,21 @@ data class OverwatchConfig(
     var voxyVistaMessages: Boolean = true,
     var hideVanillaPotionHud: Boolean = false,
     var customPotionHudEnabled: Boolean = false,
-    var customPotionHudCorner: String = "TOP_RIGHT",
-    var customPotionHudScale: Double = 1.0,
+    var abilityCooldownHudEnabled: Boolean = true,
+    var questLogHudEnabled: Boolean = true,
+    var hudPanelsEnabled: Boolean = false,
+    var hudBarStyle: String = "CLASSIC",
+    var questCompletionToastEnabled: Boolean = false,
+    var levelUpToastEnabled: Boolean = false,
     var customPartyNametagsEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var mountFeederHudEnabled: Boolean = true,
+    var mountPickupDebug: Boolean = false,
     var lootrunEnabled: Boolean = true,
     var lootrunBeaconsEnabled: Boolean = true,
     var lootrunTaskMarkerEnabled: Boolean = true,
     var lootrunHudEnabled: Boolean = true,
     var lootrunRecorderEnabled: Boolean = false,
-    var fishingEnabled: Boolean = true,
-    var fishingNativeCatchDetection: Boolean = true,
-    var fishingNametagCatchDetection: Boolean = true,
-    var fishingNametagRange: Double = 3.0,
-    var fishingDelayMinMs: Double = 150.0,
-    var fishingDelayMaxMs: Double = 600.0,
-    var fishingSettleTimeoutMs: Double = 12000.0,
-    var fishingHotspotHudEnabled: Boolean = true,
-    var fishingHotspotKeywords: List<String> = listOf(
-        "hotspot",
-        "double hook chance",
-        "fishing speed",
-        "treasure chance",
-        "sea creature chance",
-        "trophy fish chance",
-    ),
-    var fishingHotspotRange: Double = 5.0,
-    var fishingHotspotVerticalRange: Double = 4.0,
-    var fishingToggleActive: Boolean = false,
     var trackerEnabled: Boolean = false,
     var trackerWaypointsEnabled: Boolean = true,
     var trackerWaypointScale: Double = 1.0,
@@ -80,10 +66,13 @@ data class OverwatchConfig(
     var trackerPingChat: Boolean = true,
     var trackerPingSoundId: String = "minecraft:block.note_block.pling",
     var trackerPingPitch: Double = 1.5,
-    var trackerHudCorner: String = "TOP_LEFT",
-    var trackerHudScale: Double = 1.0,
     var trackerHudShowDistance: Boolean = true,
     var trackerRules: MutableList<TrackerRule> = mutableListOf(),
+    var hudLayouts: MutableMap<String, HudElementLayout> = mutableMapOf(),
+    var customInventoryEnabled: Boolean = true,
+    var customHudEnabled: Boolean = false,
+    var chatChannel: String = "all",
+    var mountRegistry: MutableMap<String, StoredMount>? = null,
 ) {
     data class TrackerRule(
         var enabled: Boolean = true,
@@ -101,15 +90,19 @@ data class OverwatchConfig(
         var alwaysDisplay: Boolean = false,
     )
 
+    data class HudElementLayout(
+        var corner: String = "TOP_LEFT",
+        var offsetX: Int = 4,
+        var offsetY: Int = 4,
+        var scale: Double = 1.0,
+        var locked: Boolean = false,
+        var barWidth: Int = 0,
+        var boxH: Int = 0,
+    )
+
     fun sanitize(): OverwatchConfig {
         maxCps = maxCps.coerceIn(1.0, 12.0)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)
-        fishingNametagRange = fishingNametagRange.coerceIn(0.5, 16.0)
-        fishingDelayMinMs = fishingDelayMinMs.coerceIn(0.0, 10000.0)
-        fishingDelayMaxMs = fishingDelayMaxMs.coerceIn(fishingDelayMinMs, 10000.0)
-        fishingSettleTimeoutMs = fishingSettleTimeoutMs.coerceIn(1000.0, 60000.0)
-        fishingHotspotRange = fishingHotspotRange.coerceIn(0.5, 32.0)
-        fishingHotspotVerticalRange = fishingHotspotVerticalRange.coerceIn(0.5, 32.0)
         trackerRange = trackerRange.coerceIn(8.0, 128.0)
         trackerDiscoveredChestRange = trackerDiscoveredChestRange.coerceIn(64.0, 4000.0)
         trackerDiscoveredChestGuidanceRange = trackerDiscoveredChestGuidanceRange.coerceIn(8.0, trackerDiscoveredChestRange)
@@ -117,10 +110,14 @@ data class OverwatchConfig(
         trackerDiscoveredNodeGuidanceRange = trackerDiscoveredNodeGuidanceRange.coerceIn(8.0, trackerDiscoveredNodeRange)
         questWaypointRange = questWaypointRange.coerceIn(64.0, 4000.0)
         trackerPingPitch = trackerPingPitch.coerceIn(0.5, 2.0)
-        trackerHudScale = trackerHudScale.coerceIn(0.5, 2.5)
         trackerWaypointScale = trackerWaypointScale.coerceIn(0.5, 2.5)
-        customPotionHudScale = customPotionHudScale.coerceIn(0.5, 2.5)
         trackerRules.forEach { it.minChestTier = it.minChestTier.coerceIn(0, 4) }
+        if (mountRegistry == null) mountRegistry = mutableMapOf()
+        hudLayouts.values.forEach {
+            it.scale = it.scale.coerceIn(0.5, 2.5)
+            it.barWidth = it.barWidth.coerceIn(0, 2000)
+            it.boxH = it.boxH.coerceIn(0, 2000)
+        }
         return this
     }
 

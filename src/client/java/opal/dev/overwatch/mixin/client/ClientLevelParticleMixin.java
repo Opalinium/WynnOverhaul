@@ -1,10 +1,8 @@
 package opal.dev.overwatch.mixin.client;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import opal.dev.overwatch.client.HotspotRingParticles;
 import opal.dev.overwatch.client.LootrunParticleFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ClientLevelParticleMixin {
 
     @Inject(method = "doAddParticle", at = @At("HEAD"))
-    private void overwatch$recordHotspotParticle(
+    private void overwatch$onAddParticle(
             ParticleOptions particleOptions,
             boolean alwaysVisible,
             boolean ignoreRange,
@@ -27,9 +25,7 @@ public abstract class ClientLevelParticleMixin {
             double zSpeed,
             CallbackInfo ci
     ) {
-        if (particleOptions instanceof DustParticleOptions dust) {
-            HotspotRingParticles.record(dust.getColor(), x, y, z);
-        } else if (particleOptions == ParticleTypes.FIREWORK) {
+        if (particleOptions == ParticleTypes.FIREWORK) {
             LootrunParticleFeature.INSTANCE.onParticle(x, y, z);
         }
     }

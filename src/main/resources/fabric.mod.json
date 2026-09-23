@@ -17,8 +17,6 @@
   "entrypoints": {
     "client": [
       "opal.dev.overwatch.client.OverwatchClient",
-      "opal.dev.overwatch.client.AutoFishClient",
-      "opal.dev.overwatch.client.PanicShutdown",
       "opal.dev.overwatch.client.EntityTrackerClient",
       "opal.dev.overwatch.client.WynnQolClient",
       "opal.dev.overwatch.client.DiscordRichPresence",

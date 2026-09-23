@@ -23,12 +23,13 @@ class OwCheckbox(
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val boxY = y + (height - BOX) / 2
-        val bg = if (checked) (if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM) else (if (isHovered) OwTheme.PANEL_RAISED else OwTheme.PANEL_ALT)
-        graphics.fill(x, boxY, x + BOX, boxY + BOX, bg)
-        graphics.outline(x, boxY, BOX, BOX, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.BORDER)
-        if (checked) {
-            graphics.fill(x + 3, boxY + 3, x + BOX - 3, boxY + BOX - 3, OwTheme.TEXT)
+        val sprite = when {
+            checked && isHovered -> OwTheme.CHECKBOX_SELECTED_HOVER_SPRITE
+            checked -> OwTheme.CHECKBOX_SELECTED_SPRITE
+            isHovered -> OwTheme.CHECKBOX_HOVER_SPRITE
+            else -> OwTheme.CHECKBOX_SPRITE
         }
+        OwTheme.drawTintedSprite(graphics, sprite, x, boxY, BOX, BOX, if (checked) OwTheme.ACCENT else OwTheme.SPRITE_TINT)
         val font = Minecraft.getInstance().font
         val textX = x + BOX + 8
         val text = truncateToWidth(font, message.string, x + width - textX)

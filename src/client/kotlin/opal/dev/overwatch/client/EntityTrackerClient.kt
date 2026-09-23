@@ -45,6 +45,8 @@ class EntityTrackerClient : ClientModInitializer {
     }
 
     private fun onTick(client: Minecraft) {
+        OverwatchGate.refresh(client)
+        if (!OverwatchGate.inGame) return
         val config = OverwatchConfig.current
 
         while (toggleKey.consumeClick()) {
