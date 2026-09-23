@@ -72,13 +72,15 @@ class OverwatchInventoryScreen(
     private val journal = ContentBookViewModel(ContentBookCache.snapshot ?: emptyList())
     private var journalBusy: Boolean = false
     private var charScrollY: Int = 0
+    private var journalScrollY: Int = 0
     private var journalSearchField: OwTextField? = null
     private var journalSortButton: OwButton? = null
-    private var journalFilterButton: OwButton? = null
-    private var journalPageLabel: OwLabel? = null
-    private var journalPrevButton: OwButton? = null
-    private var journalNextButton: OwButton? = null
+    private val journalCategoryButtons = ArrayList<Pair<OwButton, Int>>()
+    private var journalTrackButton: OwButton? = null
+    private var journalWikiButton: OwButton? = null
+    private var journalActionsTop: Int = 0
     private var journalRefreshButton: OwButton? = null
+    private var selectedJournal: ActivityInfo? = null
     private var hoveredChar: Int = -1
     private var hoveredJournal: JournalSlot? = null
     private val charWidgets = ArrayList<OwButton>()
@@ -90,6 +92,7 @@ class OverwatchInventoryScreen(
     private val charHoverZones = ArrayList<CharZone>()
     private val charWidgetRows = ArrayList<Pair<OwButton, Int>>()
     private val charPinnedWidgetRows = ArrayList<Pair<OwButton, Int>>()
+    private val charButtonSlots = ArrayList<Pair<OwButton, Int>>()
     private var charTickCounter = 0
     private var pendingTabFire: Pair<InvTab, () -> Boolean>? = null
     private var pendingTabFireTimeout: Int = 0
@@ -188,52 +191,60 @@ class OverwatchInventoryScreen(
             val gw = panelWidth() - MARGIN * 2
             val rowY = { dy: Int -> pt + CONTENT_TOP_REL + dy }
             val sortW = 72
-            journalSearchField = OwTextField(font, gx, rowY(JOURNAL_SEARCH_Y), gw - sortW - 4, SEARCH_H).also {
+            val refreshW = 56
+            journalSearchField = OwTextField(font, gx, rowY(0), gw - sortW - refreshW - 8, SEARCH_H).also {
                 it.setValue(journal.query)
-                it.setResponder { v -> journal.query = v; journal.page = 0; rebuildWidgets() }
+                it.setResponder { v -> journal.query = v; journalScrollY = 0; rebuildWidgets() }
                 addRenderableWidget(it)
             }
-            journalSortButton = OwButton(gx + gw - sortW, rowY(JOURNAL_SEARCH_Y), sortW, SEARCH_H, Component.literal(journal.sort.label)) {
+            journalSortButton = OwButton(gx + gw - sortW - refreshW - 4, rowY(0), sortW, SEARCH_H, Component.literal(journal.sort.label)) {
                 journal.cycleSort()
                 rebuildWidgets()
             }.also { addRenderableWidget(it) }
-            journalFilterButton = OwButton(gx, rowY(JOURNAL_FILTER_Y), gw, SEARCH_H, Component.literal("Filter: ${journal.filter ?: "All"}")) {
-                journal.cycleFilter()
-                rebuildWidgets()
-            }.also { addRenderableWidget(it) }
-            if (journal.pageCount() > 1) {
-                journalPrevButton = OwButton(gx, rowY(JOURNAL_ACTION_Y), 20, SEARCH_H, Component.literal("<")) {
-                    journal.page = (journal.page - 1).mod(journal.pageCount())
-                    rebuildWidgets()
-                }.also { addRenderableWidget(it) }
-                journalPageLabel = OwLabel(gx + 22, rowY(JOURNAL_ACTION_Y), 64, SEARCH_H, "${journal.page + 1}/${journal.pageCount()}", OwTheme.TEXT_DIM).also {
-                    addRenderableWidget(it)
-                }
-                journalNextButton = OwButton(gx + 88, rowY(JOURNAL_ACTION_Y), 20, SEARCH_H, Component.literal(">")) {
-                    journal.page = (journal.page + 1).mod(journal.pageCount())
-                    rebuildWidgets()
-                }.also { addRenderableWidget(it) }
-            } else {
-                journalPrevButton = null
-                journalPageLabel = null
-                journalNextButton = null
-            }
-            journalRefreshButton = OwButton(gx + gw - 64, rowY(JOURNAL_ACTION_Y), 64, SEARCH_H, Component.literal("Refresh")) {
+            journalRefreshButton = OwButton(gx + gw - refreshW, rowY(0), refreshW, SEARCH_H, Component.literal("Refresh")) {
                 refreshJournal()
             }.also { addRenderableWidget(it) }
+
+            journalCategoryButtons.clear()
+            val header = computeJournalHeader(gw)
+            for (chip in header.chips) {
+                val button = OwButton(gx + chip.x, rowY(chip.y), chip.w, JOURNAL_TAB_H, Component.literal(chip.value ?: "All"), accent = journal.filter == chip.value) {
+                    journal.selectFilter(chip.value)
+                    journalScrollY = 0
+                    rebuildWidgets()
+                }.also { addRenderableWidget(it) }
+                journalCategoryButtons.add(button to chip.y)
+            }
+
+            journalActionsTop = header.actionsTop
+            val selected = selectedJournal
+            if (selected != null) {
+                journalTrackButton = OwButton(
+                    gx, rowY(header.actionsTop), 120, JOURNAL_ACTION_BTN_H, Component.literal(trackLabel(selected)),
+                    enabled = { selected.trackingState != ActivityTrackingState.UNTRACKABLE },
+                ) {
+                    toggleJournalTrack(selected)
+                }.also { addRenderableWidget(it) }
+                journalWikiButton = OwButton(gx + 124, rowY(header.actionsTop), 100, JOURNAL_ACTION_BTN_H, Component.literal("Wiki Info")) {
+                    Minecraft.getInstance().setScreenAndShow(OverwatchQuestWikiScreen(selected.type, selected.name, this))
+                }.also { addRenderableWidget(it) }
+            } else {
+                journalTrackButton = null
+                journalWikiButton = null
+            }
         } else {
             journalSearchField = null
             journalSortButton = null
-            journalFilterButton = null
-            journalPageLabel = null
-            journalPrevButton = null
-            journalNextButton = null
+            journalCategoryButtons.clear()
+            journalTrackButton = null
+            journalWikiButton = null
             journalRefreshButton = null
         }
         if (invTab == InvTab.CHARACTER) {
             charWidgets.clear()
             charWidgetRows.clear()
             charPinnedWidgetRows.clear()
+            charButtonSlots.clear()
             val menu = characterMenu
             charSnapshot = menu?.let { CharacterMenuModel.snapshot(it) } ?: CharacterMenuModel.lastSnapshot
             val snap = charSnapshot
@@ -271,7 +282,11 @@ class OverwatchInventoryScreen(
                         charWidgets.add(
                             OwButton(bx, by, w, OPENER_BTN_H, Component.literal(label), accent = true, icon = charSlotStack(slot), iconScale = iconScale) {
                                 sendCharInput(slot, 0, ContainerInput.PICKUP)
-                            }.also { addRenderableWidget(it); charPinnedWidgetRows.add(it to CHAR_MENU_ROW_Y) },
+                            }.also {
+                                addRenderableWidget(it)
+                                charPinnedWidgetRows.add(it to CHAR_MENU_ROW_Y)
+                                charButtonSlots.add(it to slot)
+                            },
                         )
                     }
                 }
@@ -293,7 +308,7 @@ class OverwatchInventoryScreen(
                     charWidgets.add(
                         OwButton(rightX, by, rightW, OPENER_BTN_H, Component.literal("Reset Skills"), icon = charSlotStack(crystal)) {
                             sendCharInput(crystal, 0, ContainerInput.QUICK_MOVE)
-                        }.also { addRenderableWidget(it); charWidgetRows.add(it to wy) },
+                        }.also { addRenderableWidget(it); charWidgetRows.add(it to wy); charButtonSlots.add(it to crystal) },
                     )
                 }
             }
@@ -301,6 +316,7 @@ class OverwatchInventoryScreen(
             charWidgets.clear()
             charWidgetRows.clear()
             charPinnedWidgetRows.clear()
+            charButtonSlots.clear()
         }
         if (invTab == InvTab.SETTINGS) {
             panels.buildTabs(ox + MARGIN, panelWidth() - MARGIN * 2, pt + CONTENT_TOP_REL)
@@ -349,13 +365,12 @@ class OverwatchInventoryScreen(
                 val pt = panelTopFor(it.panelH)
                 for (button in tabButtons) button.y = pt + TAB_Y_REL
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
-                journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL + JOURNAL_SEARCH_Y }
-                journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL + JOURNAL_SEARCH_Y }
-                journalFilterButton?.let { button -> button.y = pt + CONTENT_TOP_REL + JOURNAL_FILTER_Y }
-                journalPrevButton?.let { button -> button.y = pt + CONTENT_TOP_REL + JOURNAL_ACTION_Y }
-                journalPageLabel?.let { label -> label.y = pt + CONTENT_TOP_REL + JOURNAL_ACTION_Y }
-                journalNextButton?.let { button -> button.y = pt + CONTENT_TOP_REL + JOURNAL_ACTION_Y }
-                journalRefreshButton?.let { button -> button.y = pt + CONTENT_TOP_REL + JOURNAL_ACTION_Y }
+                journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL }
+                journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
+                journalRefreshButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
+                for ((button, relY) in journalCategoryButtons) button.y = pt + CONTENT_TOP_REL + relY
+                journalTrackButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
+                journalWikiButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
                 drawOuterPanel(graphics, pt, it.panelH)
                 when (invTab) {
                     InvTab.INVENTORY -> {
@@ -388,7 +403,10 @@ class OverwatchInventoryScreen(
         super.extractRenderState(graphics, mouseX, mouseY, partialTick)
 
         if (invTab == InvTab.INVENTORY) drawHoverAndTooltip(graphics, layout)
-        if (invTab == InvTab.CHARACTER) drawCharHoverAndTooltip(graphics, layout)
+        if (invTab == InvTab.CHARACTER) {
+            drawCharHoverAndTooltip(graphics, layout)
+            drawCharButtonTooltip(graphics)
+        }
         if (invTab == InvTab.JOURNAL) drawJournalHoverAndTooltip(graphics)
         if (invTab == InvTab.INVENTORY) drawCarried(graphics, mouseX, mouseY, menu.carried)
     }
@@ -481,18 +499,16 @@ class OverwatchInventoryScreen(
         }
         val journalSlotsOut = ArrayList<JournalSlot>()
         if (invTab == InvTab.JOURNAL) {
-            for ((i, a) in journal.pageItems().withIndex()) {
-                val col = i % ContentBookViewModel.COLS
-                val row = i / ContentBookViewModel.COLS
-                journalSlotsOut.add(
-                    JournalSlot(
-                        x + col * ContentBookViewModel.SLOT_PITCH,
-                        JOURNAL_GRID_Y + row * ContentBookViewModel.SLOT_PITCH,
-                        a,
-                    ),
-                )
+            val header = computeJournalHeader(w)
+            val results = journal.results()
+            val cols = ContentBookViewModel.LIST_COLS
+            val colW = w / cols
+            for ((i, a) in results.withIndex()) {
+                val col = i % cols
+                val row = i / cols
+                journalSlotsOut.add(JournalSlot(x + col * colW, header.listTop + row * ContentBookViewModel.ROW_H, a))
             }
-            y = JOURNAL_H
+            y = header.listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H + SECTION_GAP
         }
         val charTilesOut = ArrayList<PlacedTile>()
         if (invTab == InvTab.CHARACTER) {
@@ -726,7 +742,7 @@ class OverwatchInventoryScreen(
     }
 
     private fun panelWidth(): Int =
-        if (invTab == InvTab.CHARACTER) {
+        if (invTab == InvTab.CHARACTER || invTab == InvTab.JOURNAL) {
             (width * 0.55).toInt().coerceIn(560, 640).coerceAtMost((width - 20).coerceAtLeast(200))
         } else if (invTab == InvTab.SETTINGS) {
             (width * 0.46).toInt().coerceIn(460, 560).coerceAtMost((width - 20).coerceAtLeast(200))
@@ -1037,6 +1053,7 @@ class OverwatchInventoryScreen(
         OverwatchInventory.pendingTransitionTab = null
         characterMenu = menu
         combatInfoPager.reset()
+        identityCache = null
         if (invTab == InvTab.CHARACTER) rebuildWidgets()
     }
 
@@ -1123,7 +1140,6 @@ class OverwatchInventoryScreen(
         )
     }
 
-    private val dockedStackCache = HashMap<Int, ItemStack>()
 
     private fun dockedStack(slot: Int): ItemStack {
         val live = if (slot in 0 until menu.slots.size) menu.slots[slot].item else ItemStack.EMPTY
@@ -1170,33 +1186,56 @@ class OverwatchInventoryScreen(
 
     private fun findJournalSlot(layout: Layout, x: Int, y: Int): JournalSlot? {
         if (x < layout.gridX || x >= layout.gridX + layout.gridW) return null
-        if (y < layout.scrollTop || y >= layout.scrollBottom) return null
-        val contentY = y + scrollY - layout.scrollTop
-        val s = ContentBookViewModel.SLOT_SIZE
-        return layout.journalSlots.firstOrNull { x in it.x until it.x + s && contentY in it.y until it.y + s }
+        val header = computeJournalHeader(layout.gridW)
+        val listTop = layout.scrollTop + header.listTop
+        val listBottom = minOf(layout.scrollBottom, listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H)
+        if (y < listTop || y >= listBottom) return null
+        val contentY = y + journalScrollY - layout.scrollTop
+        val colW = layout.gridW / ContentBookViewModel.LIST_COLS
+        return layout.journalSlots.firstOrNull { x in it.x until it.x + colW && contentY in it.y until it.y + ContentBookViewModel.ROW_H }
     }
 
     private fun drawJournalContent(graphics: GuiGraphicsExtractor, player: Player?, layout: Layout) {
         drawFloatingCharacter(graphics, player, layout)
-        val s = ContentBookViewModel.SLOT_SIZE
-        graphics.text(font, "JOURNAL", layout.gridX, layout.scrollTop + 2, OwTheme.ACCENT)
-        if (journalMenu == null && journal.activities.isEmpty()) {
-            graphics.text(font, "Opening the Content Book...", layout.gridX, layout.scrollTop + JOURNAL_GRID_Y, OwTheme.TEXT_DIM)
+        val gx = layout.gridX
+        val gw = layout.gridW
+        val top = layout.scrollTop
+        graphics.text(font, "JOURNAL", gx, top + 2, OwTheme.ACCENT)
+        val header = computeJournalHeader(gw)
+        for ((i, line) in header.detailLines.take(JOURNAL_MAX_DETAIL_LINES).withIndex()) {
+            graphics.text(font, trimToWidth(line.text, gw), gx, top + header.detailTop + i * JOURNAL_DETAIL_LINE_H, line.color)
         }
-        graphics.enableScissor(layout.gridX, layout.scrollTop, layout.gridX + layout.gridW, layout.scrollBottom)
+        graphics.text(font, journal.statusLine(), gx, top + header.statusTop, OwTheme.TEXT_DIM)
+        val listTop = top + header.listTop
+        val listBottom = minOf(layout.scrollBottom, listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H)
+        if (journalMenu == null && journal.activities.isEmpty()) {
+            graphics.text(font, "Opening the Content Book...", gx, listTop, OwTheme.TEXT_DIM)
+        }
+        val colW = gw / ContentBookViewModel.LIST_COLS
+        graphics.enableScissor(gx, listTop, gx + gw, listBottom)
         for (slot in layout.journalSlots) {
-            val sy = slot.y - scrollY + layout.scrollTop
-            if (sy + s <= layout.scrollTop || sy >= layout.scrollBottom) continue
-            val a = slot.activity
-            val bg = if (slot == hoveredJournal) OwTheme.TILE_HOVER else OwTheme.TILE_BG
-            graphics.fill(slot.x, sy, slot.x + s, sy + s, bg)
-            val border = (a.type.colorArgb and 0xFFFFFF) or 0xFF000000.toInt()
-            graphics.outline(slot.x, sy, s, s, border)
-            graphics.item(a.icon, slot.x + (s - 16) / 2, sy + (s - 16) / 2)
-            graphics.fill(slot.x + 2, sy + s - 3, slot.x + s - 2, sy + s - 1, statusColorArgb(a.status))
+            val sy = slot.y - journalScrollY + top
+            if (sy + ContentBookViewModel.ROW_H <= listTop || sy >= listBottom) continue
+            drawJournalRow(graphics, slot.x, sy, colW, slot.activity, slot == hoveredJournal)
         }
         graphics.disableScissor()
-        graphics.text(font, journal.statusLine(), layout.gridX, layout.scrollTop + JOURNAL_STATUS_Y, OwTheme.TEXT_DIM)
+    }
+
+    private fun drawJournalRow(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, a: ActivityInfo, hovered: Boolean) {
+        val rowH = ContentBookViewModel.ROW_H - 2
+        val selected = a === selectedJournal
+        val bg = when {
+            selected -> OwTheme.TILE_HOVER
+            hovered -> OwTheme.PANEL_RAISED
+            else -> OwTheme.TILE_BG
+        }
+        graphics.fill(x, y, x + w - 2, y + rowH, bg)
+        graphics.outline(x, y, w - 2, rowH, if (selected) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
+        graphics.item(a.icon, x + 2, y + 1)
+        val prefix = if (a.trackingState == ActivityTrackingState.TRACKED) "* " else ""
+        val name = trimToWidth("$prefix${a.name}", w - 22 - 10)
+        graphics.text(font, name, x + 22, y + (rowH - 8) / 2, (a.type.colorArgb and 0xFFFFFF) or 0xFF000000.toInt())
+        graphics.fill(x + w - 8, y + 2, x + w - 4, y + rowH - 2, statusColorArgb(a.status))
     }
 
     private fun drawJournalHoverAndTooltip(graphics: GuiGraphicsExtractor) {
@@ -1212,7 +1251,8 @@ class OverwatchInventoryScreen(
             return true
         }
         if (button != 0) return true
-        toggleJournalTrack(slot.activity)
+        selectedJournal = slot.activity
+        rebuildWidgets()
         return true
     }
 
@@ -1262,6 +1302,12 @@ class OverwatchInventoryScreen(
         ActivityStatus.COMPLETED -> "Completed"
     }
 
+    private fun trackLabel(a: ActivityInfo): String = when (a.trackingState) {
+        ActivityTrackingState.TRACKED -> "Untrack"
+        ActivityTrackingState.TRACKABLE -> "Track"
+        ActivityTrackingState.UNTRACKABLE -> "Can't Track"
+    }
+
     private fun statusColor(status: ActivityStatus): ChatFormatting = when (status) {
         ActivityStatus.STARTED -> ChatFormatting.YELLOW
         ActivityStatus.AVAILABLE -> ChatFormatting.AQUA
@@ -1286,6 +1332,77 @@ class OverwatchInventoryScreen(
         }
         if (current.isNotEmpty()) lines.add(current.toString())
         return lines
+    }
+
+    private data class CategoryChip(val x: Int, val y: Int, val w: Int, val value: String?)
+
+    private fun journalCategoryChips(left: Int, top: Int, width: Int): List<CategoryChip> {
+        val chips = ArrayList<CategoryChip>()
+        var cx = left
+        var cy = top
+        for (value in journal.filterOptions()) {
+            val label = value ?: "All"
+            val chipW = font.width(label) + 12
+            if (cx != left && cx + chipW > left + width) {
+                cx = left
+                cy += JOURNAL_TAB_H + 2
+            }
+            chips.add(CategoryChip(cx, cy, chipW, value))
+            cx += chipW + 2
+        }
+        return chips
+    }
+
+    private data class DetailLine(val text: String, val color: Int)
+
+    private fun buildJournalDetailLines(a: ActivityInfo, maxWidth: Int): List<DetailLine> {
+        val lines = ArrayList<DetailLine>()
+        lines.add(DetailLine(a.name, a.type.colorArgb))
+        lines.add(DetailLine("${a.type.filterName} -- ${statusLabel(a.status)}", statusColorArgb(a.status)))
+        a.specialInfo?.let { lines.add(DetailLine(it, OwTheme.TEXT_DIM)) }
+        a.description?.let { desc -> for (w in wrapLines(desc, maxWidth)) lines.add(DetailLine(w, OwTheme.TEXT_DIM)) }
+        if (a.levelReq > 0) {
+            lines.add(DetailLine("Combat Lv. Min: ${a.levelReq}", if (a.levelReqFulfilled) OwTheme.GOOD else OwTheme.BAD))
+        }
+        for (req in a.professionReqs) {
+            lines.add(DetailLine("${req.profession} Lv. Min: ${req.level}", if (req.fulfilled) OwTheme.GOOD else OwTheme.BAD))
+        }
+        for (req in a.questReqs) {
+            lines.add(DetailLine("Quest: ${req.questName}", if (req.fulfilled) OwTheme.GOOD else OwTheme.BAD))
+        }
+        a.length?.let { lines.add(DetailLine("Length: ${it.name.lowercase().replaceFirstChar(Char::uppercase)}", OwTheme.TEXT_DIM)) }
+        a.distance?.let { lines.add(DetailLine("Distance: ${it.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)}", OwTheme.TEXT_DIM)) }
+        a.difficulty?.let { lines.add(DetailLine("Difficulty: ${it.name.lowercase().replaceFirstChar(Char::uppercase)}", OwTheme.TEXT_DIM)) }
+        if (a.rewards.isNotEmpty()) {
+            lines.add(DetailLine("Rewards", OwTheme.ACCENT))
+            for ((_, items) in a.rewards) for (reward in items) lines.add(DetailLine("- $reward", OwTheme.TEXT))
+        }
+        return lines
+    }
+
+    private data class JournalHeader(
+        val chips: List<CategoryChip>,
+        val detailLines: List<DetailLine>,
+        val detailTop: Int,
+        val actionsTop: Int,
+        val statusTop: Int,
+        val listTop: Int,
+    )
+
+    private fun computeJournalHeader(width: Int): JournalHeader {
+        val chips = journalCategoryChips(0, JOURNAL_ROW1_H + JOURNAL_SECTION_GAP, width)
+        val chipsBottom = (chips.maxOfOrNull { it.y } ?: (JOURNAL_ROW1_H + JOURNAL_SECTION_GAP)) + JOURNAL_TAB_H
+        val detailTop = chipsBottom + JOURNAL_SECTION_GAP
+        val selected = selectedJournal
+        val detailLines = if (selected != null) {
+            buildJournalDetailLines(selected, width - 8)
+        } else {
+            listOf(DetailLine("Select an activity from the list below to see its details.", OwTheme.TEXT_DIM))
+        }
+        val actionsTop = detailTop + minOf(detailLines.size, JOURNAL_MAX_DETAIL_LINES) * JOURNAL_DETAIL_LINE_H + 4
+        val statusTop = actionsTop + JOURNAL_ACTION_BTN_H + JOURNAL_SECTION_GAP
+        val listTop = statusTop + 12
+        return JournalHeader(chips, detailLines, detailTop, actionsTop, statusTop, listTop)
     }
 
 
@@ -1400,6 +1517,18 @@ class OverwatchInventoryScreen(
         if (stack.isEmpty) return
         if (!(characterMenu?.carried?.isEmpty ?: true)) return
         graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
+    }
+
+    private fun drawCharButtonTooltip(graphics: GuiGraphicsExtractor) {
+        if (hoveredChar >= 0) return
+        if (!(characterMenu?.carried?.isEmpty ?: true)) return
+        for ((button, slot) in charButtonSlots) {
+            if (!button.visible || !button.isMouseOver(mouseX.toDouble(), mouseY.toDouble())) continue
+            val stack = charSlotStack(slot)
+            if (stack.isEmpty) return
+            graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
+            return
+        }
     }
 
     private fun characterClick(x: Int, y: Int, button: Int, event: MouseButtonEvent): Boolean {
@@ -1576,21 +1705,32 @@ class OverwatchInventoryScreen(
         }
     }
 
+    private var identityCache: List<Pair<String, Int>>? = null
+
     private fun readCharacterStats(menu: AbstractContainerMenu): List<Pair<String, Int>> {
         val lines = ArrayList<Pair<String, Int>>()
         val total = menu.slots.size
         val ownSlots = if (total > PLAYER_INV_SIZE) total - PLAYER_INV_SIZE else total
         for (slot in 0 until ownSlots) {
             val stack = menu.slots[slot].item
-            if (stack.isEmpty) continue
+            if (stack.isEmpty) {
+                if (slot == combatInfoPager.slot) identityCache?.let { lines.addAll(it) }
+                continue
+            }
             val lore = WynnItemRarity.loreLines(stack)
-            if (lore.isEmpty()) continue
+            if (lore.isEmpty()) {
+                if (slot == combatInfoPager.slot) identityCache?.let { lines.addAll(it) }
+                continue
+            }
             when {
                 lore.any { it.startsWith("Total Lv:") } -> {
-                    lines.add(stripCodes(stack.hoverName.string).trim() to slot)
+                    val identityLines = ArrayList<Pair<String, Int>>()
+                    identityLines.add(stripCodes(stack.hoverName.string).trim() to slot)
                     for (key in PLAYER_STAT_KEYS) {
-                        lore.firstOrNull { it.startsWith(key) }?.let { lines.add("  $it" to slot) }
+                        lore.firstOrNull { it.startsWith(key) }?.let { identityLines.add("  $it" to slot) }
                     }
+                    identityCache = identityLines
+                    lines.addAll(identityLines)
                     if (combatInfoPager.done) {
                         val combat = combatInfoPager.result()
                         if (combat.isNotEmpty()) {
@@ -1835,11 +1975,9 @@ class OverwatchInventoryScreen(
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
         }
         if (invTab == InvTab.JOURNAL) {
-            val n = journal.pageCount()
-            if (n > 1) {
-                journal.page = (journal.page - scrollY.toInt()).mod(n)
-                rebuildWidgets()
-            }
+            val rowCount = (journal.results().size + ContentBookViewModel.LIST_COLS - 1) / ContentBookViewModel.LIST_COLS
+            val maxScroll = (maxOf(0, rowCount - JOURNAL_LIST_ROWS) * ContentBookViewModel.ROW_H)
+            this.journalScrollY = (this.journalScrollY - scrollY * SCROLL_STEP).toInt().coerceIn(0, maxScroll)
             return true
         }
         if (invTab == InvTab.CHARACTER) {
@@ -1920,6 +2058,8 @@ class OverwatchInventoryScreen(
     override fun panelContentBottom(): Int = if (invTab == InvTab.SETTINGS) settingsPanelBottom else height - MARGIN
 
     companion object {
+        private val dockedStackCache = HashMap<Int, ItemStack>()
+        fun clearDockedCache() = dockedStackCache.clear()
         const val MARGIN = 10
         const val GAP = 8
         const val TAB_W = 64
@@ -1934,12 +2074,13 @@ class OverwatchInventoryScreen(
         const val PREVIEW_H = 140
         const val PREVIEW_ENTITY_SIZE = 52
         const val ROW_H = 20
-        const val JOURNAL_SEARCH_Y = 14
-        const val JOURNAL_FILTER_Y = 36
-        const val JOURNAL_GRID_Y = 60
-        const val JOURNAL_STATUS_Y = 182
-        const val JOURNAL_ACTION_Y = 198
-        const val JOURNAL_H = 214
+        const val JOURNAL_ROW1_H = 16
+        const val JOURNAL_SECTION_GAP = 6
+        const val JOURNAL_TAB_H = 16
+        const val JOURNAL_DETAIL_LINE_H = 10
+        const val JOURNAL_MAX_DETAIL_LINES = 16
+        const val JOURNAL_ACTION_BTN_H = 18
+        const val JOURNAL_LIST_ROWS = 11
         const val CHARACTER_GRID_Y = 72
         const val STATS_ROW_H = 11
         const val SKILL_ROW_H = 22

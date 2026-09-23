@@ -30,7 +30,7 @@ class EntityTrackerClient : ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(::onTick)
         LevelRenderEvents.END_MAIN.register { ctx -> TrackerEsp.capture(ctx) }
-        HudElementRegistry.addLast(
+        HudElementRegistry.addFirst(
             Identifier.fromNamespaceAndPath("overwatch", "entity_tracker_esp"),
             TrackerEspHudElement(),
         )

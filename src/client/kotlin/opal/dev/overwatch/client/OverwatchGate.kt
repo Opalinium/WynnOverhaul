@@ -26,6 +26,7 @@ object OverwatchGate {
         val inGameNow = onWynn && fresh
         if (inGame && !inGameNow) {
             CharacterMenuModel.clearSnapshot()
+            OverwatchInventoryScreen.clearDockedCache()
             WynnLevelTracker.clear()
             WynnVitalsTracker.clear()
             WynnSprintTracker.clear()

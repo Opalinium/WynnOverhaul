@@ -48,6 +48,8 @@ object CharacterMenuModel {
                     openers.add("Recruit a Friend" to slot)
                 letters.contains("Daily Reward", ignoreCase = true) ->
                     openers.add("Daily Reward" to slot)
+                letters.contains("Store", ignoreCase = true) && letters.contains("Wardrobe", ignoreCase = true) ->
+                    openers.add("Store" to slot)
                 else -> skillFor(letters)?.let { name ->
                     val confirm = isSkillConfirm(stack)
                     val pp = skillPoints(stack)

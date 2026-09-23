@@ -13,6 +13,7 @@ import opal.dev.overwatch.Overwatch
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import kotlin.math.floor
+import kotlin.math.sqrt
 
 object TrackerEsp {
 
@@ -23,7 +24,6 @@ object TrackerEsp {
         val distance: Float,
         val label: String,
         val argb: Int,
-        val isChest: Boolean,
     )
 
     @Volatile
@@ -65,6 +65,7 @@ object TrackerEsp {
             val cam = ctx.levelState().cameraRenderState
             val camPos = cam.pos ?: return
             val vp = Matrix4f(cam.projectionMatrix).mul(cam.viewRotationMatrix)
+            val view = cam.viewRotationMatrix
             val clip = Vector4f()
 
             val now = System.nanoTime()
@@ -72,20 +73,20 @@ object TrackerEsp {
             val out = ArrayList<Waypoint>(liveMatches.size + discoveredMatches.size + questMatches.size + lootrunMatches.size)
 
             for (match in liveMatches) {
-                projectWaypoint(match, level, player, camPos, vp, clip, now, out)
+                projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
             }
             if (discoveredMatches.isNotEmpty() && player != null) {
                 val guidanceRangeSqr = config.trackerDiscoveredChestGuidanceRange * config.trackerDiscoveredChestGuidanceRange
                 for (match in discoveredMatches) {
                     if (player.distanceToSqr(match.center()) > guidanceRangeSqr) continue
-                    projectWaypoint(match, level, player, camPos, vp, clip, now, out)
+                    projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
                 }
             }
             for (match in questMatches) {
-                projectWaypoint(match, level, player, camPos, vp, clip, now, out)
+                projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
             }
             for (match in lootrunMatches) {
-                projectWaypoint(match, level, player, camPos, vp, clip, now, out)
+                projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
             }
 
             waypoints = out
@@ -104,6 +105,7 @@ object TrackerEsp {
         player: LocalPlayer?,
         camPos: Vec3,
         vp: Matrix4f,
+        view: Matrix4f,
         clip: Vector4f,
         now: Long,
         out: MutableList<Waypoint>,
@@ -121,7 +123,20 @@ object TrackerEsp {
         val az = (box.minZ + box.maxZ) * 0.5
         val ay = box.maxY + WAYPOINT_Y_OFFSET
 
-        vp.transform((ax - camPos.x).toFloat(), (ay - camPos.y).toFloat(), (az - camPos.z).toFloat(), 1.0f, clip)
+        var dx = ax - camPos.x
+        var dy = ay - camPos.y
+        var dz = az - camPos.z
+        val len = sqrt(dx * dx + dy * dy + dz * dz)
+        if (len > MAX_PROJECT_DISTANCE) {
+            val k = MAX_PROJECT_DISTANCE / len
+            dx *= k
+            dy *= k
+            dz *= k
+        }
+
+        view.transform(dx.toFloat(), dy.toFloat(), dz.toFloat(), 1.0f, clip)
+        val behind = -clip.z < FORWARD_MIN
+        vp.transform(dx.toFloat(), dy.toFloat(), dz.toFloat(), 1.0f, clip)
 
         var w = clip.w
         var flip = false
@@ -135,10 +150,10 @@ object TrackerEsp {
             ndcX = -ndcX
             ndcY = -ndcY
         }
-        val onScreen = !flip && ndcX in -EDGE..EDGE && ndcY in -EDGE..EDGE
+        val onScreen = !behind && !flip && ndcX >= -1f && ndcX < 1f && ndcY >= -1f && ndcY < 1f
         val distance = player?.position()?.distanceTo(center)?.toFloat() ?: 0f
 
-        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb, isChest = match.anchor == null))
+        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb))
     }
 
     private fun losKey(match: EntityTracker.Match): Long {
@@ -169,6 +184,7 @@ object TrackerEsp {
 
     private const val LOS_REFRESH_NANOS = 150_000_000L
     private const val EPS = 1.0e-4f
-    private const val EDGE = 0.97f
+    private const val FORWARD_MIN = 0.05f
+    private const val MAX_PROJECT_DISTANCE = 250000.0
     private const val WAYPOINT_Y_OFFSET = 0.35
 }
