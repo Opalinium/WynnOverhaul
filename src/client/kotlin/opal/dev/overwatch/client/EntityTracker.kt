@@ -736,7 +736,7 @@ object EntityTracker {
     private fun ping(client: Minecraft, config: OverwatchConfig, newly: List<Match>) {
         if (config.trackerPingSound) {
             client.soundManager.play(
-                SimpleSoundInstance.forUI(pingSound(config), config.trackerPingPitch.toFloat(), 0.6f),
+                SimpleSoundInstance.forUI(pingSound(config), config.trackerPingPitch.toFloat(), config.trackerPingVolume.toFloat()),
             )
         }
         if (config.trackerPingChat) {

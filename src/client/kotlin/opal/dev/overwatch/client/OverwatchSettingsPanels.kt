@@ -20,12 +20,20 @@ class OverwatchSettingsPanels(private val host: Host) {
     }
 
     enum class Group(val label: String) {
-        TRACKER("Tracker"),
         HUD("HUD"),
+        NOTIFICATIONS("Notifications"),
+        TRACKER("Tracker"),
+        ANIMATIONS("Animations"),
+        CAMERA("Camera"),
         QOL("QoL"),
         LOOTRUN("Lootrun"),
         DISCORD("Discord"),
-        OVERRIDES("Overrides"),
+        OVERRIDES("Advanced"),
+    }
+
+    enum class NotificationTab(val label: String) {
+        TOASTS("Toasts"),
+        ALERTS("Alerts"),
     }
 
     enum class TrackerTab(val label: String) {
@@ -39,6 +47,10 @@ class OverwatchSettingsPanels(private val host: Host) {
     private var activeGroup: Group = Group.QOL
     private var activeTrackerTab: TrackerTab = TrackerTab.GENERAL
     private var trackerRulesPage = 0
+    private var activeNotificationTab: NotificationTab = NotificationTab.TOASTS
+    private var activeToastKind: OverwatchToastQueue.Kind = OverwatchToastQueue.Kind.QUEST
+
+    val animationsActive: Boolean get() = activeGroup == Group.ANIMATIONS
 
     private var trackerStatusLabel: OwLabel? = null
     private var trackerRulesStatusLabel: OwLabel? = null
@@ -65,7 +77,25 @@ class OverwatchSettingsPanels(private val host: Host) {
             cy += 6
         }
 
+        if (activeGroup == Group.NOTIFICATIONS) {
+            cy = drawTabRow(NotificationTab.entries, contentLeft, contentW, cy, { it.label }, { it == activeNotificationTab }) {
+                activeNotificationTab = it
+                host.rebuildPanels()
+            }
+            if (activeNotificationTab == NotificationTab.TOASTS) {
+                cy = drawTabRow(OverwatchToastQueue.Kind.entries, contentLeft, contentW, cy, { it.label }, { it == activeToastKind }, sub = true) {
+                    activeToastKind = it
+                    host.rebuildPanels()
+                }
+            }
+            cy += 6
+        }
+
         when (activeGroup) {
+            Group.NOTIFICATIONS -> when (activeNotificationTab) {
+                NotificationTab.TOASTS -> buildToastsTab(contentLeft, contentW, cy)
+                NotificationTab.ALERTS -> buildAlertsTab(contentLeft, contentW, cy)
+            }
             Group.TRACKER -> when (activeTrackerTab) {
                 TrackerTab.GENERAL -> buildTrackerTab(contentLeft, contentW, cy)
                 TrackerTab.RULES -> buildRulesTab(contentLeft, contentW, cy)
@@ -73,6 +103,8 @@ class OverwatchSettingsPanels(private val host: Host) {
                 TrackerTab.DISCOVERED -> buildDiscoveredTab(contentLeft, contentW, cy)
             }
             Group.QOL -> buildQolTab(contentLeft, contentW, cy)
+            Group.ANIMATIONS -> buildAnimationsTab(contentLeft, contentW, cy)
+            Group.CAMERA -> buildCameraTab(contentLeft, contentW, cy)
             Group.HUD -> buildHudTab(contentLeft, contentW, cy)
             Group.LOOTRUN -> buildLootrunTab(contentLeft, contentW, cy)
             Group.DISCORD -> buildDiscordTab(contentLeft, contentW, cy)
@@ -433,15 +465,7 @@ class OverwatchSettingsPanels(private val host: Host) {
             config.trackerWaypointScale = it
         }
 
-        header("New-Match Alerts")
-        checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
-        checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }
-        cycleButton({ "Ping sound: ${soundLabel()}" }, "Sound played when an entity starts matching. Click to cycle (plays a preview).") {
-            val i = SOUND_PRESETS.indexOfFirst { it.second == config.trackerPingSoundId }
-            config.trackerPingSoundId = SOUND_PRESETS[(i + 1).mod(SOUND_PRESETS.size)].second
-            previewTrackerSound()
-        }
-        slider("Ping pitch", 0.5, 2.0, 2, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
+        rows += OwLabel(left, 0, w, 10, "Ping sound and chat alerts are under Notifications > Alerts.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
 
         header("Tracked List HUD")
         checkbox("Show distance in HUD list", "", config.trackerHudShowDistance) { config.trackerHudShowDistance = it }
@@ -455,7 +479,7 @@ class OverwatchSettingsPanels(private val host: Host) {
         )
     }
 
-    private fun soundLabel(): String = SOUND_PRESETS.firstOrNull { it.second == config.trackerPingSoundId }?.first ?: config.trackerPingSoundId
+    private fun soundLabel(): String = NotificationSounds.label(config.trackerPingSoundId)
 
 
     private fun buildDiscoveredTab(left: Int, w: Int, top: Int) {
@@ -526,6 +550,114 @@ class OverwatchSettingsPanels(private val host: Host) {
         host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
+    private fun buildCameraTab(left: Int, w: Int, top: Int) {
+        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+
+        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
+            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
+            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += box to OwTheme.ROW_H
+        }
+
+        fun slider(label: String, min: Double, max: Double, value: Double, tooltip: String, onChange: (Double) -> Unit) {
+            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, 2, value, label, onChange)
+            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += s to OwTheme.ROW_H
+        }
+
+        rows += OwSectionHeader(left, 0, w, "Souls-style Camera") to 18
+        checkbox(
+            "Enable free orbit camera",
+            "Third-person camera that orbits your character independently of where you face. WASD moves relative to the camera and your character turns to run in that direction. Attacking and casting turn you toward the crosshair. Active in the third-person back view (F5); bind a key in Controls to toggle it.",
+            config.soulsCameraEnabled,
+        ) { config.soulsCameraEnabled = it }
+        checkbox(
+            "Show reticle",
+            "Draws the crosshair in third person so you can see what your attacks will target.",
+            config.soulsCameraReticle,
+        ) { config.soulsCameraReticle = it }
+        slider("Camera distance", 1.5, 12.0, config.soulsCameraDistance, "How far behind your character the camera sits.") { config.soulsCameraDistance = it }
+        slider("Camera height", -1.0, 2.0, config.soulsCameraHeight, "Raises or lowers the point the camera orbits, relative to your eyes.") { config.soulsCameraHeight = it }
+        slider("Shoulder offset", -1.5, 1.5, config.soulsCameraShoulder, "Shifts the camera sideways. Positive is over the right shoulder.") { config.soulsCameraShoulder = it }
+        slider("Look sensitivity", 0.2, 3.0, config.soulsCameraSensitivity, "Multiplier on top of your normal mouse sensitivity, camera only.") { config.soulsCameraSensitivity = it }
+        slider("Camera follow smoothing", 0.0, 1.0, config.soulsCameraSmoothing, "Lets the camera trail slightly behind your movement. 0 is rigid.") { config.soulsCameraSmoothing = it }
+        slider("Character turn speed", 0.15, 1.0, config.soulsCameraTurnSpeed, "How quickly your character swings to face the way you run. 1 is instant.") { config.soulsCameraTurnSpeed = it }
+        slider("Aim hold time (ms)", 0.0, 2000.0, config.soulsCameraFaceHoldMs, "How long your character keeps facing the crosshair after an attack or spell click before turning back to run. Raise it if spell combos get interrupted.") { config.soulsCameraFaceHoldMs = it }
+
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+    }
+
+    private fun buildAnimationsTab(left: Int, w: Int, top: Int) {
+        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+
+        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
+            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
+            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += box to OwTheme.ROW_H
+        }
+
+        fun header(label: String) {
+            rows += OwSectionHeader(left, 0, w, label) to 18
+        }
+
+        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
+            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
+                onPress()
+                host.rebuildPanels()
+            }
+            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += button to OwTheme.ROW_H
+        }
+
+        header("Weapon Animations")
+        checkbox(
+            "Weapon attack animations",
+            "Replaces your swing with a per-weapon animation (spear thrust, dagger slash, wand cast, relik sweep, bow draw) in first and third person. Cosmetic only, and only affects your own character.",
+            config.weaponAnimationsEnabled,
+        ) { config.weaponAnimationsEnabled = it }
+        checkbox(
+            "Weapon idle stance",
+            "Replaces the vanilla arm pose with a per-weapon hold (two-handed grip for spears, staves and firearms, guard raised after you attack, slight breathing sway) so swings ease in and out of it. Needs weapon attack animations on.",
+            config.weaponIdleEnabled,
+        ) { config.weaponIdleEnabled = it }
+        checkbox(
+            "Combo attacks",
+            "Chains different strokes as you attack (swipe left, right, thrust, twirl, then a finisher). Resets after a short pause.",
+            config.weaponAnimationCombo,
+        ) { config.weaponAnimationCombo = it }
+        checkbox(
+            "Spell animations",
+            "Plays a unique animation for each class spell (Bash, Heal, Arrow Storm, Spin Attack, Totem and the rest, including archetype variants) the moment Wynncraft announces the cast. Spells without a dedicated animation use a generic cast. Needs weapon attack animations on.",
+            config.weaponAnimationSpells,
+        ) { config.weaponAnimationSpells = it }
+        checkbox(
+            "Swing sound effects",
+            "Plays a local whoosh, and a heavier hit on finishers, timed to each stroke. Only you hear these.",
+            config.weaponAnimationSfx,
+        ) { config.weaponAnimationSfx = it }
+        val sfxSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationSfxVolume, "Swing sound volume") { config.weaponAnimationSfxVolume = it }
+        rows += sfxSlider to OwTheme.ROW_H
+        checkbox(
+            "Weapon afterimages",
+            "Leaves faint fading copies of your held weapon along the swing, drawn from its real item texture.",
+            config.weaponAnimationTrail,
+        ) { config.weaponAnimationTrail = it }
+        val trailSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.2, 1.5, 2, config.weaponAnimationTrailIntensity, "Afterimage opacity") { config.weaponAnimationTrailIntensity = it }
+        rows += trailSlider to OwTheme.ROW_H
+        cycleButton({ "Weapon animation models..." }, "Register weapon models and choose which animation each one uses.") {
+            Minecraft.getInstance().setScreenAndShow(OverwatchWeaponAnimationScreen(host.screen))
+        }
+        checkbox(
+            "Freeze animation (preview)",
+            "Debug: holds your held weapon's animation at the progress below so you can inspect a single pose. Progress 0 and 1 are the standby pose.",
+            config.weaponAnimationPreview,
+        ) { config.weaponAnimationPreview = it }
+        val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress") { config.weaponAnimationPreviewT = it }
+        rows += previewSlider to OwTheme.ROW_H
+
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+    }
+
 
     private fun buildQolTab(left: Int, w: Int, top: Int) {
         val rows = mutableListOf<Pair<AbstractWidget, Int>>()
@@ -562,6 +694,7 @@ class OverwatchSettingsPanels(private val host: Host) {
             config.qolPreventHotbarOverscroll,
         ) { config.qolPreventHotbarOverscroll = it }
 
+
         header("Nametags")
         checkbox(
             "Highlight party & friends",
@@ -587,23 +720,144 @@ class OverwatchSettingsPanels(private val host: Host) {
             "Shows a full feeding breakdown panel while the Mount Feeder menu is open and a mount is hovered.",
             config.mountFeederHudEnabled,
         ) { config.mountFeederHudEnabled = it }
-        checkbox(
-            "Mount pickup debug logging",
-            "Logs mounted action-bar traffic with pickup-like content to latest.log (escaped, readable). Turn on, ride through pickups, then share the MountPickupDebug lines.",
-            config.mountPickupDebug,
-        ) { config.mountPickupDebug = it }
 
         header("Inventory")
         checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory.", config.customInventoryEnabled) {
             config.customInventoryEnabled = it
         }
 
-        header("Debug")
-        checkbox(
-            "Middle-click copies item data",
-            "Middle-click a hovered item in a custom Overwatch screen to copy its registry id, name and full data components to the clipboard -- for matching server menu items during development.",
-            config.debugItemCopyEnabled,
-        ) { config.debugItemCopyEnabled = it }
+        header("Tools")
+        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {
+            Minecraft.getInstance().setScreenAndShow(OverwatchQuestBookScreen(host.screen))
+        } to OwTheme.ROW_H
+        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Powder Guide")) {
+            Minecraft.getInstance().setScreenAndShow(OverwatchPowderGuideScreen(host.screen))
+        } to OwTheme.ROW_H
+
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+    }
+
+
+    private fun buildToastsTab(left: Int, w: Int, top: Int) {
+        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        val kind = activeToastKind
+        val settings = config.toast(kind)
+
+        fun header(label: String) {
+            rows += OwSectionHeader(left, 0, w, label) to 18
+        }
+
+        fun slider(label: String, min: Double, max: Double, decimals: Int, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
+            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange)
+            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += s to OwTheme.ROW_H
+        }
+
+        fun button(label: String, tooltip: String, onPress: () -> Unit) {
+            val b = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(label)) {
+                onPress()
+                host.rebuildPanels()
+            }
+            b.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += b to OwTheme.ROW_H
+        }
+
+        val (enabledLabel, enabledTooltip) = when (kind) {
+            OverwatchToastQueue.Kind.QUEST -> "Quest completion toast" to "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead."
+            OverwatchToastQueue.Kind.LEVEL_UP -> "Level up toast" to "Blocks level-up chat messages and shows a HUD toast instead."
+            OverwatchToastQueue.Kind.DISCOVERY -> "Area discovery toast" to "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead."
+            OverwatchToastQueue.Kind.LOCATION -> "Location change toast" to "Shows a HUD toast with the region name when you enter a new area."
+        }
+        val enabledBox = OwCheckbox(left, 0, w, Component.literal(enabledLabel), toastEnabled(kind)) {
+            setToastEnabled(kind, it)
+            config.save()
+        }
+        enabledBox.setTooltip(Tooltip.create(Component.literal(enabledTooltip)))
+
+        header("${kind.label} Toast")
+        rows += enabledBox to OwTheme.ROW_H
+        button(
+            "Style: ${OverwatchToastQueue.styleFor(kind).label}",
+            "Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.",
+        ) {
+            setToastStyle(kind, OverwatchToastQueue.styleFor(kind).next().name)
+            config.save()
+        }
+
+        header("Appearance")
+        slider("Scale", 0.5, 4.0, 2, settings.scale, "Size of this toast's text and panel.") { settings.scale = it }
+        slider("Opacity", 0.2, 1.0, 2, settings.opacity, "How solid this toast is at its most visible.") { settings.opacity = it }
+        slider("Duration (s)", 1.5, 20.0, 1, settings.durationSeconds, "How long this toast stays on screen, including its fade in and out.") { settings.durationSeconds = it }
+
+        header("Sound")
+        button("Sound: ${NotificationSounds.label(settings.sound)}", "Sound played when this toast appears. Click to cycle (plays a preview).") {
+            settings.sound = NotificationSounds.next(settings.sound, allowOff = true)
+            NotificationSounds.play(settings.sound, settings.soundVolume)
+        }
+        slider("Volume", 0.0, 1.0, 2, settings.soundVolume, "Volume of this toast's sound.") { settings.soundVolume = it }
+
+        header("Preview & Position")
+        button("Preview this toast", "Shows a sample of this toast using your current settings.") { OverwatchToastQueue.preview(kind) }
+        button("Preview all toasts", "Queues one sample of every toast type.") { OverwatchToastQueue.preview() }
+        button("Position toasts...", "Toasts share one position. Opens the HUD designer to move or resize it.") {
+            Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
+        }
+
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+    }
+
+    private fun toastEnabled(kind: OverwatchToastQueue.Kind): Boolean = when (kind) {
+        OverwatchToastQueue.Kind.QUEST -> config.questCompletionToastEnabled
+        OverwatchToastQueue.Kind.LEVEL_UP -> config.levelUpToastEnabled
+        OverwatchToastQueue.Kind.DISCOVERY -> config.discoveryToastEnabled
+        OverwatchToastQueue.Kind.LOCATION -> config.locationToastEnabled
+    }
+
+    private fun setToastEnabled(kind: OverwatchToastQueue.Kind, value: Boolean) {
+        when (kind) {
+            OverwatchToastQueue.Kind.QUEST -> config.questCompletionToastEnabled = value
+            OverwatchToastQueue.Kind.LEVEL_UP -> config.levelUpToastEnabled = value
+            OverwatchToastQueue.Kind.DISCOVERY -> config.discoveryToastEnabled = value
+            OverwatchToastQueue.Kind.LOCATION -> config.locationToastEnabled = value
+        }
+    }
+
+    private fun setToastStyle(kind: OverwatchToastQueue.Kind, value: String) {
+        when (kind) {
+            OverwatchToastQueue.Kind.QUEST -> config.questToastStyle = value
+            OverwatchToastQueue.Kind.LEVEL_UP -> config.levelUpToastStyle = value
+            OverwatchToastQueue.Kind.DISCOVERY -> config.discoveryToastStyle = value
+            OverwatchToastQueue.Kind.LOCATION -> config.locationToastStyle = value
+        }
+    }
+
+    private fun buildAlertsTab(left: Int, w: Int, top: Int) {
+        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+
+        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
+            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
+            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += box to OwTheme.ROW_H
+        }
+
+        fun header(label: String) {
+            rows += OwSectionHeader(left, 0, w, label) to 18
+        }
+
+        fun slider(label: String, min: Double, max: Double, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
+            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, 2, initial, label, onChange)
+            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += s to OwTheme.ROW_H
+        }
+
+        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
+            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
+                onPress()
+                host.rebuildPanels()
+            }
+            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += button to OwTheme.ROW_H
+        }
 
         header("Rare Item Alert")
         checkbox(
@@ -617,7 +871,22 @@ class OverwatchSettingsPanels(private val host: Host) {
             config.mythicAlertMinRarity = opts[(i + 1).mod(opts.size)].name
         }
         checkbox("Play sound", "", config.mythicAlertSound) { config.mythicAlertSound = it }
+        cycleButton({ "Alert sound: ${NotificationSounds.label(config.mythicAlertSoundId)}" }, "Sound played when a rare item is obtained. Click to cycle (plays a preview).") {
+            config.mythicAlertSoundId = NotificationSounds.next(config.mythicAlertSoundId, allowOff = false)
+            NotificationSounds.play(config.mythicAlertSoundId, config.mythicAlertVolume)
+        }
+        slider("Alert volume", 0.0, 1.0, config.mythicAlertVolume, "Volume of the rare item alert sound.") { config.mythicAlertVolume = it }
         checkbox("Show chat message", "", config.mythicAlertChat) { config.mythicAlertChat = it }
+
+        header("Entity Tracker Alerts")
+        checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
+        checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }
+        cycleButton({ "Ping sound: ${soundLabel()}" }, "Sound played when an entity starts matching. Click to cycle (plays a preview).") {
+            config.trackerPingSoundId = NotificationSounds.next(config.trackerPingSoundId, allowOff = false)
+            previewTrackerSound()
+        }
+        slider("Ping pitch", 0.5, 2.0, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
+        slider("Ping volume", 0.0, 1.0, config.trackerPingVolume, "Volume of the new-match ping sound.") { config.trackerPingVolume = it }
 
         host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
@@ -807,6 +1076,7 @@ class OverwatchSettingsPanels(private val host: Host) {
     private fun buildOverridesTab(left: Int, w: Int, top: Int) {
         val rows = mutableListOf<Pair<AbstractWidget, Int>>()
 
+        rows += OwSectionHeader(left, 0, w, "Wynncraft Overrides") to 18
         val contentBookCheckbox = OwCheckbox(left, 0, w, Component.literal("Override Wynncraft's Content Book"), config.contentBookOverrideEnabled) {
             config.contentBookOverrideEnabled = it
         }
@@ -826,6 +1096,7 @@ class OverwatchSettingsPanels(private val host: Host) {
         )
         rows += waypointCheckbox to OwTheme.ROW_H
 
+        rows += OwSectionHeader(left, 0, w, "Rendering") to 18
         val voxyCheckbox = OwCheckbox(left, 0, w, Component.literal("Voxy Vista (hide LODs outside Wynncraft)"), config.voxyVistaEnabled) {
             config.voxyVistaEnabled = it
         }
@@ -839,76 +1110,18 @@ class OverwatchSettingsPanels(private val host: Host) {
         )
         rows += voxyCheckbox to OwTheme.ROW_H
 
-        rows += OwSectionHeader(left, 0, w, "Toasts") to 18
-
-        fun toastType(
-            label: String,
-            tooltip: String,
-            enabled: Boolean,
-            onToggle: (Boolean) -> Unit,
-            style: () -> String,
-            onStyle: (String) -> Unit,
-        ) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), enabled) { onToggle(it) }
-            box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-            val styleButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("    Style: ${ToastStyle.parse(style()).label}")) {
-                onStyle(ToastStyle.parse(style()).next().name)
-                config.save()
-                host.rebuildPanels()
-            }
-            styleButton.setTooltip(Tooltip.create(Component.literal("Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.")))
-            rows += styleButton to OwTheme.ROW_H
+        rows += OwSectionHeader(left, 0, w, "Debug") to 18
+        val debugCheckbox = OwCheckbox(left, 0, w, Component.literal("Middle-click copies item data"), config.debugItemCopyEnabled) {
+            config.debugItemCopyEnabled = it
         }
-
-        toastType(
-            "Quest completion toast",
-            "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead.",
-            config.questCompletionToastEnabled, { config.questCompletionToastEnabled = it },
-            { config.questToastStyle }, { config.questToastStyle = it },
+        debugCheckbox.setTooltip(
+            Tooltip.create(
+                Component.literal(
+                    "Middle-click a hovered item in a custom Overwatch screen to copy its registry id, name and full data components to the clipboard -- for matching server menu items during development.",
+                ),
+            ),
         )
-        toastType(
-            "Level up toast",
-            "Blocks level-up chat messages and shows a HUD toast instead.",
-            config.levelUpToastEnabled, { config.levelUpToastEnabled = it },
-            { config.levelUpToastStyle }, { config.levelUpToastStyle = it },
-        )
-        toastType(
-            "Area discovery toast",
-            "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead.",
-            config.discoveryToastEnabled, { config.discoveryToastEnabled = it },
-            { config.discoveryToastStyle }, { config.discoveryToastStyle = it },
-        )
-        toastType(
-            "Location change toast",
-            "Shows a HUD toast with the region name when you enter a new area.",
-            config.locationToastEnabled, { config.locationToastEnabled = it },
-            { config.locationToastStyle }, { config.locationToastStyle = it },
-        )
-
-        val textScaleSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.75, 4.0, 2, config.toastTextScale, "Classic text scale") { config.toastTextScale = it }
-        textScaleSlider.setTooltip(Tooltip.create(Component.literal("Size of the text and panel on Classic toasts.")))
-        rows += textScaleSlider to OwTheme.ROW_H
-
-        val soulsScaleSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.5, 4.0, 2, config.soulsToastScale, "Souls text scale") { config.soulsToastScale = it }
-        soulsScaleSlider.setTooltip(Tooltip.create(Component.literal("Size of the large centred text on Souls-style toasts.")))
-        rows += soulsScaleSlider to OwTheme.ROW_H
-
-        val durationSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 1.5, 12.0, 1, config.toastDurationSeconds, "Toast duration (s)") { config.toastDurationSeconds = it }
-        durationSlider.setTooltip(Tooltip.create(Component.literal("How long a Classic toast stays up. Souls toasts last 1.5x as long.")))
-        rows += durationSlider to OwTheme.ROW_H
-
-        val previewButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Preview toasts")) { OverwatchToastQueue.preview() }
-        previewButton.setTooltip(Tooltip.create(Component.literal("Shows one sample of each toast type using your current settings. Position them from the HUD designer.")))
-        rows += previewButton to OwTheme.ROW_H
-
-        rows += OwSectionHeader(left, 0, w, "Reference Tools") to 18
-        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {
-            Minecraft.getInstance().setScreenAndShow(OverwatchQuestBookScreen(host.screen))
-        } to OwTheme.ROW_H
-        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Powder Guide")) {
-            Minecraft.getInstance().setScreenAndShow(OverwatchPowderGuideScreen(host.screen))
-        } to OwTheme.ROW_H
+        rows += debugCheckbox to OwTheme.ROW_H
 
         host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
@@ -939,18 +1152,6 @@ class OverwatchSettingsPanels(private val host: Host) {
         val PALETTE = listOf(
             0xFFFF5555L, 0xFFFFAA00L, 0xFFFFFF55L, 0xFF55FF55L,
             0xFF55FFFFL, 0xFF5555FFL, 0xFFFF55FFL, 0xFFFFFFFFL,
-        )
-        val SOUND_PRESETS = listOf(
-            "Pling" to "minecraft:block.note_block.pling",
-            "Bell" to "minecraft:block.note_block.bell",
-            "Chime" to "minecraft:block.amethyst_block.chime",
-            "Harp" to "minecraft:block.note_block.harp",
-            "Bit" to "minecraft:block.note_block.bit",
-            "Didgeridoo" to "minecraft:block.note_block.didgeridoo",
-            "XP orb" to "minecraft:entity.experience_orb.pickup",
-            "Level up" to "minecraft:entity.player.levelup",
-            "Arrow hit" to "minecraft:entity.arrow.hit_player",
-            "Dispenser" to "minecraft:block.dispenser.dispense",
         )
     }
 }

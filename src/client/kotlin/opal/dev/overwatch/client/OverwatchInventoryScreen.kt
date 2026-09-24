@@ -752,6 +752,7 @@ class OverwatchInventoryScreen(
     private fun dockW(): Int = TILE + GAP + PREVIEW_W + GAP + TILE
 
     private fun panelLeft(): Int {
+        if (invTab == InvTab.SETTINGS && panels.animationsActive) return (width - panelWidth() - MARGIN).coerceAtLeast(MARGIN)
         if (invTab == InvTab.SETTINGS) return ((width - panelWidth()) / 2).coerceAtLeast(MARGIN)
         val total = dockW() + GAP + panelWidth()
         if (total + MARGIN * 2 <= width) return (width - total) / 2 + dockW() + GAP

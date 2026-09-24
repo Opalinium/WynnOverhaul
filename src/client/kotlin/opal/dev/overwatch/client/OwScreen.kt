@@ -17,7 +17,7 @@ abstract class OwScreen(
 
     protected open val panelWidth: Int get() = (width * 0.7).toInt().coerceIn(320, 520)
     protected open val panelHeight: Int get() = (height * 0.82).toInt().coerceIn(240, 420)
-    protected val panelLeft: Int get() = (width - panelWidth) / 2
+    protected open val panelLeft: Int get() = (width - panelWidth) / 2
     protected val panelTop: Int get() = (height - panelHeight) / 2
 
     protected val contentLeft: Int get() = panelLeft + OwTheme.PAD

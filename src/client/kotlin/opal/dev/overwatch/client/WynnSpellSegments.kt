@@ -57,7 +57,7 @@ object WynnSpellSegments {
     private val SPACER: Char = c("DAFF")
     private val MANA_ICON: String = g("E531")
     private val HEALTH_ICON: String = g("E530")
-    private val CLICK_ARROW: String = g("E106")
+    val CLICK_ARROW: String = g("E106")
     private val LEFT_A: String = g("E100")
     private val LEFT_B: String = g("E103")
     private val RIGHT_A: String = g("E101")
@@ -72,7 +72,7 @@ object WynnSpellSegments {
     )
 
     private val LEFT_CLICK = "[$LEFT_A$LEFT_B]"
-    private val RIGHT_CLICK = "[$RIGHT_A|$RIGHT_B]"
+    private val RIGHT_CLICK = "[$RIGHT_A$RIGHT_B]"
     private val NO_CLICK = "[$NONE_A$NONE_B]"
     private val CLICK_SEPARATOR = "\\s$CLICK_ARROW\\s"
     private val INPUTS_PATTERN = Regex(

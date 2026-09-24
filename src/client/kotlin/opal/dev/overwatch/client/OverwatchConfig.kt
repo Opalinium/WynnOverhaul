@@ -19,11 +19,33 @@ data class OverwatchConfig(
     var wynnCombatEnabled: Boolean = false,
     var wynnAttackSpeed: Boolean = true,
     var qolPreventHotbarOverscroll: Boolean = false,
+    var weaponAnimationsEnabled: Boolean = false,
+    var weaponIdleEnabled: Boolean = true,
+    var weaponAnimationCombo: Boolean = true,
+    var weaponAnimationSpells: Boolean = true,
+    var weaponAnimationSfx: Boolean = true,
+    var weaponAnimationSfxVolume: Double = 0.6,
+    var weaponAnimationTrail: Boolean = true,
+    var weaponAnimationTrailIntensity: Double = 1.0,
+    var weaponAnimationPreview: Boolean = false,
+    var weaponAnimationPreviewT: Double = 0.5,
+    var weaponAnimationEntries: MutableList<WeaponAnimationEntry>? = null,
+    var soulsCameraEnabled: Boolean = false,
+    var soulsCameraDistance: Double = 4.0,
+    var soulsCameraHeight: Double = 0.0,
+    var soulsCameraShoulder: Double = 0.0,
+    var soulsCameraSensitivity: Double = 1.0,
+    var soulsCameraSmoothing: Double = 0.25,
+    var soulsCameraTurnSpeed: Double = 0.55,
+    var soulsCameraFaceHoldMs: Double = 700.0,
+    var soulsCameraReticle: Boolean = true,
     var debugItemCopyEnabled: Boolean = false,
     var mythicAlertEnabled: Boolean = false,
     var mythicAlertMinRarity: String = "MYTHIC",
     var mythicAlertSound: Boolean = true,
     var mythicAlertChat: Boolean = true,
+    var mythicAlertSoundId: String = "minecraft:entity.player.levelup",
+    var mythicAlertVolume: Double = 1.0,
     var discordRpcEnabled: Boolean = true,
     var discordShowActivity: Boolean = true,
     var discordShowLevel: Boolean = true,
@@ -52,11 +74,11 @@ data class OverwatchConfig(
     var toastTextScale: Double = 1.75,
     var soulsToastScale: Double = 1.5,
     var toastDurationSeconds: Double = 4.0,
+    var toastKinds: MutableMap<String, ToastSettings>? = null,
     var customPartyNametagsEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var equipComparisonEnabled: Boolean = true,
     var mountFeederHudEnabled: Boolean = true,
-    var mountPickupDebug: Boolean = false,
     var lootrunEnabled: Boolean = true,
     var lootrunBeaconsEnabled: Boolean = true,
     var lootrunTaskMarkerEnabled: Boolean = true,
@@ -76,6 +98,7 @@ data class OverwatchConfig(
     var trackerPingChat: Boolean = true,
     var trackerPingSoundId: String = "minecraft:block.note_block.pling",
     var trackerPingPitch: Double = 1.5,
+    var trackerPingVolume: Double = 0.6,
     var trackerHudShowDistance: Boolean = true,
     var trackerRules: MutableList<TrackerRule> = mutableListOf(),
     var hudLayouts: MutableMap<String, HudElementLayout> = mutableMapOf(),
@@ -84,6 +107,27 @@ data class OverwatchConfig(
     var chatChannel: String = "all",
     var mountRegistry: MutableMap<String, StoredMount>? = null,
 ) {
+    data class ToastSettings(
+        var scale: Double = 1.75,
+        var durationSeconds: Double = 4.0,
+        var opacity: Double = 1.0,
+        var sound: String = "",
+        var soundVolume: Double = 0.6,
+    )
+
+    fun toast(kind: OverwatchToastQueue.Kind): ToastSettings {
+        val map = toastKinds ?: mutableMapOf<String, ToastSettings>().also { toastKinds = it }
+        return map.getOrPut(kind.name) { legacyToastSettings(kind) }
+    }
+
+    private fun legacyToastSettings(kind: OverwatchToastQueue.Kind): ToastSettings {
+        val souls = ToastStyle.parse(OverwatchToastQueue.styleName(kind)) == ToastStyle.SOULS
+        return ToastSettings(
+            scale = if (souls) soulsToastScale else toastTextScale,
+            durationSeconds = if (souls) toastDurationSeconds * 1.5 else toastDurationSeconds,
+        )
+    }
+
     data class TrackerRule(
         var enabled: Boolean = true,
         var label: String = "",
@@ -122,7 +166,27 @@ data class OverwatchConfig(
         trackerPingPitch = trackerPingPitch.coerceIn(0.5, 2.0)
         trackerWaypointScale = trackerWaypointScale.coerceIn(0.5, 2.5)
         trackerRules.forEach { it.minChestTier = it.minChestTier.coerceIn(0, 4) }
+        weaponAnimationPreviewT = weaponAnimationPreviewT.coerceIn(0.0, 1.0)
+        weaponAnimationSfxVolume = weaponAnimationSfxVolume.coerceIn(0.0, 1.0)
+        weaponAnimationTrailIntensity = weaponAnimationTrailIntensity.coerceIn(0.2, 1.5)
+        mythicAlertVolume = mythicAlertVolume.coerceIn(0.0, 1.0)
+        trackerPingVolume = trackerPingVolume.coerceIn(0.0, 1.0)
+        OverwatchToastQueue.Kind.entries.forEach {
+            val t = toast(it)
+            t.scale = t.scale.coerceIn(0.5, 4.0)
+            t.durationSeconds = t.durationSeconds.coerceIn(1.5, 20.0)
+            t.opacity = t.opacity.coerceIn(0.2, 1.0)
+            t.soundVolume = t.soundVolume.coerceIn(0.0, 1.0)
+        }
+        soulsCameraDistance = soulsCameraDistance.coerceIn(1.5, 12.0)
+        soulsCameraHeight = soulsCameraHeight.coerceIn(-1.0, 2.0)
+        soulsCameraShoulder = soulsCameraShoulder.coerceIn(-1.5, 1.5)
+        soulsCameraSensitivity = soulsCameraSensitivity.coerceIn(0.2, 3.0)
+        soulsCameraSmoothing = soulsCameraSmoothing.coerceIn(0.0, 1.0)
+        soulsCameraTurnSpeed = soulsCameraTurnSpeed.coerceIn(0.15, 1.0)
+        soulsCameraFaceHoldMs = soulsCameraFaceHoldMs.coerceIn(0.0, 2000.0)
         if (mountRegistry == null) mountRegistry = mutableMapOf()
+        if (weaponAnimationEntries == null) weaponAnimationEntries = mutableListOf()
         hudLayouts.values.forEach {
             it.scale = it.scale.coerceIn(0.5, 2.5)
             it.barWidth = it.barWidth.coerceIn(0, 2000)

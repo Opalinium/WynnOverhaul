@@ -3,9 +3,7 @@ package opal.dev.overwatch.client
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.player.LocalPlayer
-import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.item.ItemStack
 
@@ -66,7 +64,7 @@ object RareItemAlert {
     private fun announce(client: Minecraft, player: LocalPlayer, stack: ItemStack, rarity: WynnRarity) {
         val config = OverwatchConfig.current
         if (config.mythicAlertSound) {
-            client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.PLAYER_LEVELUP, 1.0f))
+            NotificationSounds.play(config.mythicAlertSoundId, config.mythicAlertVolume)
         }
         if (config.mythicAlertChat) {
             player.sendSystemMessage(

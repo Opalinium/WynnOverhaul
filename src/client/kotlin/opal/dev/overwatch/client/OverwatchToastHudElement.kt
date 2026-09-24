@@ -37,17 +37,20 @@ class OverwatchToastHudElement : HudElement {
     }
 
     private fun renderClassic(graphics: GuiGraphicsExtractor, toast: OverwatchToastQueue.Toast, fraction: Float) {
-        val alpha = when {
-            fraction < FADE_IN_END -> (255 * (fraction / FADE_IN_END)).toInt()
-            fraction > FADE_OUT_START -> (255 * (1f - (fraction - FADE_OUT_START) / (1f - FADE_OUT_START))).toInt()
-            else -> 255
-        }.coerceIn(0, 255)
+        val settings = OverwatchConfig.current.toast(toast.kind)
+        val alpha = (
+            when {
+                fraction < FADE_IN_END -> 255 * (fraction / FADE_IN_END)
+                fraction > FADE_OUT_START -> 255 * (1f - (fraction - FADE_OUT_START) / (1f - FADE_OUT_START))
+                else -> 255f
+            } * settings.opacity.toFloat()
+        ).toInt().coerceIn(0, 255)
         if (alpha <= 0) return
 
         val font = Minecraft.getInstance().font
         val guiW = graphics.guiWidth()
         val guiH = graphics.guiHeight()
-        val textScale = OverwatchConfig.current.toastTextScale.toFloat().coerceIn(0.75f, 4f)
+        val textScale = settings.scale.toFloat().coerceIn(0.5f, 4f)
         val total = HudLayoutManager.scale(ID) * textScale
         val subtitle = if (toast.detail.isBlank()) toast.subtitle else "${toast.subtitle}  ·  ${toast.detail}"
         val (floorW, floorH) = HudLayoutManager.boxSize(ID)
@@ -75,13 +78,14 @@ class OverwatchToastHudElement : HudElement {
     }
 
     private fun renderSouls(graphics: GuiGraphicsExtractor, toast: OverwatchToastQueue.Toast, fraction: Float) {
-        val af = soulsAlpha(fraction)
+        val settings = OverwatchConfig.current.toast(toast.kind)
+        val af = soulsAlpha(fraction) * settings.opacity.toFloat()
         if (af <= 0.02f) return
 
         val font = Minecraft.getInstance().font
         val guiW = graphics.guiWidth()
         val guiH = graphics.guiHeight()
-        val total = HudLayoutManager.scale(ID) * OverwatchConfig.current.soulsToastScale.toFloat().coerceIn(0.5f, 4f)
+        val total = HudLayoutManager.scale(ID) * settings.scale.toFloat().coerceIn(0.5f, 4f)
 
         val kicker = toast.title.uppercase()
         val name = toast.subtitle

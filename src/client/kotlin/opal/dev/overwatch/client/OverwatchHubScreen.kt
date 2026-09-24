@@ -11,6 +11,7 @@ class OverwatchHubScreen(parent: Screen? = null) : OwScreen(Component.literal("O
     private val panels = OverwatchSettingsPanels(this)
 
     override val panelWidth: Int get() = (width * 0.75).toInt().coerceIn(400, 560)
+    override val panelLeft: Int get() = if (panels.animationsActive) (width - panelWidth - 12).coerceAtLeast(0) else (width - panelWidth) / 2
     override val panelHeight: Int get() = (height * 0.85).toInt().coerceIn(320, 520)
 
     override fun init() {

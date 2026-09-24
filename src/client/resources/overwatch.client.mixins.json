@@ -21,7 +21,18 @@
     "BossHealthUpdateGuardMixin",
     "HudSuppressionMixin",
     "ChatChannelButtonsMixin",
-    "ItemDebugCopyMixin"
+    "ItemDebugCopyMixin",
+    "WeaponAnimationThirdPersonMixin",
+    "WeaponAnimationFirstPersonMixin",
+    "WeaponAnimationRegisterMixin",
+    "WeaponAnimationWristMixin",
+    "WeaponAnimationSwingMixin",
+    "WeaponAnimationStateMixin",
+    "SoulsCameraMixin",
+    "SoulsCameraMouseMixin",
+    "SoulsCameraInputMixin",
+    "SoulsCameraActionMixin",
+    "SoulsCameraReticleMixin"
   ],
   "injectors": {
     "defaultRequire": 1
