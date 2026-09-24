@@ -4,24 +4,48 @@ import net.minecraft.client.Minecraft
 
 object SpellComboGuard {
 
+    private const val COMBO_LENGTH = 3
+    private const val TAIL_NANOS = 400_000_000L
+
     private var suspendUntilNanos = 0L
+    private var inputs = 0
     private var wasUseDown = false
+    private var wasAttackDown = false
 
     fun tick(client: Minecraft) {
         val config = OverwatchConfig.current
+        val useDown = client.options.keyUse.isDown
+        val attackDown = client.options.keyAttack.isDown
+        val useEdge = useDown && !wasUseDown
+        val attackEdge = attackDown && !wasAttackDown
+        wasUseDown = useDown
+        wasAttackDown = attackDown
         if (!config.combatSpellGuardEnabled) {
-            wasUseDown = false
+            inputs = 0
             return
         }
-        val useDown = client.options.keyUse.isDown
-        if (useDown && !wasUseDown) {
-            suspendUntilNanos = System.nanoTime() + (config.combatSpellGuardMs * 1_000_000L).toLong()
-        }
-        wasUseDown = useDown
+        if (!useEdge && !attackEdge) return
+
+        val now = System.nanoTime()
+        val active = now < suspendUntilNanos
+        if (!active) inputs = 0
+
+        val counts = if (active) inputs < COMBO_LENGTH else if (startsWithLeft(client)) attackEdge else useEdge
+        if (!counts) return
+
+        inputs++
+        val window = (config.combatSpellGuardMs * 1_000_000L).toLong()
+        suspendUntilNanos = now + if (inputs >= COMBO_LENGTH) minOf(window, TAIL_NANOS) else window
     }
 
     fun isSuspended(): Boolean {
         val config = OverwatchConfig.current
         return config.combatSpellGuardEnabled && System.nanoTime() < suspendUntilNanos
+    }
+
+    private fun startsWithLeft(client: Minecraft): Boolean {
+        val player = client.player ?: return false
+        val stack = ActiveWeapon.stack(player) ?: player.mainHandItem
+        return WeaponAnimations.startsSpellWithLeft(stack)
     }
 }

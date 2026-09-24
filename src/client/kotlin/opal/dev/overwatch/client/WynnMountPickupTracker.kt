@@ -2,7 +2,6 @@ package opal.dev.overwatch.client
 
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
-import opal.dev.overwatch.Overwatch
 
 object WynnMountPickupTracker {
 
@@ -33,30 +32,7 @@ object WynnMountPickupTracker {
         if (pickup != null) {
             last = pickup
             OverwatchGate.noteActionBar()
-            if (OverwatchConfig.current.mountPickupDebug) {
-                Overwatch.LOGGER.info("MountPickupDebug HIT words={} raw={}", pickup.words, escape(raw))
-            }
             return
-        }
-        if (OverwatchConfig.current.mountPickupDebug && WynnMountEnergyTracker.hasSegment(raw) && upperRun(raw) != null) {
-            val now = System.currentTimeMillis()
-            if (now - lastMissLogAt > MISS_LOG_THROTTLE_MS) {
-                lastMissLogAt = now
-                val body = tailBody(raw)
-                Overwatch.LOGGER.info(
-                    "MountPickupDebug MISS window={} words={} raw={}",
-                    body != null,
-                    body?.let { decodeWords(it) } ?: emptyList<String>(),
-                    escape(raw),
-                )
-            }
-        }
-    }
-
-    private fun escape(raw: String): String = buildString {
-        for (ch in raw) {
-            if (ch.code in 0x20..0x7E) append(ch)
-            else append("\\u" + ch.code.toString(16).padStart(4, '0').uppercase())
         }
     }
 
@@ -178,8 +154,6 @@ object WynnMountPickupTracker {
     private const val MIN_UPPER_IN_RUN = 3
 
     private const val MIN_WORD_LENGTH = 2
-    private var lastMissLogAt: Long = 0L
-    private const val MISS_LOG_THROTTLE_MS = 2000L
 
     private const val PICKUP_TTL_MS = 3500L
 }

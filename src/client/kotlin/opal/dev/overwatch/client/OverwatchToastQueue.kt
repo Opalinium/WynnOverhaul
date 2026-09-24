@@ -15,11 +15,11 @@ enum class ToastStyle(val label: String) {
 
 object OverwatchToastQueue {
 
-    enum class Kind(val defaultColor: Int) {
-        QUEST(0xFF55FF55.toInt()),
-        LEVEL_UP(0xFFFFD700.toInt()),
-        DISCOVERY(0xFFFFAA00.toInt()),
-        LOCATION(0xFFE6D3A0.toInt()),
+    enum class Kind(val label: String, val defaultColor: Int) {
+        QUEST("Quest", 0xFF55FF55.toInt()),
+        LEVEL_UP("Level Up", 0xFFFFD700.toInt()),
+        DISCOVERY("Discovery", 0xFFFFAA00.toInt()),
+        LOCATION("Location", 0xFFE6D3A0.toInt()),
     }
 
     data class Toast(
@@ -28,6 +28,7 @@ object OverwatchToastQueue {
         val colorArgb: Int,
         val style: ToastStyle = ToastStyle.CLASSIC,
         val detail: String = "",
+        val kind: Kind = Kind.QUEST,
     )
 
     private class Active(val toast: Toast, val shownAtMillis: Long, val durationMillis: Long)
@@ -38,19 +39,19 @@ object OverwatchToastQueue {
     private var active: Active? = null
 
     fun make(kind: Kind, title: String, subtitle: String, colorArgb: Int, detail: String = ""): Toast =
-        Toast(title, subtitle, colorArgb, styleFor(kind), detail)
+        Toast(title, subtitle, colorArgb, styleFor(kind), detail, kind)
 
-    fun styleFor(kind: Kind): ToastStyle {
+    fun styleName(kind: Kind): String {
         val config = OverwatchConfig.current
-        return ToastStyle.parse(
-            when (kind) {
-                Kind.QUEST -> config.questToastStyle
-                Kind.LEVEL_UP -> config.levelUpToastStyle
-                Kind.DISCOVERY -> config.discoveryToastStyle
-                Kind.LOCATION -> config.locationToastStyle
-            },
-        )
+        return when (kind) {
+            Kind.QUEST -> config.questToastStyle
+            Kind.LEVEL_UP -> config.levelUpToastStyle
+            Kind.DISCOVERY -> config.discoveryToastStyle
+            Kind.LOCATION -> config.locationToastStyle
+        }
     }
+
+    fun styleFor(kind: Kind): ToastStyle = ToastStyle.parse(styleName(kind))
 
     fun show(toast: Toast) {
         pending.add(toast)
@@ -74,6 +75,8 @@ object OverwatchToastQueue {
         }
         val next = pending.poll() ?: return null
         active = Active(next, now, durationFor(next))
+        val settings = OverwatchConfig.current.toast(next.kind)
+        NotificationSounds.play(settings.sound, settings.soundVolume)
         return next
     }
 
@@ -84,16 +87,20 @@ object OverwatchToastQueue {
     }
 
     fun preview() {
-        show(make(Kind.LOCATION, "Entering", "Paths of Sludge", Kind.LOCATION.defaultColor))
-        show(make(Kind.DISCOVERY, "Area Discovered", "The Eldritch Outlook", Kind.DISCOVERY.defaultColor, "+300000 XP"))
-        show(make(Kind.QUEST, "Quest Completed", "A Journey Further", Kind.QUEST.defaultColor))
-        show(make(Kind.LEVEL_UP, "Level Up!", "You reached combat level 100!", Kind.LEVEL_UP.defaultColor))
+        Kind.entries.forEach { preview(it) }
     }
 
-    private fun durationFor(toast: Toast): Long {
-        val base = (OverwatchConfig.current.toastDurationSeconds.coerceIn(1.5, 12.0) * 1000).toLong()
-        return if (toast.style == ToastStyle.SOULS) (base * SOULS_DURATION_FACTOR).toLong() else base
+    fun preview(kind: Kind) {
+        show(
+            when (kind) {
+                Kind.LOCATION -> make(kind, "Entering", "Paths of Sludge", kind.defaultColor)
+                Kind.DISCOVERY -> make(kind, "Area Discovered", "The Eldritch Outlook", kind.defaultColor, "+300000 XP")
+                Kind.QUEST -> make(kind, "Quest Completed", "A Journey Further", kind.defaultColor)
+                Kind.LEVEL_UP -> make(kind, "Level Up!", "You reached combat level 100!", kind.defaultColor)
+            },
+        )
     }
 
-    private const val SOULS_DURATION_FACTOR = 1.5
+    private fun durationFor(toast: Toast): Long =
+        (OverwatchConfig.current.toast(toast.kind).durationSeconds.coerceIn(1.5, 20.0) * 1000).toLong()
 }

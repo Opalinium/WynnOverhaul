@@ -24,6 +24,7 @@ object RaytraceAttack {
         if (!gate.isReady(now, immediateFirst = immediateFirst) { nextDelayNanos(player, config) }) return false
 
         val gameMode = client.gameMode ?: return false
+        SoulsCamera.onCombatAction(client)
 
         if (config.wynnCombatEnabled) {
             player.swing(InteractionHand.MAIN_HAND)
