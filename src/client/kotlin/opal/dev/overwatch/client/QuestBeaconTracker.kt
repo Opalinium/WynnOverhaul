@@ -23,6 +23,10 @@ object QuestBeaconTracker {
         private set
 
     @Volatile
+    var stable: List<EntityTracker.Match> = emptyList()
+        private set
+
+    @Volatile
     var hiddenEntityIds: Set<Int> = emptySet()
         private set
 
@@ -101,17 +105,23 @@ object QuestBeaconTracker {
         val liveGoalMatches = goals.filter { it.source == QuestGoalTracker.Source.LIVE }.map { goalMatch(it) }
         val questTracked = tracked != null && ActivityType.entries.any { it.isQuest && it.displayName.equals(tracked.type, ignoreCase = true) }
         val pageCoord = if (questTracked) null else wikiCoordFallback()
+        var stableMatches: List<EntityTracker.Match>? = null
         val matches = when {
             wikiGoalMatches.isNotEmpty() -> wikiGoalMatches
             pageCoord != null -> listOf(pageCoord)
             liveGoalMatches.isNotEmpty() -> liveGoalMatches
-            else -> triangulate(player.position(), beacons, markerCandidates, tracked)
-                .ifEmpty { listOfNotNull(if (questTracked) wikiCoordFallback() else null) }
+            else -> {
+                val triangulated = triangulate(player.position(), beacons, markerCandidates, tracked)
+                stableMatches = triangulated.filter { BeaconTriangulator.reliable(it.first) }.map { it.second }
+                triangulated.map { it.second }
+                    .ifEmpty { listOfNotNull(if (questTracked) wikiCoordFallback() else null).also { stableMatches = it } }
+            }
         }
         if (matches.isEmpty()) {
             clearMatches()
             return
         }
+        stable = stableMatches ?: matches
 
         hideUntilNanos = System.nanoTime() + HIDE_GRACE_NANOS
         beaconPositions = positions
@@ -128,6 +138,7 @@ object QuestBeaconTracker {
 
     private fun clearMatches() {
         if (current.isNotEmpty()) current = emptyList()
+        if (stable.isNotEmpty()) stable = emptyList()
         if (System.nanoTime() > hideUntilNanos) {
             if (hiddenEntityIds.isNotEmpty()) hiddenEntityIds = emptySet()
             if (beaconPositions.isNotEmpty()) beaconPositions = emptyList()
@@ -146,7 +157,7 @@ object QuestBeaconTracker {
         beacons: List<Pair<Vec3, ActivityType>>,
         markers: List<Display.TextDisplay>,
         tracked: WynnScoreboardTracker.Tracked?,
-    ): List<EntityTracker.Match> {
+    ): List<Pair<ActivityType, EntityTracker.Match>> {
         val fresh = HashMap<ActivityType, Vec3>(2)
         for (marker in markers) {
             if (!isMarkerFont(marker)) continue
@@ -161,7 +172,7 @@ object QuestBeaconTracker {
         }
         val targets = HashMap<ActivityType, Vec3>(BeaconTriangulator.recent())
         targets.putAll(fresh)
-        return targets.map { (kind, target) -> triangulatedMatch(target, kind, tracked) }
+        return targets.map { (kind, target) -> kind to triangulatedMatch(target, kind, tracked) }
     }
 
     private fun triangulatedMatch(target: Vec3, kind: ActivityType, tracked: WynnScoreboardTracker.Tracked?): EntityTracker.Match {
@@ -169,7 +180,7 @@ object QuestBeaconTracker {
             tracked.type.equals(kind.displayName, ignoreCase = true) ||
                 (kind == ActivityType.WORLD_DISCOVERY && tracked.type.contains("discovery", ignoreCase = true))
             )
-        val label = if (sameKind && tracked!!.name.isNotBlank()) "${kind.displayName}: ${tracked.name}" else kind.displayName
+        val label = if (sameKind && tracked.name.isNotBlank()) "${kind.displayName}: ${tracked.name}" else kind.displayName
         return waypointMatch(floor(target.x).toInt(), floor(target.y).toInt(), floor(target.z).toInt(), label, kind.colorArgb, WaypointIcons.activity(kind))
     }
 

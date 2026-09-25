@@ -42,15 +42,28 @@ object WynnLocationToasts {
         val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
 
         val header = lines.firstNotNullOfOrNull { DISCOVERY.matchEntire(it) }
-        if (header != null) {
-            val kind = header.groupValues[1]
-            val name = header.groupValues[2].trim()
-            val xp = header.groupValues[3]
-            val detail = if (xp.isEmpty()) "" else "+$xp XP"
+        val secretIndex = if (header == null) lines.indexOfFirst { SECRET.matches(it) } else -1
+        if (header != null || secretIndex >= 0) {
+            val title: String
+            val name: String
+            val xp: String
+            var progress = ""
+            if (header != null) {
+                title = "${header.groupValues[1]} Discovered"
+                name = header.groupValues[2].trim()
+                xp = header.groupValues[3]
+            } else {
+                val match = SECRET.matchEntire(lines[secretIndex])!!
+                title = "${match.groupValues[1]} Discovery"
+                name = match.groupValues[2].trim()
+                xp = match.groupValues[3]
+                progress = lines.getOrNull(secretIndex + 1)?.let { PROGRESS.matchEntire(it) }?.let { "${it.groupValues[1]} ${it.groupValues[2]}/${it.groupValues[3]}" }.orEmpty()
+            }
+            val detail = listOfNotNull(if (xp.isEmpty()) null else "+$xp XP", progress.ifEmpty { null }).joinToString("  ·  ")
             lastDiscoveryName = name
             lastDiscoveryAt = now
             OverwatchToastQueue.dropPending { it.title == ENTERING_TITLE && it.subtitle.equals(name, ignoreCase = true) }
-            OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.DISCOVERY, "$kind Discovered", name, DISCOVERY_COLOR, detail))
+            OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.DISCOVERY, title, name, DISCOVERY_COLOR, detail))
             blockUntil = now + CONTINUATION_MILLIS
             blockCount = 0
             return false
@@ -76,5 +89,7 @@ object WynnLocationToasts {
     private const val MAX_CONTINUATION_MESSAGES = 8
     private const val DISCOVERY_DEDUP_MILLIS = 6_000L
     private const val REPEAT_COOLDOWN_MILLIS = 20_000L
+    private val SECRET = Regex("""^([A-Za-z]+) Discovery:\s*(.+?)\s*(?:\(\+?([\d,]+)\s*XP\))?$""")
+    private val PROGRESS = Regex("""^(.+?)\s*\[(\d+)/(\d+)]$""")
     private val DISCOVERY = Regex("""^([A-Za-z]+) Discovered:\s*(.+?)\s*(?:\(\+?([\d,]+)\s*XP\))?$""")
 }

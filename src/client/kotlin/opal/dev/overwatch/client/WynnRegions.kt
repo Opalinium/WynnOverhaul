@@ -55,6 +55,8 @@ object WynnRegions {
         }, "Overwatch-WynnRegions").apply { isDaemon = true }.start()
     }
 
+    fun centers(): Map<String, Pair<Int, Int>> = regions.associate { it.name to ((it.minX + it.maxX) / 2 to (it.minZ + it.maxZ) / 2) }
+
     fun nearestRegion(x: Double, z: Double): String? {
         val list = regions
         if (list.isEmpty()) return null
