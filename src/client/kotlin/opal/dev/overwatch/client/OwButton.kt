@@ -63,10 +63,10 @@ class OwButton(
                 graphics.pose().pushMatrix()
                 graphics.pose().translate(cx.toFloat(), cy.toFloat())
                 graphics.pose().scale(iconScale)
-                graphics.item(icon!!, -ICON_SIZE / 2, -ICON_SIZE / 2)
+                graphics.item(icon, -ICON_SIZE / 2, -ICON_SIZE / 2)
                 graphics.pose().popMatrix()
             } else {
-                graphics.item(icon!!, x + ICON_PAD, y + (height - ICON_SIZE) / 2)
+                graphics.item(icon, x + ICON_PAD, y + (height - ICON_SIZE) / 2)
             }
             graphics.text(font, text, x + ICON_PAD + iconW, y + (height - 8) / 2, color)
         } else {

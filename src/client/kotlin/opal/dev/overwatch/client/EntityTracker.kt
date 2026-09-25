@@ -492,7 +492,7 @@ object EntityTracker {
                 for (pos in chunk.blockEntitiesPos) {
                     val be = chunk.getBlockEntity(pos) ?: continue
                     if (be !is ChestBlockEntity && be !is BarrelBlockEntity) continue
-                    val container = be as RandomizableContainerBlockEntity
+                    val container = be
                     if (playerPos.distanceToSqr(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5) > rangeSqr) continue
 
                     val remembered = confirmedChests[pos.asLong()]

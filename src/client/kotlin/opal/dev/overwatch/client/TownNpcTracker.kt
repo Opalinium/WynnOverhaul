@@ -56,7 +56,7 @@ object TownNpcTracker {
             if (entity.tickCount < MIN_AGE_TICKS) continue
             val previous = samples[entity.id]
             val moved = previous == null || previous.x != entity.x || previous.y != entity.y || previous.z != entity.z
-            val stable = if (moved) 0 else previous!!.stable + 1
+            val stable = if (moved) 0 else previous.stable + 1
             next[entity.id] = Sample(entity.x, entity.y, entity.z, stable)
             if (stable < MIN_STABLE_SCANS) continue
             if (levelTag.containsMatchIn(name)) continue
