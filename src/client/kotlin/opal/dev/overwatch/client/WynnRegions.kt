@@ -9,7 +9,6 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 object WynnRegions {
-
     private data class Region(val name: String, val minX: Int, val maxX: Int, val minZ: Int, val maxZ: Int)
 
     @Volatile

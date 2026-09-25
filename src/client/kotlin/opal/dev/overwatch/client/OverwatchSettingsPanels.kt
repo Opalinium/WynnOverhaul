@@ -9,7 +9,6 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
 
 class OverwatchSettingsPanels(private val host: Host) {
-
     interface Host {
         val screen: Screen
         val panelFont: Font
@@ -172,28 +171,71 @@ class OverwatchSettingsPanels(private val host: Host) {
         return ty + height + 2
     }
 
-
-    private fun buildTrackerTab(left: Int, w: Int, top: Int) {
+    private inner class PanelScope(val left: Int, val w: Int) {
         val rows = mutableListOf<Pair<AbstractWidget, Int>>()
 
-        val trackerCheckbox = OwCheckbox(left, 0, w, Component.literal("Entity Tracker enabled"), config.trackerEnabled) {
-            config.trackerEnabled = it
+        private fun <T : AbstractWidget> add(widget: T, tooltip: String, height: Int = OwTheme.ROW_H): T {
+            if (tooltip.isNotEmpty()) widget.setTooltip(Tooltip.create(Component.literal(tooltip)))
+            rows += widget to height
+            return widget
         }
-        trackerCheckbox.setTooltip(Tooltip.create(Component.literal("Master switch. The 'Toggle Entity Tracker' keybind flips this too.")))
-        rows += trackerCheckbox to OwTheme.ROW_H
 
-        val scanRangeTooltip = Tooltip.create(Component.literal("How far to actively scan for entities/chests matching your rules, every tick."))
-        val scanRangeRows = owNumberField(left, w, host.panelFont, "Scan range", 8.0, 128.0, 0, config.trackerRange) { config.trackerRange = it }
-        scanRangeRows.forEach { it.first.setTooltip(scanRangeTooltip) }
-        rows += scanRangeRows
+        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
+            add(OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange), tooltip)
+        }
 
-        trackerStatusLabel = OwLabel(left, 0, w, OwTheme.ROW_H, "")
-        rows += trackerStatusLabel!! to OwTheme.ROW_H
-        refreshTrackerStatus()
+        fun header(label: String) {
+            rows += OwSectionHeader(left, 0, w, label) to 18
+        }
 
-        rows += OwLabel(left, 0, w, 10, "Use the Rules / Display / Discovered tabs above for more.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
+        fun slider(label: String, min: Double, max: Double, decimals: Int, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
+            add(OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange), tooltip)
+        }
 
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+        fun slider(label: String, min: Double, max: Double, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
+            slider(label, min, max, 2, initial, tooltip, onChange)
+        }
+
+        fun button(label: String, tooltip: String, onPress: () -> Unit) {
+            add(
+                OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(label)) {
+                    onPress()
+                    host.rebuildPanels()
+                },
+                tooltip,
+            )
+        }
+
+        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) = button(labelFor(), tooltip, onPress)
+    }
+
+    private fun panel(left: Int, w: Int, top: Int, build: PanelScope.() -> Unit) {
+        val scope = PanelScope(left, w)
+        scope.build()
+        host.installPanelRows(scope.rows, left, top, w, host.panelContentBottom() - top)
+    }
+
+
+    private fun buildTrackerTab(left: Int, w: Int, top: Int) {
+        panel(left, w, top) {
+            val trackerCheckbox = OwCheckbox(left, 0, w, Component.literal("Entity Tracker enabled"), config.trackerEnabled) {
+                config.trackerEnabled = it
+            }
+            trackerCheckbox.setTooltip(Tooltip.create(Component.literal("Master switch. The 'Toggle Entity Tracker' keybind flips this too.")))
+            rows += trackerCheckbox to OwTheme.ROW_H
+
+            val scanRangeTooltip = Tooltip.create(Component.literal("How far to actively scan for entities/chests matching your rules, every tick."))
+            val scanRangeRows = owNumberField(left, w, host.panelFont, "Scan range", 8.0, 128.0, 0, config.trackerRange) { config.trackerRange = it }
+            scanRangeRows.forEach { it.first.setTooltip(scanRangeTooltip) }
+            rows += scanRangeRows
+
+            trackerStatusLabel = OwLabel(left, 0, w, OwTheme.ROW_H, "")
+            rows += trackerStatusLabel!! to OwTheme.ROW_H
+            refreshTrackerStatus()
+
+            rows += OwLabel(left, 0, w, 10, "Use the Rules / Display / Discovered tabs above for more.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
+
+        }
     }
 
     private fun refreshTrackerStatus() {
@@ -427,50 +469,24 @@ class OverwatchSettingsPanels(private val host: Host) {
 
 
     private fun buildDisplayTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
-
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
-
-        fun slider(label: String, min: Double, max: Double, decimals: Int, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
-            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange)
-            if (tooltip.isNotEmpty()) s.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += s to OwTheme.ROW_H
-        }
-
-        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
-            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
-                onPress()
-                host.rebuildPanels()
+        panel(left, w, top) {
+            checkbox(
+                "Draw waypoints",
+                "Marker on each match: a ringed badge with the real item icon (chest, tool, spawn egg, book...), plus " +
+                    "a name + distance card when you look near it, or an arrow pointing the way when it's off screen or behind you. " +
+                    "Turn off for HUD list + ping only.",
+                config.trackerWaypointsEnabled,
+            ) { config.trackerWaypointsEnabled = it }
+            slider("Waypoint scale", 0.5, 2.5, 2, config.trackerWaypointScale, "Size of the on-screen waypoint icons, labels and arrows.") {
+                config.trackerWaypointScale = it
             }
-            if (tooltip.isNotEmpty()) button.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += button to OwTheme.ROW_H
+
+            rows += OwLabel(left, 0, w, 10, "Ping sound and chat alerts are under Notifications > Alerts.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
+
+            header("Tracked List HUD")
+            checkbox("Show distance in HUD list", "", config.trackerHudShowDistance) { config.trackerHudShowDistance = it }
+
         }
-
-        checkbox(
-            "Draw waypoints",
-            "Xaero-style marker on each match: a coloured icon with the initial, plus name + distance " +
-                "boxes when you look near it, or an arrow pointing the way when it's off screen or behind you. " +
-                "Turn off for HUD list + ping only.",
-            config.trackerWaypointsEnabled,
-        ) { config.trackerWaypointsEnabled = it }
-        slider("Waypoint scale", 0.5, 2.5, 2, config.trackerWaypointScale, "Size of the on-screen waypoint icons, labels and arrows.") {
-            config.trackerWaypointScale = it
-        }
-
-        rows += OwLabel(left, 0, w, 10, "Ping sound and chat alerts are under Notifications > Alerts.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
-
-        header("Tracked List HUD")
-        checkbox("Show distance in HUD list", "", config.trackerHudShowDistance) { config.trackerHudShowDistance = it }
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun previewTrackerSound() {
@@ -483,327 +499,313 @@ class OverwatchSettingsPanels(private val host: Host) {
 
 
     private fun buildDiscoveredTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        rows += OwSectionHeader(left, 0, w, "Discovered Chests") to 18
-        val chestCheckbox = OwCheckbox(left, 0, w, Component.literal("Show already-discovered chests"), config.trackerDiscoveredChestsEnabled) {
-            config.trackerDiscoveredChestsEnabled = it
-        }
-        chestCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "Show every chest you've already found (matching an enabled chest rule) far beyond " +
-                        "the scan range -- their positions are already known, so this is just a HUD " +
-                        "marker, not a re-scan.",
+        panel(left, w, top) {
+            rows += OwSectionHeader(left, 0, w, "Discovered Chests") to 18
+            val chestCheckbox = OwCheckbox(left, 0, w, Component.literal("Show already-discovered chests"), config.trackerDiscoveredChestsEnabled) {
+                config.trackerDiscoveredChestsEnabled = it
+            }
+            chestCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "Show every chest you've already found (matching an enabled chest rule) far beyond " +
+                            "the scan range -- their positions are already known, so this is just a HUD " +
+                            "marker, not a re-scan.",
+                    ),
                 ),
-            ),
-        )
-        rows += chestCheckbox to OwTheme.ROW_H
+            )
+            rows += chestCheckbox to OwTheme.ROW_H
 
-        val chestRangeTooltip = Tooltip.create(Component.literal("How far away an already-discovered chest still counts."))
-        val chestRangeRows = owNumberField(left, w, host.panelFont, "Discovered chest range", 64.0, 4000.0, 0, config.trackerDiscoveredChestRange) {
-            config.trackerDiscoveredChestRange = it
-        }
-        chestRangeRows.forEach { it.first.setTooltip(chestRangeTooltip) }
-        rows += chestRangeRows
+            val chestRangeTooltip = Tooltip.create(Component.literal("How far away an already-discovered chest still counts."))
+            val chestRangeRows = owNumberField(left, w, host.panelFont, "Discovered chest range", 64.0, 4000.0, 0, config.trackerDiscoveredChestRange) {
+                config.trackerDiscoveredChestRange = it
+            }
+            chestRangeRows.forEach { it.first.setTooltip(chestRangeTooltip) }
+            rows += chestRangeRows
 
-        val chestGuidanceTooltip = Tooltip.create(
-            Component.literal("How close a discovered chest needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
-        )
-        val chestGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredChestGuidanceRange) {
-            config.trackerDiscoveredChestGuidanceRange = it
-        }
-        chestGuidanceRows.forEach { it.first.setTooltip(chestGuidanceTooltip) }
-        rows += chestGuidanceRows
+            val chestGuidanceTooltip = Tooltip.create(
+                Component.literal("How close a discovered chest needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
+            )
+            val chestGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredChestGuidanceRange) {
+                config.trackerDiscoveredChestGuidanceRange = it
+            }
+            chestGuidanceRows.forEach { it.first.setTooltip(chestGuidanceTooltip) }
+            rows += chestGuidanceRows
 
-        rows += OwSectionHeader(left, 0, w, "Discovered Gathering Nodes") to 18
-        val nodeCheckbox = OwCheckbox(left, 0, w, Component.literal("Show already-discovered nodes"), config.trackerDiscoveredNodesEnabled) {
-            config.trackerDiscoveredNodesEnabled = it
-        }
-        nodeCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "Show every gathering node you've already found (matching an enabled node rule) far " +
-                        "beyond the scan range -- same idea as discovered chests, just for nodes. Nodes " +
-                        "have no live re-check the way chests do, so this trusts the last hologram reading.",
+            rows += OwSectionHeader(left, 0, w, "Discovered Gathering Nodes") to 18
+            val nodeCheckbox = OwCheckbox(left, 0, w, Component.literal("Show already-discovered nodes"), config.trackerDiscoveredNodesEnabled) {
+                config.trackerDiscoveredNodesEnabled = it
+            }
+            nodeCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "Show every gathering node you've already found (matching an enabled node rule) far " +
+                            "beyond the scan range -- same idea as discovered chests, just for nodes. Nodes " +
+                            "have no live re-check the way chests do, so this trusts the last hologram reading.",
+                    ),
                 ),
-            ),
-        )
-        rows += nodeCheckbox to OwTheme.ROW_H
+            )
+            rows += nodeCheckbox to OwTheme.ROW_H
 
-        val nodeRangeTooltip = Tooltip.create(Component.literal("How far away an already-discovered node still counts."))
-        val nodeRangeRows = owNumberField(left, w, host.panelFont, "Discovered node range", 64.0, 4000.0, 0, config.trackerDiscoveredNodeRange) {
-            config.trackerDiscoveredNodeRange = it
+            val nodeRangeTooltip = Tooltip.create(Component.literal("How far away an already-discovered node still counts."))
+            val nodeRangeRows = owNumberField(left, w, host.panelFont, "Discovered node range", 64.0, 4000.0, 0, config.trackerDiscoveredNodeRange) {
+                config.trackerDiscoveredNodeRange = it
+            }
+            nodeRangeRows.forEach { it.first.setTooltip(nodeRangeTooltip) }
+            rows += nodeRangeRows
+
+            val nodeGuidanceTooltip = Tooltip.create(
+                Component.literal("How close a discovered node needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
+            )
+            val nodeGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredNodeGuidanceRange) {
+                config.trackerDiscoveredNodeGuidanceRange = it
+            }
+            nodeGuidanceRows.forEach { it.first.setTooltip(nodeGuidanceTooltip) }
+            rows += nodeGuidanceRows
+
         }
-        nodeRangeRows.forEach { it.first.setTooltip(nodeRangeTooltip) }
-        rows += nodeRangeRows
-
-        val nodeGuidanceTooltip = Tooltip.create(
-            Component.literal("How close a discovered node needs to be before it gets an on-screen marker. Farther than this it's list-only -- capped to the range above."),
-        )
-        val nodeGuidanceRows = owNumberField(left, w, host.panelFont, "Guidance range", 8.0, 256.0, 0, config.trackerDiscoveredNodeGuidanceRange) {
-            config.trackerDiscoveredNodeGuidanceRange = it
-        }
-        nodeGuidanceRows.forEach { it.first.setTooltip(nodeGuidanceTooltip) }
-        rows += nodeGuidanceRows
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun buildCameraTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        panel(left, w, top) {
+            rows += OwSectionHeader(left, 0, w, "Souls-style Camera") to 18
+            checkbox(
+                "Enable free orbit camera",
+                "Third-person camera that orbits your character independently of where you face. WASD moves relative to the camera and your character turns to run in that direction. Attacking and casting turn you toward the crosshair. Active in the third-person back view (F5); bind a key in Controls to toggle it.",
+                config.soulsCameraEnabled,
+            ) { config.soulsCameraEnabled = it }
+            checkbox(
+                "Show reticle",
+                "Draws the crosshair in third person so you can see what your attacks will target.",
+                config.soulsCameraReticle,
+            ) { config.soulsCameraReticle = it }
+            slider("Camera distance", 1.5, 12.0, config.soulsCameraDistance, "How far behind your character the camera sits.") { config.soulsCameraDistance = it }
+            slider("Camera height", -1.0, 2.0, config.soulsCameraHeight, "Raises or lowers the point the camera orbits, relative to your eyes.") { config.soulsCameraHeight = it }
+            slider("Shoulder offset", -1.5, 1.5, config.soulsCameraShoulder, "Shifts the camera sideways. Positive is over the right shoulder.") { config.soulsCameraShoulder = it }
+            slider("Look sensitivity", 0.2, 3.0, config.soulsCameraSensitivity, "Multiplier on top of your normal mouse sensitivity, camera only.") { config.soulsCameraSensitivity = it }
+            slider("Camera follow smoothing", 0.0, 1.0, config.soulsCameraSmoothing, "Lets the camera trail slightly behind your movement. 0 is rigid.") { config.soulsCameraSmoothing = it }
+            slider("Character turn speed", 0.15, 1.0, config.soulsCameraTurnSpeed, "How quickly your character swings to face the way you run. 1 is instant.") { config.soulsCameraTurnSpeed = it }
+            slider("Aim hold time (ms)", 0.0, 2000.0, config.soulsCameraFaceHoldMs, "How long your character keeps facing the crosshair after an attack or spell click before turning back to run. Raise it if spell combos get interrupted.") { config.soulsCameraFaceHoldMs = it }
 
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
         }
-
-        fun slider(label: String, min: Double, max: Double, value: Double, tooltip: String, onChange: (Double) -> Unit) {
-            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, 2, value, label, onChange)
-            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += s to OwTheme.ROW_H
-        }
-
-        rows += OwSectionHeader(left, 0, w, "Souls-style Camera") to 18
-        checkbox(
-            "Enable free orbit camera",
-            "Third-person camera that orbits your character independently of where you face. WASD moves relative to the camera and your character turns to run in that direction. Attacking and casting turn you toward the crosshair. Active in the third-person back view (F5); bind a key in Controls to toggle it.",
-            config.soulsCameraEnabled,
-        ) { config.soulsCameraEnabled = it }
-        checkbox(
-            "Show reticle",
-            "Draws the crosshair in third person so you can see what your attacks will target.",
-            config.soulsCameraReticle,
-        ) { config.soulsCameraReticle = it }
-        slider("Camera distance", 1.5, 12.0, config.soulsCameraDistance, "How far behind your character the camera sits.") { config.soulsCameraDistance = it }
-        slider("Camera height", -1.0, 2.0, config.soulsCameraHeight, "Raises or lowers the point the camera orbits, relative to your eyes.") { config.soulsCameraHeight = it }
-        slider("Shoulder offset", -1.5, 1.5, config.soulsCameraShoulder, "Shifts the camera sideways. Positive is over the right shoulder.") { config.soulsCameraShoulder = it }
-        slider("Look sensitivity", 0.2, 3.0, config.soulsCameraSensitivity, "Multiplier on top of your normal mouse sensitivity, camera only.") { config.soulsCameraSensitivity = it }
-        slider("Camera follow smoothing", 0.0, 1.0, config.soulsCameraSmoothing, "Lets the camera trail slightly behind your movement. 0 is rigid.") { config.soulsCameraSmoothing = it }
-        slider("Character turn speed", 0.15, 1.0, config.soulsCameraTurnSpeed, "How quickly your character swings to face the way you run. 1 is instant.") { config.soulsCameraTurnSpeed = it }
-        slider("Aim hold time (ms)", 0.0, 2000.0, config.soulsCameraFaceHoldMs, "How long your character keeps facing the crosshair after an attack or spell click before turning back to run. Raise it if spell combos get interrupted.") { config.soulsCameraFaceHoldMs = it }
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun buildAnimationsTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
-
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
-
-        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
-            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
-                onPress()
-                host.rebuildPanels()
+        panel(left, w, top) {
+            header("Movement Animations")
+            checkbox(
+                "Movement animations",
+                "Restyles how player bodies move: walking, sprinting, jumping, landing, crouching, swimming, climbing, riding, gliding, eating, blocking, getting hurt and dying. Layers on top of vanilla and never overrides an active weapon animation on your arms.",
+                config.locomotionEnabled,
+            ) { config.locomotionEnabled = it }
+            cycleButton({ "Style: " + LocomotionAnimations.labelOf(config.locomotionStyle) }, "Heroic: broad, powerful strides. Stealth: low and quiet. Lightfoot: springy and bouncy. Heavy: weighty stomps and slow sway. Weary: slumped and dragging.") {
+                config.locomotionStyle = LocomotionAnimations.nextStyle(config.locomotionStyle)
             }
-            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += button to OwTheme.ROW_H
-        }
+            checkbox("Apply to other players", "Also restyles every other player you can see, not just you.", config.locomotionOtherPlayers) { config.locomotionOtherPlayers = it }
+            checkbox("Randomize other players' styles", "Each other player gets one of the styles based on their identity, so a crowd does not move in lockstep. Turn off to give everyone your selected style.", config.locomotionRandomizeOthers) { config.locomotionRandomizeOthers = it }
+            checkbox("Joint bending", "Bends arms at the elbow and legs at the knee instead of swinging them as stiff blocks. Skin, sleeves, pants and armor bend together.", config.locomotionBend) { config.locomotionBend = it }
+            checkbox("Walk and sprint", "Stride length, body bob, sway and forward lean while moving.", config.locomotionWalk) { config.locomotionWalk = it }
+            checkbox("Jump, fall and landing", "Arms and legs react to leaping and falling, with a knee-bending impact when you land from a height.", config.locomotionJump) { config.locomotionJump = it }
+            checkbox("Crouch", "Adds a deeper hunch, tucked arms and bent knees to sneaking.", config.locomotionCrouch) { config.locomotionCrouch = it }
+            checkbox("Swimming and treading", "Flutter kick while swimming and a sculling motion while treading water.", config.locomotionSwim) { config.locomotionSwim = it }
+            checkbox("Climbing", "Hand-over-hand reach and stepping on ladders and vines.", config.locomotionClimb) { config.locomotionClimb = it }
+            checkbox("Riding", "Legs spread astride mounts and boats, hands forward on the reins.", config.locomotionRide) { config.locomotionRide = it }
+            checkbox("Elytra gliding", "Arms swept back and legs trailing while gliding.", config.locomotionElytra) { config.locomotionElytra = it }
+            checkbox("Eating, drinking and blocking", "Head chews while eating or drinking, and you brace back while blocking.", config.locomotionUseItem) { config.locomotionUseItem = it }
+            checkbox("Hurt reaction", "Recoil and arm flail when taking damage.", config.locomotionHurt) { config.locomotionHurt = it }
+            checkbox("Death", "Limbs go slack and spread as a player falls.", config.locomotionDeath) { config.locomotionDeath = it }
 
-        header("Weapon Animations")
-        checkbox(
-            "Weapon attack animations",
-            "Replaces your swing with a per-weapon animation (spear thrust, dagger slash, wand cast, relik sweep, bow draw) in first and third person. Cosmetic only, and only affects your own character.",
-            config.weaponAnimationsEnabled,
-        ) { config.weaponAnimationsEnabled = it }
-        checkbox(
-            "Weapon idle stance",
-            "Replaces the vanilla arm pose with a per-weapon hold (two-handed grip for spears, staves and firearms, guard raised after you attack, slight breathing sway) so swings ease in and out of it. Needs weapon attack animations on.",
-            config.weaponIdleEnabled,
-        ) { config.weaponIdleEnabled = it }
-        checkbox(
-            "Combo attacks",
-            "Chains different strokes as you attack (swipe left, right, thrust, twirl, then a finisher). Resets after a short pause.",
-            config.weaponAnimationCombo,
-        ) { config.weaponAnimationCombo = it }
-        checkbox(
-            "Spell animations",
-            "Plays a unique animation for each class spell (Bash, Heal, Arrow Storm, Spin Attack, Totem and the rest, including archetype variants) the moment Wynncraft announces the cast. Spells without a dedicated animation use a generic cast. Needs weapon attack animations on.",
-            config.weaponAnimationSpells,
-        ) { config.weaponAnimationSpells = it }
-        checkbox(
-            "Swing sound effects",
-            "Plays a local whoosh, and a heavier hit on finishers, timed to each stroke. Only you hear these.",
-            config.weaponAnimationSfx,
-        ) { config.weaponAnimationSfx = it }
-        val sfxSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationSfxVolume, "Swing sound volume") { config.weaponAnimationSfxVolume = it }
-        rows += sfxSlider to OwTheme.ROW_H
-        checkbox(
-            "Weapon afterimages",
-            "Leaves faint fading copies of your held weapon along the swing, drawn from its real item texture.",
-            config.weaponAnimationTrail,
-        ) { config.weaponAnimationTrail = it }
-        val trailSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.2, 1.5, 2, config.weaponAnimationTrailIntensity, "Afterimage opacity") { config.weaponAnimationTrailIntensity = it }
-        rows += trailSlider to OwTheme.ROW_H
-        cycleButton({ "Weapon animation models..." }, "Register weapon models and choose which animation each one uses.") {
-            Minecraft.getInstance().setScreenAndShow(OverwatchWeaponAnimationScreen(host.screen))
-        }
-        checkbox(
-            "Freeze animation (preview)",
-            "Debug: holds your held weapon's animation at the progress below so you can inspect a single pose. Progress 0 and 1 are the standby pose.",
-            config.weaponAnimationPreview,
-        ) { config.weaponAnimationPreview = it }
-        val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress") { config.weaponAnimationPreviewT = it }
-        rows += previewSlider to OwTheme.ROW_H
+            header("Weapon Animations")
+            checkbox(
+                "Weapon attack animations",
+                "Replaces your swing with a per-weapon animation (spear thrust, dagger slash, wand cast, relik sweep, bow draw) in first and third person. Cosmetic only, and only affects your own character.",
+                config.weaponAnimationsEnabled,
+            ) { config.weaponAnimationsEnabled = it }
+            checkbox(
+                "Weapon idle stance",
+                "Replaces the vanilla arm pose with a per-weapon hold (two-handed grip for spears, staves and firearms, guard raised after you attack, slight breathing sway) so swings ease in and out of it. Needs weapon attack animations on.",
+                config.weaponIdleEnabled,
+            ) { config.weaponIdleEnabled = it }
+            checkbox(
+                "True idle pose",
+                "After you stand still for a while, the weapon drops into a relaxed rest pose (spears and staves planted at your side, blades lowered) with slower, deeper breathing and a gentle weight shift. Needs weapon idle stance on.",
+                config.weaponTrueIdleEnabled,
+            ) { config.weaponTrueIdleEnabled = it }
+            val idleDelaySlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.5, 15.0, 1, config.weaponTrueIdleDelaySeconds, "True idle delay (s)") { config.weaponTrueIdleDelaySeconds = it }
+            idleDelaySlider.setTooltip(Tooltip.create(Component.literal("How long you must stand still, after your last attack, before the rest pose starts.")))
+            rows += idleDelaySlider to OwTheme.ROW_H
+            checkbox(
+                "Sprint stance",
+                "While sprinting, you lean into the run and carry the weapon in a running pose: spears and staves held level in both hands, lighter weapons tucked with the arms still pumping. Needs weapon idle stance on.",
+                config.weaponSprintEnabled,
+            ) { config.weaponSprintEnabled = it }
+            checkbox(
+                "Walk stance",
+                "While walking, the weapon is carried in a relaxed travelling pose and the arms swing in step with your stride. Needs weapon idle stance on.",
+                config.weaponWalkEnabled,
+            ) { config.weaponWalkEnabled = it }
+            checkbox(
+                "Combo attacks",
+                "Chains different strokes as you attack (swipe left, right, thrust, twirl, then a finisher). Resets after a short pause.",
+                config.weaponAnimationCombo,
+            ) { config.weaponAnimationCombo = it }
+            checkbox(
+                "Spell animations",
+                "Plays a unique animation for each class spell (Bash, Heal, Arrow Storm, Spin Attack, Totem and the rest, including archetype variants) the moment Wynncraft announces the cast. Spells without a dedicated animation use a generic cast. Needs weapon attack animations on.",
+                config.weaponAnimationSpells,
+            ) { config.weaponAnimationSpells = it }
+            checkbox(
+                "Swing sound effects",
+                "Plays a local whoosh, and a heavier hit on finishers, timed to each stroke. Only you hear these.",
+                config.weaponAnimationSfx,
+            ) { config.weaponAnimationSfx = it }
+            val sfxSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationSfxVolume, "Swing sound volume") { config.weaponAnimationSfxVolume = it }
+            rows += sfxSlider to OwTheme.ROW_H
+            checkbox(
+                "Weapon afterimages",
+                "Leaves faint fading copies of your held weapon along the swing, drawn from its real item texture.",
+                config.weaponAnimationTrail,
+            ) { config.weaponAnimationTrail = it }
+            val trailSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.2, 1.5, 2, config.weaponAnimationTrailIntensity, "Afterimage opacity") { config.weaponAnimationTrailIntensity = it }
+            rows += trailSlider to OwTheme.ROW_H
+            cycleButton({ "Weapon animation models..." }, "Register weapon models and choose which animation each one uses.") {
+                Minecraft.getInstance().setScreenAndShow(OverwatchWeaponAnimationScreen(host.screen))
+            }
+            checkbox(
+                "Freeze animation (preview)",
+                "Debug: holds your held weapon's animation at the progress below so you can inspect a single pose. Progress 0 and 1 are the standby pose.",
+                config.weaponAnimationPreview,
+            ) { config.weaponAnimationPreview = it }
+            val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress") { config.weaponAnimationPreviewT = it }
+            rows += previewSlider to OwTheme.ROW_H
 
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+        }
     }
 
 
     private fun buildQolTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        panel(left, w, top) {
+            header("Combat")
+            checkbox(
+                "Hold to attack",
+                "Keeps swinging while attack is held, paced to your weapon's attack speed. The 'Toggle Hold-to-Attack' keybind flips this too.",
+                config.enabled,
+            ) { config.enabled = it }
 
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
+            checkbox(
+                "Prevent hotbar overscroll",
+                "Scrolling the hotbar past slot 9 or slot 1 stops there instead of looping around to the other end.",
+                config.qolPreventHotbarOverscroll,
+            ) { config.qolPreventHotbarOverscroll = it }
 
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
+            header("Nametags")
+            checkbox(
+                "Highlight party & friends",
+                "Prefixes other players' nametags with [Party]/[Friend] when they're in your current party or friends list (read from \"party list\"/\"friend list\").",
+                config.customPartyNametagsEnabled,
+            ) { config.customPartyNametagsEnabled = it }
 
-        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
-            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
-                onPress()
-                host.rebuildPanels()
+            header("Gear")
+            checkbox(
+                "Equipped item comparison",
+                "Shows the tooltip of your currently equipped item beside the hovered armor piece, accessory or weapon in the Overwatch inventory.",
+                config.equipComparisonEnabled,
+            ) { config.equipComparisonEnabled = it }
+
+            header("Prices")
+            checkbox(
+                "Price check on tooltips",
+                "Shows Trade Market prices (lowest / median / average, from Wynnventory) on hovered gear and tiered materials. Needs a Wynnventory API key.",
+                config.priceCheckEnabled,
+            ) { config.priceCheckEnabled = it }
+            checkbox(
+                "NPC & listing prices",
+                "Formats merchant prices in stx / LE / EB and compares merchant and Trade Market listing prices to the market.",
+                config.priceCheckNpcEnabled,
+            ) { config.priceCheckNpcEnabled = it }
+            rows += OwLabel(left, 0, w, OwTheme.ROW_H, "Wynnventory API key") to OwTheme.ROW_H
+            val keyBox = OwTextField(host.panelFont, left, 0, w, OwTheme.ROW_H)
+            keyBox.setMaxLength(128)
+            keyBox.setValue(config.wynnventoryApiKey)
+            keyBox.setHint(Component.literal("paste your read-only key"))
+            keyBox.setResponder { config.wynnventoryApiKey = it.trim() }
+            keyBox.setTooltip(Tooltip.create(Component.literal("Free read-only key from wynnventory.com. Stored only in your local config file and sent only to wynnventory.com.")))
+            rows += keyBox to OwTheme.ROW_H
+
+            header("Mounts")
+            checkbox(
+                "Feeding info on item tooltips",
+                "Appends the optimal feeding shopping list to a hovered mount saddle/whistle's tooltip.",
+                config.mountTooltipEnabled,
+            ) { config.mountTooltipEnabled = it }
+            checkbox(
+                "Feeder stable HUD",
+                "Shows a full feeding breakdown panel while the Mount Feeder menu is open and a mount is hovered.",
+                config.mountFeederHudEnabled,
+            ) { config.mountFeederHudEnabled = it }
+
+            header("Inventory")
+            checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory.", config.customInventoryEnabled) {
+                config.customInventoryEnabled = it
             }
-            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += button to OwTheme.ROW_H
+            checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks). On Wynncraft it only starts from your own inventory slots, so menu buttons can't be triggered by a drag.", config.shiftDragQuickMove) {
+                config.shiftDragQuickMove = it
+            }
+
+            header("Tools")
+            rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {
+                Minecraft.getInstance().setScreenAndShow(OverwatchQuestBookScreen(host.screen))
+            } to OwTheme.ROW_H
         }
-
-        header("Combat")
-        checkbox(
-            "Hold to attack",
-            "Keeps swinging while attack is held, paced to your weapon's attack speed. The 'Toggle Hold-to-Attack' keybind flips this too.",
-            config.enabled,
-        ) { config.enabled = it }
-
-        checkbox(
-            "Prevent hotbar overscroll",
-            "Scrolling the hotbar past slot 9 or slot 1 stops there instead of looping around to the other end.",
-            config.qolPreventHotbarOverscroll,
-        ) { config.qolPreventHotbarOverscroll = it }
-
-
-        header("Nametags")
-        checkbox(
-            "Highlight party & friends",
-            "Prefixes other players' nametags with [Party]/[Friend] when they're in your current party or friends list (read from \"party list\"/\"friend list\").",
-            config.customPartyNametagsEnabled,
-        ) { config.customPartyNametagsEnabled = it }
-
-        header("Gear")
-        checkbox(
-            "Equipped item comparison",
-            "Shows the tooltip of your currently equipped item beside the hovered armor piece, accessory or weapon in the Overwatch inventory.",
-            config.equipComparisonEnabled,
-        ) { config.equipComparisonEnabled = it }
-
-        header("Mounts")
-        checkbox(
-            "Feeding info on item tooltips",
-            "Appends the optimal feeding shopping list to a hovered mount saddle/whistle's tooltip.",
-            config.mountTooltipEnabled,
-        ) { config.mountTooltipEnabled = it }
-        checkbox(
-            "Feeder stable HUD",
-            "Shows a full feeding breakdown panel while the Mount Feeder menu is open and a mount is hovered.",
-            config.mountFeederHudEnabled,
-        ) { config.mountFeederHudEnabled = it }
-
-        header("Inventory")
-        checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory.", config.customInventoryEnabled) {
-            config.customInventoryEnabled = it
-        }
-
-        header("Tools")
-        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {
-            Minecraft.getInstance().setScreenAndShow(OverwatchQuestBookScreen(host.screen))
-        } to OwTheme.ROW_H
-        rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Powder Guide")) {
-            Minecraft.getInstance().setScreenAndShow(OverwatchPowderGuideScreen(host.screen))
-        } to OwTheme.ROW_H
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
 
     private fun buildToastsTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-        val kind = activeToastKind
-        val settings = config.toast(kind)
+        panel(left, w, top) {
+            val kind = activeToastKind
+            val settings = config.toast(kind)
 
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
-
-        fun slider(label: String, min: Double, max: Double, decimals: Int, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
-            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange)
-            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += s to OwTheme.ROW_H
-        }
-
-        fun button(label: String, tooltip: String, onPress: () -> Unit) {
-            val b = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(label)) {
-                onPress()
-                host.rebuildPanels()
+            val (enabledLabel, enabledTooltip) = when (kind) {
+                OverwatchToastQueue.Kind.QUEST -> "Quest completion toast" to "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead."
+                OverwatchToastQueue.Kind.LEVEL_UP -> "Level up toast" to "Blocks level-up chat messages and shows a HUD toast instead."
+                OverwatchToastQueue.Kind.DISCOVERY -> "Area discovery toast" to "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead."
+                OverwatchToastQueue.Kind.LOCATION -> "Location change toast" to "Shows a HUD toast with the region name when you enter a new area."
             }
-            b.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += b to OwTheme.ROW_H
-        }
+            val enabledBox = OwCheckbox(left, 0, w, Component.literal(enabledLabel), toastEnabled(kind)) {
+                setToastEnabled(kind, it)
+                config.save()
+            }
+            enabledBox.setTooltip(Tooltip.create(Component.literal(enabledTooltip)))
 
-        val (enabledLabel, enabledTooltip) = when (kind) {
-            OverwatchToastQueue.Kind.QUEST -> "Quest completion toast" to "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead."
-            OverwatchToastQueue.Kind.LEVEL_UP -> "Level up toast" to "Blocks level-up chat messages and shows a HUD toast instead."
-            OverwatchToastQueue.Kind.DISCOVERY -> "Area discovery toast" to "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead."
-            OverwatchToastQueue.Kind.LOCATION -> "Location change toast" to "Shows a HUD toast with the region name when you enter a new area."
-        }
-        val enabledBox = OwCheckbox(left, 0, w, Component.literal(enabledLabel), toastEnabled(kind)) {
-            setToastEnabled(kind, it)
-            config.save()
-        }
-        enabledBox.setTooltip(Tooltip.create(Component.literal(enabledTooltip)))
+            header("${kind.label} Toast")
+            rows += enabledBox to OwTheme.ROW_H
+            button(
+                "Style: ${OverwatchToastQueue.styleFor(kind).label}",
+                "Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.",
+            ) {
+                setToastStyle(kind, OverwatchToastQueue.styleFor(kind).next().name)
+                config.save()
+            }
 
-        header("${kind.label} Toast")
-        rows += enabledBox to OwTheme.ROW_H
-        button(
-            "Style: ${OverwatchToastQueue.styleFor(kind).label}",
-            "Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.",
-        ) {
-            setToastStyle(kind, OverwatchToastQueue.styleFor(kind).next().name)
-            config.save()
+            header("Appearance")
+            slider("Scale", 0.5, 4.0, 2, settings.scale, "Size of this toast's text and panel.") { settings.scale = it }
+            slider("Opacity", 0.2, 1.0, 2, settings.opacity, "How solid this toast is at its most visible.") { settings.opacity = it }
+            slider("Duration (s)", 1.5, 20.0, 1, settings.durationSeconds, "How long this toast stays on screen, including its fade in and out.") { settings.durationSeconds = it }
+
+            header("Sound")
+            button("Sound: ${NotificationSounds.label(settings.sound)}", "Sound played when this toast appears. Click to cycle (plays a preview).") {
+                settings.sound = NotificationSounds.next(settings.sound, allowOff = true)
+                NotificationSounds.play(settings.sound, settings.soundVolume)
+            }
+            slider("Volume", 0.0, 1.0, 2, settings.soundVolume, "Volume of this toast's sound.") { settings.soundVolume = it }
+
+            header("Preview & Position")
+            button("Preview this toast", "Shows a sample of this toast using your current settings.") { OverwatchToastQueue.preview(kind) }
+            button("Preview all toasts", "Queues one sample of every toast type.") { OverwatchToastQueue.preview() }
+            button("Position toasts...", "Toasts share one position. Opens the HUD designer to move or resize it.") {
+                Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
+            }
+
         }
-
-        header("Appearance")
-        slider("Scale", 0.5, 4.0, 2, settings.scale, "Size of this toast's text and panel.") { settings.scale = it }
-        slider("Opacity", 0.2, 1.0, 2, settings.opacity, "How solid this toast is at its most visible.") { settings.opacity = it }
-        slider("Duration (s)", 1.5, 20.0, 1, settings.durationSeconds, "How long this toast stays on screen, including its fade in and out.") { settings.durationSeconds = it }
-
-        header("Sound")
-        button("Sound: ${NotificationSounds.label(settings.sound)}", "Sound played when this toast appears. Click to cycle (plays a preview).") {
-            settings.sound = NotificationSounds.next(settings.sound, allowOff = true)
-            NotificationSounds.play(settings.sound, settings.soundVolume)
-        }
-        slider("Volume", 0.0, 1.0, 2, settings.soundVolume, "Volume of this toast's sound.") { settings.soundVolume = it }
-
-        header("Preview & Position")
-        button("Preview this toast", "Shows a sample of this toast using your current settings.") { OverwatchToastQueue.preview(kind) }
-        button("Preview all toasts", "Queues one sample of every toast type.") { OverwatchToastQueue.preview() }
-        button("Position toasts...", "Toasts share one position. Opens the HUD designer to move or resize it.") {
-            Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
-        }
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun toastEnabled(kind: OverwatchToastQueue.Kind): Boolean = when (kind) {
@@ -832,298 +834,265 @@ class OverwatchSettingsPanels(private val host: Host) {
     }
 
     private fun buildAlertsTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
-
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
-
-        fun slider(label: String, min: Double, max: Double, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
-            val s = OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, 2, initial, label, onChange)
-            s.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += s to OwTheme.ROW_H
-        }
-
-        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
-            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
-                onPress()
-                host.rebuildPanels()
+        panel(left, w, top) {
+            header("Rare Item Alert")
+            checkbox(
+                "Alert on rare item obtained",
+                "Sound/chat alert when an item at or above the rarity below shows up in your inventory. Reads the item's Wynncraft rarity straight off its name colour.",
+                config.mythicAlertEnabled,
+            ) { config.mythicAlertEnabled = it }
+            cycleButton({ "Minimum rarity: ${rarityLabel()}" }, "Click to cycle: Normal / Unique / Rare / Legendary / Fabled / Mythic.") {
+                val opts = WynnRarity.entries
+                val i = opts.indexOfFirst { it.name == config.mythicAlertMinRarity }.coerceAtLeast(0)
+                config.mythicAlertMinRarity = opts[(i + 1).mod(opts.size)].name
             }
-            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += button to OwTheme.ROW_H
-        }
+            checkbox("Play sound", "", config.mythicAlertSound) { config.mythicAlertSound = it }
+            cycleButton({ "Alert sound: ${NotificationSounds.label(config.mythicAlertSoundId)}" }, "Sound played when a rare item is obtained. Click to cycle (plays a preview).") {
+                config.mythicAlertSoundId = NotificationSounds.next(config.mythicAlertSoundId, allowOff = false)
+                NotificationSounds.play(config.mythicAlertSoundId, config.mythicAlertVolume)
+            }
+            slider("Alert volume", 0.0, 1.0, config.mythicAlertVolume, "Volume of the rare item alert sound.") { config.mythicAlertVolume = it }
+            checkbox("Show chat message", "", config.mythicAlertChat) { config.mythicAlertChat = it }
 
-        header("Rare Item Alert")
-        checkbox(
-            "Alert on rare item obtained",
-            "Sound/chat alert when an item at or above the rarity below shows up in your inventory. Reads the item's Wynncraft rarity straight off its name colour.",
-            config.mythicAlertEnabled,
-        ) { config.mythicAlertEnabled = it }
-        cycleButton({ "Minimum rarity: ${rarityLabel()}" }, "Click to cycle: Normal / Unique / Rare / Legendary / Fabled / Mythic.") {
-            val opts = WynnRarity.entries
-            val i = opts.indexOfFirst { it.name == config.mythicAlertMinRarity }.coerceAtLeast(0)
-            config.mythicAlertMinRarity = opts[(i + 1).mod(opts.size)].name
-        }
-        checkbox("Play sound", "", config.mythicAlertSound) { config.mythicAlertSound = it }
-        cycleButton({ "Alert sound: ${NotificationSounds.label(config.mythicAlertSoundId)}" }, "Sound played when a rare item is obtained. Click to cycle (plays a preview).") {
-            config.mythicAlertSoundId = NotificationSounds.next(config.mythicAlertSoundId, allowOff = false)
-            NotificationSounds.play(config.mythicAlertSoundId, config.mythicAlertVolume)
-        }
-        slider("Alert volume", 0.0, 1.0, config.mythicAlertVolume, "Volume of the rare item alert sound.") { config.mythicAlertVolume = it }
-        checkbox("Show chat message", "", config.mythicAlertChat) { config.mythicAlertChat = it }
+            header("Entity Tracker Alerts")
+            checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
+            checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }
+            cycleButton({ "Ping sound: ${soundLabel()}" }, "Sound played when an entity starts matching. Click to cycle (plays a preview).") {
+                config.trackerPingSoundId = NotificationSounds.next(config.trackerPingSoundId, allowOff = false)
+                previewTrackerSound()
+            }
+            slider("Ping pitch", 0.5, 2.0, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
+            slider("Ping volume", 0.0, 1.0, config.trackerPingVolume, "Volume of the new-match ping sound.") { config.trackerPingVolume = it }
 
-        header("Entity Tracker Alerts")
-        checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
-        checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }
-        cycleButton({ "Ping sound: ${soundLabel()}" }, "Sound played when an entity starts matching. Click to cycle (plays a preview).") {
-            config.trackerPingSoundId = NotificationSounds.next(config.trackerPingSoundId, allowOff = false)
-            previewTrackerSound()
         }
-        slider("Ping pitch", 0.5, 2.0, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
-        slider("Ping volume", 0.0, 1.0, config.trackerPingVolume, "Volume of the new-match ping sound.") { config.trackerPingVolume = it }
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun rarityLabel(): String = WynnRarity.entries.firstOrNull { it.name == config.mythicAlertMinRarity }?.displayName ?: "Mythic"
 
 
     private fun buildHudTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
-
-        fun header(label: String) {
-            rows += OwSectionHeader(left, 0, w, label) to 18
-        }
-
-        fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) {
-            val button = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(labelFor())) {
-                onPress()
-                host.rebuildPanels()
+        panel(left, w, top) {
+            checkbox(
+                "Custom HUD",
+                "One switch for the whole New World-styled HUD: health/mana, sprint (mount energy while riding, plus mount pickup announcements), experience and class resource bars, spell cast/combo indicators, NPC dialogue, plus the draggable hotbar, parsed from the real action bar and boss bars. Also hides the vanilla overlay text, hotbar and hunger bar they replace.",
+                config.customHudEnabled,
+            ) { config.customHudEnabled = it }
+            cycleButton({ "Customize HUD layout..." }, "Drag, resize and lock any HUD element -- opens the HUD designer.") {
+                Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
             }
-            button.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += button to OwTheme.ROW_H
+
+            header("Potion Effects")
+            checkbox("Hide vanilla effect icons", "Hides the top-right vanilla potion effect icon HUD.", config.hideVanillaPotionHud) {
+                config.hideVanillaPotionHud = it
+            }
+            checkbox(
+                "Show custom effect HUD",
+                "Shows active effects as an icon + name + remaining-time list instead.",
+                config.customPotionHudEnabled,
+            ) { config.customPotionHudEnabled = it }
+
+            header("Ability Cooldowns")
+            checkbox(
+                "Show ability cooldown HUD",
+                "Shows active class/archetype ability cooldowns (read from the tab-list \"Status Effects\" listing) as a name + timer + bar per ability.",
+                config.abilityCooldownHudEnabled,
+            ) { config.abilityCooldownHudEnabled = it }
+
+            header("Quest Log")
+            checkbox(
+                "Show custom quest log",
+                "Replaces the vanilla scoreboard sidebar (tracked quest, daily/weekly objectives) with a draggable panel. Also hides the vanilla sidebar it replaces.",
+                config.questLogHudEnabled,
+            ) { config.questLogHudEnabled = it }
+
+            header("Bars")
+            cycleButton({ "Bar style: ${HudBars.styleLabel(config.hudBarStyle)}" }, "Look shared by the health, mana, sprint, experience, class resource and mount energy bars. Height comes from the HUD designer: drag a bar's corner handle taller or shorter.") {
+                val i = HudBars.STYLES.indexOf(config.hudBarStyle).coerceAtLeast(0)
+                config.hudBarStyle = HudBars.STYLES[(i + 1).mod(HudBars.STYLES.size)]
+            }
+
+            header("Chat")
+            checkbox("Custom chat layout", "Makes the chat a HUD element you can drag and resize in the HUD designer. Off keeps the vanilla chat position and size.", config.chatHudEnabled) {
+                config.chatHudEnabled = it
+            }
+            cycleButton({ "Chat style: ${ChatHud.label(config.chatStyle)}" }, "Classic is the vanilla per-line backdrop. Glass, fade band and no backdrop restyle only the backgrounds behind chat lines.") {
+                val i = ChatHud.STYLES.indexOf(config.chatStyle).coerceAtLeast(0)
+                config.chatStyle = ChatHud.STYLES[(i + 1).mod(ChatHud.STYLES.size)]
+            }
+
+            checkbox("Smart reply", "When someone messages you (or you message them) in the last 3 minutes, opening chat switches to a direct conversation with them. Pick ALL to go back.", config.chatSmartReply) {
+                config.chatSmartReply = it
+            }
+            checkbox("Conversation view", "While a direct conversation is selected, the open chat shows only that player's messages, like a separate channel per player.", config.chatConversationView) {
+                config.chatConversationView = it
+            }
+
+            header("Hotbar")
+            cycleButton({ "Hotbar style: ${HotbarStyles.label(config.hotbarStyle)}" }, "Classic is the vanilla bar. Glass strip, floating tiles, arc, radial wheel and Elden cross are redrawn layouts of the same nine slots; drag and scale them in the HUD designer.") {
+                val i = HotbarStyles.STYLES.indexOf(config.hotbarStyle).coerceAtLeast(0)
+                config.hotbarStyle = HotbarStyles.STYLES[(i + 1).mod(HotbarStyles.STYLES.size)]
+            }
+
+            header("Panels")
+            checkbox(
+                "Panel backgrounds",
+                "Draws dark panels behind HUD text. Off is the New World style: floating shadowed text with no panels (bars keep their tracks).",
+                config.hudPanelsEnabled,
+            ) { config.hudPanelsEnabled = it }
+
         }
-
-        checkbox(
-            "Custom HUD",
-            "One switch for the whole New World-styled HUD: health/mana, sprint (mount energy while riding, plus mount pickup announcements), experience and class resource bars, spell cast/combo indicators, NPC dialogue, plus the draggable hotbar, parsed from the real action bar and boss bars. Also hides the vanilla overlay text, hotbar and hunger bar they replace.",
-            config.customHudEnabled,
-        ) { config.customHudEnabled = it }
-        cycleButton({ "Customize HUD layout..." }, "Drag, resize and lock any HUD element -- opens the HUD designer.") {
-            Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
-        }
-
-        header("Potion Effects")
-        checkbox("Hide vanilla effect icons", "Hides the top-right vanilla potion effect icon HUD.", config.hideVanillaPotionHud) {
-            config.hideVanillaPotionHud = it
-        }
-        checkbox(
-            "Show custom effect HUD",
-            "Shows active effects as an icon + name + remaining-time list instead.",
-            config.customPotionHudEnabled,
-        ) { config.customPotionHudEnabled = it }
-
-        header("Ability Cooldowns")
-        checkbox(
-            "Show ability cooldown HUD",
-            "Shows active class/archetype ability cooldowns (read from the tab-list \"Status Effects\" listing) as a name + timer + bar per ability.",
-            config.abilityCooldownHudEnabled,
-        ) { config.abilityCooldownHudEnabled = it }
-
-        header("Quest Log")
-        checkbox(
-            "Show custom quest log",
-            "Replaces the vanilla scoreboard sidebar (tracked quest, daily/weekly objectives) with a draggable panel. Also hides the vanilla sidebar it replaces.",
-            config.questLogHudEnabled,
-        ) { config.questLogHudEnabled = it }
-
-        header("Bars")
-        cycleButton({ "Bar style: ${HudBars.styleLabel(config.hudBarStyle)}" }, "Look shared by the health, mana, sprint, experience, class resource and mount energy bars. Height comes from the HUD designer: drag a bar's corner handle taller or shorter.") {
-            val i = HudBars.STYLES.indexOf(config.hudBarStyle).coerceAtLeast(0)
-            config.hudBarStyle = HudBars.STYLES[(i + 1).mod(HudBars.STYLES.size)]
-        }
-
-        header("Panels")
-        checkbox(
-            "Panel backgrounds",
-            "Draws dark panels behind HUD text. Off is the New World style: floating shadowed text with no panels (bars keep their tracks).",
-            config.hudPanelsEnabled,
-        ) { config.hudPanelsEnabled = it }
-
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
 
     private fun buildLootrunTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
-
-        fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            val box = OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange)
-            if (tooltip.isNotEmpty()) box.setTooltip(Tooltip.create(Component.literal(tooltip)))
-            rows += box to OwTheme.ROW_H
-        }
-
-        checkbox("Enabled", "Master switch for all lootrun features below.", config.lootrunEnabled) { config.lootrunEnabled = it }
-        checkbox(
-            "Chest beacon markers",
-            "Colour-codes real beacon entities (chests/tasks) while a lootrun is active.",
-            config.lootrunBeaconsEnabled,
-        ) { config.lootrunBeaconsEnabled = it }
-        checkbox(
-            "Task location marker",
-            "Decodes Wynncraft's real firework-particle circle burst into a marker at the current task's centre.",
-            config.lootrunTaskMarkerEnabled,
-        ) { config.lootrunTaskMarkerEnabled = it }
-        checkbox("State HUD", "Timer / challenges / current task, read from the real scoreboard.", config.lootrunHudEnabled) {
-            config.lootrunHudEnabled = it
-        }
-        checkbox(
-            "Record my own runs",
-            "While a lootrun is active, records your own walked route so it can be replayed as a guide line next time.",
-            config.lootrunRecorderEnabled,
-        ) { config.lootrunRecorderEnabled = it }
-
-        rows += OwSectionHeader(left, 0, w, "Saved Paths") to 18
-
-        val active = LootrunRecorder.activePath
-        if (active != null) {
-            val stopButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Following: ${active.name}  (click to stop)"), accent = true) {
-                LootrunRecorder.activePath = null
-                host.rebuildPanels()
+        panel(left, w, top) {
+            checkbox("Enabled", "Master switch for all lootrun features below.", config.lootrunEnabled) { config.lootrunEnabled = it }
+            checkbox(
+                "Chest beacon markers",
+                "Colour-codes real beacon entities (chests/tasks) while a lootrun is active.",
+                config.lootrunBeaconsEnabled,
+            ) { config.lootrunBeaconsEnabled = it }
+            checkbox(
+                "Task location marker",
+                "Decodes Wynncraft's real firework-particle circle burst into a marker at the current task's centre.",
+                config.lootrunTaskMarkerEnabled,
+            ) { config.lootrunTaskMarkerEnabled = it }
+            checkbox("State HUD", "Timer / challenges / current task, read from the real scoreboard.", config.lootrunHudEnabled) {
+                config.lootrunHudEnabled = it
             }
-            rows += stopButton to OwTheme.ROW_H
-        }
+            checkbox(
+                "Record my own runs",
+                "While a lootrun is active, records your own walked route so it can be replayed as a guide line next time.",
+                config.lootrunRecorderEnabled,
+            ) { config.lootrunRecorderEnabled = it }
 
-        val paths = LootrunPathStore.list()
-        if (paths.isEmpty()) {
-            rows += OwLabel(left, 0, w, OwTheme.ROW_H, "No saved runs yet.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
-        }
-        for (path in paths) {
-            val useWidth = w - 44
-            val useButton = OwButton(left, 0, useWidth, OwTheme.ROW_H - 2, Component.literal("${path.name}  (${path.points.size} pts)")) {
-                LootrunRecorder.activePath = path
-                host.rebuildPanels()
-            }
-            rows += useButton to 0
-            val deleteButton = OwButton(left + useWidth + 4, 0, 40, OwTheme.ROW_H - 2, Component.literal("Del")) {
-                if (LootrunRecorder.activePath?.name == path.name) LootrunRecorder.activePath = null
-                LootrunPathStore.delete(path.name)
-                host.rebuildPanels()
-            }
-            rows += deleteButton to OwTheme.ROW_H
-        }
+            rows += OwSectionHeader(left, 0, w, "Saved Paths") to 18
 
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+            val active = LootrunRecorder.activePath
+            if (active != null) {
+                val stopButton = OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Following: ${active.name}  (click to stop)"), accent = true) {
+                    LootrunRecorder.activePath = null
+                    host.rebuildPanels()
+                }
+                rows += stopButton to OwTheme.ROW_H
+            }
+
+            val paths = LootrunPathStore.list()
+            if (paths.isEmpty()) {
+                rows += OwLabel(left, 0, w, OwTheme.ROW_H, "No saved runs yet.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
+            }
+            for (path in paths) {
+                val useWidth = w - 44
+                val useButton = OwButton(left, 0, useWidth, OwTheme.ROW_H - 2, Component.literal("${path.name}  (${path.points.size} pts)")) {
+                    LootrunRecorder.activePath = path
+                    host.rebuildPanels()
+                }
+                rows += useButton to 0
+                val deleteButton = OwButton(left + useWidth + 4, 0, 40, OwTheme.ROW_H - 2, Component.literal("Del")) {
+                    if (LootrunRecorder.activePath?.name == path.name) LootrunRecorder.activePath = null
+                    LootrunPathStore.delete(path.name)
+                    host.rebuildPanels()
+                }
+                rows += deleteButton to OwTheme.ROW_H
+            }
+
+        }
     }
 
 
     private fun buildDiscordTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        panel(left, w, top) {
+            val rpcCheckbox = OwCheckbox(left, 0, w, Component.literal("Enable Discord Rich Presence"), config.discordRpcEnabled) {
+                config.discordRpcEnabled = it
+            }
+            rpcCheckbox.setTooltip(Tooltip.create(Component.literal("Connects to your local Discord client over IPC and shows a status card. Nothing is sent anywhere but Discord.")))
+            rows += rpcCheckbox to OwTheme.ROW_H
 
-        val rpcCheckbox = OwCheckbox(left, 0, w, Component.literal("Enable Discord Rich Presence"), config.discordRpcEnabled) {
-            config.discordRpcEnabled = it
-        }
-        rpcCheckbox.setTooltip(Tooltip.create(Component.literal("Connects to your local Discord client over IPC and shows a status card. Nothing is sent anywhere but Discord.")))
-        rows += rpcCheckbox to OwTheme.ROW_H
+            val activityCheckbox = OwCheckbox(left, 0, w, Component.literal("Show current activity"), config.discordShowActivity) {
+                config.discordShowActivity = it
+            }
+            activityCheckbox.setTooltip(Tooltip.create(Component.literal("What you're doing right now -- on a lootrun, your tracked quest, or just adventuring.")))
+            rows += activityCheckbox to OwTheme.ROW_H
 
-        val activityCheckbox = OwCheckbox(left, 0, w, Component.literal("Show current activity"), config.discordShowActivity) {
-            config.discordShowActivity = it
-        }
-        activityCheckbox.setTooltip(Tooltip.create(Component.literal("What you're doing right now -- on a lootrun, your tracked quest, or just adventuring.")))
-        rows += activityCheckbox to OwTheme.ROW_H
+            val levelCheckbox = OwCheckbox(left, 0, w, Component.literal("Show combat level"), config.discordShowLevel) {
+                config.discordShowLevel = it
+            }
+            levelCheckbox.setTooltip(Tooltip.create(Component.literal("Your character's combat level, read live off the in-game HUD.")))
+            rows += levelCheckbox to OwTheme.ROW_H
 
-        val levelCheckbox = OwCheckbox(left, 0, w, Component.literal("Show combat level"), config.discordShowLevel) {
-            config.discordShowLevel = it
-        }
-        levelCheckbox.setTooltip(Tooltip.create(Component.literal("Your character's combat level, read live off the in-game HUD.")))
-        rows += levelCheckbox to OwTheme.ROW_H
-
-        val regionCheckbox = OwCheckbox(left, 0, w, Component.literal("Show current region"), config.discordShowRegion) {
-            config.discordShowRegion = it
-        }
-        regionCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "The Wynncraft territory closest to your position, from Wynncraft's own public territory API " +
-                        "(api.wynncraft.com) -- an approximation, not an exact zone name.",
+            val regionCheckbox = OwCheckbox(left, 0, w, Component.literal("Show current region"), config.discordShowRegion) {
+                config.discordShowRegion = it
+            }
+            regionCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "The Wynncraft territory closest to your position, from Wynncraft's own public territory API " +
+                            "(api.wynncraft.com) -- an approximation, not an exact zone name.",
+                    ),
                 ),
-            ),
-        )
-        rows += regionCheckbox to OwTheme.ROW_H
+            )
+            rows += regionCheckbox to OwTheme.ROW_H
 
-        val info = listOf(
-            "Requires the Discord desktop app to be running.",
-            "Nothing is sent anywhere but your own local Discord client.",
-        )
-        for (line in info) rows += OwLabel(left, 0, w, 10, line, OwTheme.TEXT_DIM) to 11
+            val info = listOf(
+                "Requires the Discord desktop app to be running.",
+                "Nothing is sent anywhere but your own local Discord client.",
+            )
+            for (line in info) rows += OwLabel(left, 0, w, 10, line, OwTheme.TEXT_DIM) to 11
 
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+        }
     }
 
 
     private fun buildOverridesTab(left: Int, w: Int, top: Int) {
-        val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        panel(left, w, top) {
+            rows += OwSectionHeader(left, 0, w, "Wynncraft Overrides") to 18
+            val contentBookCheckbox = OwCheckbox(left, 0, w, Component.literal("Override Wynncraft's Content Book"), config.contentBookOverrideEnabled) {
+                config.contentBookOverrideEnabled = it
+            }
+            contentBookCheckbox.setTooltip(Tooltip.create(Component.literal("Right-clicking the Content Book item opens Overwatch's own menu instead of Wynncraft's.")))
+            rows += contentBookCheckbox to OwTheme.ROW_H
 
-        rows += OwSectionHeader(left, 0, w, "Wynncraft Overrides") to 18
-        val contentBookCheckbox = OwCheckbox(left, 0, w, Component.literal("Override Wynncraft's Content Book"), config.contentBookOverrideEnabled) {
-            config.contentBookOverrideEnabled = it
-        }
-        contentBookCheckbox.setTooltip(Tooltip.create(Component.literal("Right-clicking the Content Book item opens Overwatch's own menu instead of Wynncraft's.")))
-        rows += contentBookCheckbox to OwTheme.ROW_H
-
-        val waypointCheckbox = OwCheckbox(left, 0, w, Component.literal("Override quest waypoints"), config.questWaypointOverrideEnabled) {
-            config.questWaypointOverrideEnabled = it
-        }
-        waypointCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "Renders Overwatch's own waypoint pointer at Wynncraft's real quest marker location, " +
-                        "instead of relying on Wynncraft's own render-distance-limited beam.",
+            val waypointCheckbox = OwCheckbox(left, 0, w, Component.literal("Override quest waypoints"), config.questWaypointOverrideEnabled) {
+                config.questWaypointOverrideEnabled = it
+            }
+            waypointCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "Renders Overwatch's own waypoint pointer at Wynncraft's real quest marker location, " +
+                            "instead of relying on Wynncraft's own render-distance-limited beam.",
+                    ),
                 ),
-            ),
-        )
-        rows += waypointCheckbox to OwTheme.ROW_H
+            )
+            rows += waypointCheckbox to OwTheme.ROW_H
 
-        rows += OwSectionHeader(left, 0, w, "Rendering") to 18
-        val voxyCheckbox = OwCheckbox(left, 0, w, Component.literal("Voxy Vista (hide LODs outside Wynncraft)"), config.voxyVistaEnabled) {
-            config.voxyVistaEnabled = it
-        }
-        voxyCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "If Voxy is installed, disables its rendering (via Voxy's own enableRendering toggle) while " +
-                        "you're outside Wynncraft's own map bounds -- no LOD data to see there, so this avoids the wasted cost.",
+            rows += OwSectionHeader(left, 0, w, "Rendering") to 18
+            val voxyCheckbox = OwCheckbox(left, 0, w, Component.literal("Voxy Vista (hide LODs outside Wynncraft)"), config.voxyVistaEnabled) {
+                config.voxyVistaEnabled = it
+            }
+            voxyCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "If Voxy is installed, disables its rendering (via Voxy's own enableRendering toggle) while " +
+                            "you're outside Wynncraft's own map bounds -- no LOD data to see there, so this avoids the wasted cost.",
+                    ),
                 ),
-            ),
-        )
-        rows += voxyCheckbox to OwTheme.ROW_H
+            )
+            rows += voxyCheckbox to OwTheme.ROW_H
 
-        rows += OwSectionHeader(left, 0, w, "Debug") to 18
-        val debugCheckbox = OwCheckbox(left, 0, w, Component.literal("Middle-click copies item data"), config.debugItemCopyEnabled) {
-            config.debugItemCopyEnabled = it
-        }
-        debugCheckbox.setTooltip(
-            Tooltip.create(
-                Component.literal(
-                    "Middle-click a hovered item in a custom Overwatch screen to copy its registry id, name and full data components to the clipboard -- for matching server menu items during development.",
+            rows += OwSectionHeader(left, 0, w, "Debug") to 18
+            val debugCheckbox = OwCheckbox(left, 0, w, Component.literal("Middle-click copies item data"), config.debugItemCopyEnabled) {
+                config.debugItemCopyEnabled = it
+            }
+            debugCheckbox.setTooltip(
+                Tooltip.create(
+                    Component.literal(
+                        "Middle-click a hovered item in a custom Overwatch screen to copy its registry id, name and full data components to the clipboard -- for matching server menu items during development.",
+                    ),
                 ),
-            ),
-        )
-        rows += debugCheckbox to OwTheme.ROW_H
+            )
+            rows += debugCheckbox to OwTheme.ROW_H
 
-        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+        }
     }
 
     private companion object {

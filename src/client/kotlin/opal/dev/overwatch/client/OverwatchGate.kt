@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.client.Minecraft
 
 object OverwatchGate {
-
     @Volatile
     var onWynncraft: Boolean = false
         private set
@@ -39,6 +38,7 @@ object OverwatchGate {
             WynnRegionBarTracker.clear()
             WynnSpellTracker.clear()
             HudLayoutManager.clearSizes()
+            ContentBookCache.clearTracking()
         }
         onWynncraft = onWynn
         inGame = inGameNow

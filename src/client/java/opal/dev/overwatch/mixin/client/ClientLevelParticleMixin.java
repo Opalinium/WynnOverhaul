@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientLevel.class)
 public abstract class ClientLevelParticleMixin {
-
     @Inject(method = "doAddParticle", at = @At("HEAD"))
     private void overwatch$onAddParticle(
             ParticleOptions particleOptions,

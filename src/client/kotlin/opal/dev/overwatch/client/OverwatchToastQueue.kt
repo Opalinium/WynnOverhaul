@@ -14,7 +14,6 @@ enum class ToastStyle(val label: String) {
 }
 
 object OverwatchToastQueue {
-
     enum class Kind(val label: String, val defaultColor: Int) {
         QUEST("Quest", 0xFF55FF55.toInt()),
         LEVEL_UP("Level Up", 0xFFFFD700.toInt()),

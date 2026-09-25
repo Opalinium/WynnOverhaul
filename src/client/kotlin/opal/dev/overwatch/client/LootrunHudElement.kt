@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.overwatch.Overwatch
 
 class LootrunHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -29,9 +28,7 @@ class LootrunHudElement : HudElement {
 
         val lines = ArrayList<Pair<String, Int>>()
         lines.add(stateLine() to STATE_COLOR)
-        LootrunModel.timeLeftSeconds?.let {
-            lines.add("Time left: %d:%02d".format(it / 60, it % 60) to TEXT_COLOR)
-        }
+        val timer = LootrunModel.timeLeftSeconds?.let { "%d:%02d".format(it / 60, it % 60) }.orEmpty()
         if (LootrunModel.challengesTotal > 0) {
             lines.add("Challenges: ${LootrunModel.challengesDone}/${LootrunModel.challengesTotal}" to TEXT_COLOR)
         }
@@ -40,12 +37,13 @@ class LootrunHudElement : HudElement {
         }
 
         val font = Minecraft.getInstance().font
-        val (boxW, boxH) = HudLayoutManager.stableSize(ID, lines.maxOf { font.width(it.first) } + PAD * 2, lines.size * LINE_H + PAD * 2)
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, maxOf(lines.maxOf { font.width(it.first) }, font.width("LOOTRUN") + font.width(timer) + 24) + PAD * 2, lines.size * LINE_H + PAD * 2 + HEADER_H)
         val (x, y) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
         OwTheme.hudPanel(graphics, x, y, boxW, boxH)
 
-        var ly = y + PAD
+        HudStyle.header(graphics, font, x + PAD, y + PAD, boxW - PAD * 2, "Lootrun", timer)
+        var ly = y + PAD + HEADER_H
         for ((text, color) in lines) {
             graphics.text(font, text, x + PAD, ly, color, true)
             ly += LINE_H
@@ -70,6 +68,7 @@ class LootrunHudElement : HudElement {
         const val ID = "lootrun"
         const val PAD = 6
         const val LINE_H = 10
+        const val HEADER_H = 13
         val STATE_COLOR = OwTheme.ACCENT
         val TEXT_COLOR = OwTheme.TEXT
         val DIM_COLOR = OwTheme.TEXT_DIM

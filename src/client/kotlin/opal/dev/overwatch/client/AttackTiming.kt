@@ -4,7 +4,6 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 object AttackTiming {
-
     const val MIN_EFFECTIVE_CPS = 2.0
 
     private const val LEGACY_ATTACK_SPEED_EPSILON = 0.5

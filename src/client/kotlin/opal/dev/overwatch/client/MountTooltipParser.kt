@@ -18,16 +18,15 @@ data class MountReading(
 )
 
 object MountTooltipParser {
-
     fun parse(stack: ItemStack): MountReading? {
         if (stack.isEmpty || stack.item != Items.POTION) return null
-        val title = clean(stack.hoverName.string)
+        val title = TextClean.clean(stack.hoverName.string)
         val nameMatch = MOUNT_TITLE.find(title) ?: return null
         val name = nameMatch.groupValues[1].trim()
         val typeWord = nameMatch.groupValues[2]
         val typeName = MountGuideData.TYPES.firstOrNull { it.itemName == typeWord || it.summonItemName == typeWord }?.displayName ?: return null
 
-        val loreLines = stack.get(DataComponents.LORE)?.lines()?.map { clean(it.string) } ?: return null
+        val loreLines = stack.get(DataComponents.LORE)?.lines()?.map { TextClean.clean(it.string) } ?: return null
         if (loreLines.isEmpty()) return null
 
         var potential: Int? = null
@@ -83,14 +82,6 @@ object MountTooltipParser {
             return text.dropLast(1).toDoubleOrNull()?.let { (it * 1000).toInt() }
         }
         return text.toIntOrNull()
-    }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        for (cp in text.codePoints()) {
-            if (cp < 0xE000) sb.appendCodePoint(cp)
-        }
-        return sb.toString().trim()
     }
 
     private val MOUNT_TITLE = Regex("""^(.+?)(?:'s?)? (Saddle|Reins|Harness|Whistle|Flute|Ocarina)$""")

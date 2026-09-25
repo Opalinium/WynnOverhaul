@@ -4,7 +4,6 @@ import net.minecraft.core.component.DataComponents
 import net.minecraft.world.item.ItemStack
 
 object WynnWeapons {
-
     private val HITS_PER_SEC = Regex("""(\d+(?:\.\d+)?)\s*(?:hits?|atks?|attacks?)\s*/\s*s""", RegexOption.IGNORE_CASE)
 
     private val TIERS: List<Pair<String, Double>> = listOf(

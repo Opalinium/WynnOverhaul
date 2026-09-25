@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object WynnMountEnergyTracker {
-
     const val MAX_ENERGY = 48
 
     @Volatile

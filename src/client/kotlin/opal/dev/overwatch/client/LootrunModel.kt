@@ -6,7 +6,6 @@ import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
 
 object LootrunModel {
-
     enum class State { NOT_RUNNING, CHOOSING_BEACON, IN_TASK }
     enum class TaskType { LOOT, SLAY, DESTROY, DEFEND, UNKNOWN }
 
@@ -37,7 +36,7 @@ object LootrunModel {
             .filterNot { it.isHidden }
             .sortedWith(compareByDescending<PlayerScoreEntry> { it.value() }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.owner() })
             .take(15)
-            .map { entry -> clean(PlayerTeam.formatNameForTeam(scoreboard.getPlayersTeam(entry.owner()), entry.ownerName()).string) }
+            .map { entry -> TextClean.clean(PlayerTeam.formatNameForTeam(scoreboard.getPlayersTeam(entry.owner()), entry.ownerName()).string) }
 
         val headerIndex = lines.indexOfFirst { it == "Lootrun:" }
         if (headerIndex < 0) {
@@ -88,23 +87,6 @@ object LootrunModel {
         lootCurrent = 0
         lootTotal = 0
     }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (!isPrivateUse(cp) && cp != 0xFFFD) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        return sb.toString().trim()
-    }
-
-    private fun isPrivateUse(cp: Int): Boolean = cp >= 0xE000
 
     private val CHOOSE_BEACON = Regex("""Choose a beacon!""")
     private val WARPING_BACK = Regex("""Warping back to camp!""")

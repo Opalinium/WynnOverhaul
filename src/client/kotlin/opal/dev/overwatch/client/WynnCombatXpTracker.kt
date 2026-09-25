@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object WynnCombatXpTracker {
-
     private const val EXPERIENCE_CHAR_START_C = '\uE110'
     private const val EXPERIENCE_CHAR_END_C = '\uE144'
 

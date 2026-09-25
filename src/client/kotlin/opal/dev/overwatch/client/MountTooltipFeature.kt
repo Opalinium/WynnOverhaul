@@ -5,7 +5,6 @@ import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 
 object MountTooltipFeature {
-
     fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
             val config = OverwatchConfig.current

@@ -14,7 +14,6 @@ data class LootrunPathPoint(val x: Double, val y: Double, val z: Double)
 data class LootrunPath(val name: String, val dimension: String, val points: List<LootrunPathPoint>, val savedAtMillis: Long)
 
 object LootrunPathStore {
-
     private val PATH = FabricLoader.getInstance().configDir.resolve("overwatch-lootrun-paths.json")
     private val GSON = GsonBuilder().setPrettyPrinting().create()
     private val LIST_TYPE = object : TypeToken<MutableList<LootrunPath>>() {}.type

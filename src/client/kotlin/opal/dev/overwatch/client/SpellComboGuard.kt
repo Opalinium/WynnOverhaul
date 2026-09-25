@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.client.Minecraft
 
 object SpellComboGuard {
-
     private const val COMBO_LENGTH = 3
     private const val TAIL_NANOS = 400_000_000L
 
@@ -38,6 +37,14 @@ object SpellComboGuard {
         suspendUntilNanos = now + if (inputs >= COMBO_LENGTH) minOf(window, TAIL_NANOS) else window
     }
 
+    @JvmStatic
+    fun beforeClick(client: Minecraft, use: Boolean) {
+        val player = client.player ?: return
+        if (client.level == null || !OverwatchGate.inGame) return
+        tick(client)
+        if (use && !isSuspended() && ActiveWeapon.isRanged(player)) WeaponAnimations.onSwing(player)
+    }
+
     fun isSuspended(): Boolean {
         val config = OverwatchConfig.current
         return config.combatSpellGuardEnabled && System.nanoTime() < suspendUntilNanos
@@ -45,7 +52,6 @@ object SpellComboGuard {
 
     private fun startsWithLeft(client: Minecraft): Boolean {
         val player = client.player ?: return false
-        val stack = ActiveWeapon.stack(player) ?: player.mainHandItem
-        return WeaponAnimations.startsSpellWithLeft(stack)
+        return ActiveWeapon.isRanged(player)
     }
 }

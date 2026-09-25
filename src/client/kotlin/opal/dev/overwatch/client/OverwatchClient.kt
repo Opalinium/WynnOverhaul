@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
 class OverwatchClient : ClientModInitializer {
-
     private lateinit var toggleKey: KeyMapping
     private lateinit var configKey: KeyMapping
     private lateinit var soulsToggleKey: KeyMapping
@@ -103,7 +102,7 @@ class OverwatchClient : ClientModInitializer {
             SoulsCamera.recenter(client)
         }
 
-        if (!config.enabled || client.gui.screen() != null || client.level == null || !client.options.keyAttack.isDown) {
+        if (!config.enabled || client.gui.screen() != null || client.level == null || !ActiveWeapon.attackKey(client).isDown) {
             attackGate.reset()
         }
     }
@@ -114,8 +113,8 @@ class OverwatchClient : ClientModInitializer {
         if (!OverwatchGate.inGame) return
         if (!config.enabled || client.gui.screen() != null || client.level == null) return
         val player = client.player ?: return
-        if (!client.options.keyAttack.isDown) return
+        if (!ActiveWeapon.attackKey(client).isDown) return
 
-        RaytraceAttack.tryAttack(client, player, config, attackGate)
+        AutoAttack.tick(client, player, config, attackGate)
     }
 }

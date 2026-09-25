@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.overwatch.Overwatch
 
 class HpHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {

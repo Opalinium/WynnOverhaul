@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.entity.LidBlockEntity
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
 import net.minecraft.world.level.chunk.status.ChunkStatus
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import opal.dev.overwatch.Overwatch
@@ -37,13 +38,13 @@ import kotlin.math.floor
 import kotlin.math.sqrt
 
 object EntityTracker {
-
     class Match(
         val anchor: Entity?,
         val blockBox: AABB?,
         val label: String,
         val colorArgb: Int,
         val throughWalls: Boolean,
+        val icon: ItemStack = ItemStack.EMPTY,
     ) {
         fun box(): AABB = blockBox ?: anchor!!.boundingBox
         fun center(): Vec3 = box().center
@@ -66,6 +67,34 @@ object EntityTracker {
     private val confirmedChests = HashMap<Long, ChestRecord>()
     private val confirmedNodes = HashMap<Long, NodeRecord>()
 
+    private class VerdictEntry(
+        var type: EntityType<*>,
+        var custom: Component?,
+        var text: Component?,
+        var name: String,
+        var rule: OverwatchConfig.TrackerRule?,
+        var gen: Int,
+    )
+
+    private class VerdictCache {
+        val entries = HashMap<Int, VerdictEntry>()
+        var gen = 0
+    }
+
+    private class ChestSweep(
+        val sig: Int,
+        val level: ClientLevel,
+        val atNanos: Long,
+        val x: Double,
+        val z: Double,
+        val matches: List<Match>,
+        val keys: Set<UUID>,
+    )
+
+    private val verdictCaches = HashMap<Int, VerdictCache>()
+    private var verdictLevel: ClientLevel? = null
+    private var chestSweep: ChestSweep? = null
+
     private var nextScanNanos = 0L
     private var cachedPreview = 0
     private var nextPreviewNanos = 0L
@@ -78,6 +107,9 @@ object EntityTracker {
         } else {
             TrackerChestStore.detach(confirmedChests)
             TrackerNodeStore.detach(confirmedNodes)
+            verdictCaches.clear()
+            verdictLevel = null
+            chestSweep = null
         }
 
         val config = OverwatchConfig.current
@@ -92,6 +124,15 @@ object EntityTracker {
         if (now < nextScanNanos) return
         nextScanNanos = now + SCAN_INTERVAL_NANOS
 
+        try {
+            dispatchScan(client, config, player, level)
+        } finally {
+            val elapsed = System.nanoTime() - now
+            nextScanNanos = now + (elapsed * SCAN_BACKOFF_FACTOR).coerceIn(SCAN_INTERVAL_NANOS, MAX_SCAN_INTERVAL_NANOS)
+        }
+    }
+
+    private fun dispatchScan(client: Minecraft, config: OverwatchConfig, player: Player, level: ClientLevel) {
         if (!config.trackerEnabled) {
             clear()
             val pointRules = config.trackerRules.filter { it.enabled && (it.trackBlockBelow || it.trackGatheringNode) }
@@ -160,7 +201,7 @@ object EntityTracker {
                 } else {
                     val key = entity.uuid
                     if (!liveIds.add(key)) return@scan
-                    val match = Match(entity, redirect.box, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls)
+                    val match = Match(entity, redirect.box, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.chest)
                     matches.add(match)
                     if (seen.add(key)) newly.add(match)
                 }
@@ -173,7 +214,7 @@ object EntityTracker {
                 } else {
                     val key = entity.uuid
                     if (!liveIds.add(key)) return@scan
-                    val match = Match(entity, redirect.box, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls)
+                    val match = Match(entity, redirect.box, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.node(rule.nodeProfession))
                     matches.add(match)
                     if (seen.add(key)) newly.add(match)
                 }
@@ -182,13 +223,16 @@ object EntityTracker {
             val anchor = redirect.anchor ?: return@scan
             val key = anchor.uuid
             if (!liveIds.add(key)) return@scan
-            val match = Match(anchor, null, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls)
+            val match = Match(anchor, null, rule.label.ifBlank { sanitizeLabel(name) }, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.mob(anchor))
             matches.add(match)
             if (seen.add(key)) newly.add(match)
         }
 
-        for (rule in rules) {
-            if (rule.trackBlockBelow) chestScan(player, level, config, rule, matches, newly, liveIds)
+        val chestRules = rules.filter { it.trackBlockBelow }
+        if (chestRules.isNotEmpty()) {
+            val sweep = chestSweepFor(player, level, config, rules, chestRules, newly)
+            matches.addAll(sweep.matches)
+            liveIds.addAll(sweep.keys)
         }
 
         seen.retainAll(liveIds)
@@ -246,7 +290,7 @@ object EntityTracker {
 
             val box = AABB(bp.x.toDouble(), bp.y.toDouble(), bp.z.toDouble(), bp.x + 1.0, bp.y + 1.0, bp.z + 1.0)
             val label = if (rule.alwaysDisplay) withCooldownSuffix(record.label, availableAt) else record.label
-            out.add(Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls))
+            out.add(Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.chest))
         }
         out.sortBy { player.distanceToSqr(it.center()) }
         return out
@@ -296,7 +340,7 @@ object EntityTracker {
             } ?: continue
             val box = AABB(bp.x.toDouble(), bp.y.toDouble(), bp.z.toDouble(), bp.x + 1.0, bp.y + 1.0, bp.z + 1.0)
             val label = if (rule.alwaysDisplay) withCooldownSuffix(record.label, record.availableAtMillis) else record.label
-            out.add(Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls))
+            out.add(Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.node(record.profession.ifBlank { rule.nodeProfession })))
         }
         return out
     }
@@ -325,8 +369,14 @@ object EntityTracker {
                 }
                 hits.add(id)
             }
-            for (rule in rules) {
-                if (rule.trackBlockBelow) chestScan(player, level, config, rule, null, null, hits)
+            val chestRules = rules.filter { it.trackBlockBelow }
+            if (chestRules.isNotEmpty()) {
+                val cached = validSweep(player, level, config, rules)
+                if (cached != null) {
+                    hits.addAll(cached.keys)
+                } else {
+                    for (rule in chestRules) chestScan(player, level, config, rule, null, null, hits)
+                }
             }
         }
         cachedPreview = hits.size
@@ -343,12 +393,80 @@ object EntityTracker {
         val range = config.trackerRange
         val rangeSqr = range * range
         val box = player.boundingBox.inflate(range)
+        val cache = verdictCacheFor(level, rules)
+        val gen = ++cache.gen
         for (entity in level.getEntities(player, box) { it.isAlive }) {
             if (player.distanceToSqr(entity) > rangeSqr) continue
-            val name = nameOf(entity)
-            val rule = rules.firstOrNull { ruleMatches(it, entity, name) } ?: continue
-            onMatch(entity, name, rule)
+            val entry = verdictOf(cache, gen, entity, rules)
+            val rule = entry.rule ?: continue
+            onMatch(entity, entry.name, rule)
         }
+        cache.entries.values.removeIf { it.gen != gen }
+    }
+
+    private fun verdictCacheFor(level: ClientLevel, rules: List<OverwatchConfig.TrackerRule>): VerdictCache {
+        if (level !== verdictLevel) {
+            verdictCaches.clear()
+            verdictLevel = level
+        }
+        val sig = rules.hashCode()
+        if (verdictCaches.size >= MAX_VERDICT_CACHES && sig !in verdictCaches) verdictCaches.clear()
+        return verdictCaches.getOrPut(sig) { VerdictCache() }
+    }
+
+    private fun verdictOf(
+        cache: VerdictCache,
+        gen: Int,
+        entity: Entity,
+        rules: List<OverwatchConfig.TrackerRule>,
+    ): VerdictEntry {
+        val custom = entity.customName
+        val text = textOf(entity)
+        val hit = cache.entries[entity.id]
+        if (hit != null && hit.type === entity.type && hit.custom === custom && hit.text === text) {
+            hit.gen = gen
+            return hit
+        }
+        val name = nameOf(entity)
+        val rule = rules.firstOrNull { ruleMatches(it, entity, name) }
+        val entry = VerdictEntry(entity.type, custom, text, name, rule, gen)
+        cache.entries[entity.id] = entry
+        return entry
+    }
+
+    private fun validSweep(
+        player: Player,
+        level: ClientLevel,
+        config: OverwatchConfig,
+        rules: List<OverwatchConfig.TrackerRule>,
+    ): ChestSweep? {
+        val sweep = chestSweep ?: return null
+        if (sweep.level !== level || sweep.sig != sweepSignature(config, rules)) return null
+        if (System.nanoTime() - sweep.atNanos > CHEST_SWEEP_INTERVAL_NANOS) return null
+        val dx = player.x - sweep.x
+        val dz = player.z - sweep.z
+        if (dx * dx + dz * dz > CHEST_SWEEP_MOVE_SQR) return null
+        return sweep
+    }
+
+    private fun sweepSignature(config: OverwatchConfig, rules: List<OverwatchConfig.TrackerRule>): Int =
+        31 * rules.hashCode() + config.trackerRange.hashCode()
+
+    private fun chestSweepFor(
+        player: Player,
+        level: ClientLevel,
+        config: OverwatchConfig,
+        rules: List<OverwatchConfig.TrackerRule>,
+        chestRules: List<OverwatchConfig.TrackerRule>,
+        newly: MutableList<Match>,
+    ): ChestSweep {
+        validSweep(player, level, config, rules)?.let { return it }
+        val matches = ArrayList<Match>()
+        val keys = HashSet<UUID>()
+        for (rule in chestRules) chestScan(player, level, config, rule, matches, newly, keys)
+        val sweep = ChestSweep(sweepSignature(config, rules), level, System.nanoTime(), player.x, player.z, matches, keys)
+        chestSweep = sweep
+        return sweep
     }
 
     private fun chestScan(
@@ -406,7 +524,7 @@ object EntityTracker {
                             ?: FALLBACK_CHEST_LABEL
                     }
                     val label = if (rule.alwaysDisplay) withCooldownSuffix(baseLabel, availableAt) else baseLabel
-                    val match = Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls)
+                    val match = Match(null, box, label, rule.colorArgb.toInt(), rule.throughWalls, WaypointIcons.chest)
                     matches.add(match)
                     if (seen.add(key)) newly?.add(match)
                 }
@@ -555,20 +673,18 @@ object EntityTracker {
     private fun namePatternEntries(pattern: String): List<String> =
         pattern.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
-    private fun componentOf(entity: Entity): Component? {
-        if (entity is Display.TextDisplay) {
-            runCatching { (entity as TextDisplayAccessor).`overwatch$getText`() }.getOrNull()?.let { return it }
-        }
-        return entity.customName
+    private fun textOf(entity: Entity): Component? {
+        if (entity !is Display.TextDisplay) return null
+        return runCatching { (entity as TextDisplayAccessor).`overwatch$getText`() }.getOrNull()
     }
+
+    private fun componentOf(entity: Entity): Component? = textOf(entity) ?: entity.customName
 
     private fun nameOf(entity: Entity): String {
         entity.customName?.let { return it.string }
-        if (entity is Display.TextDisplay) {
-            runCatching { (entity as TextDisplayAccessor).`overwatch$getText`() }.getOrNull()?.let {
-                val text = it.string
-                if (text.isNotBlank()) return text
-            }
+        textOf(entity)?.let {
+            val text = it.string
+            if (text.isNotBlank()) return text
         }
         return entity.name.string
     }
@@ -769,6 +885,11 @@ object EntityTracker {
     private const val CHEST_KEY_MARKER = 0x6f77_6368_6573_74L
     private const val OPEN_NESS_THRESHOLD = 0.05f
     private const val SCAN_INTERVAL_NANOS = 200_000_000L
+    private const val MAX_SCAN_INTERVAL_NANOS = 1_000_000_000L
+    private const val SCAN_BACKOFF_FACTOR = 10L
+    private const val CHEST_SWEEP_INTERVAL_NANOS = 1_000_000_000L
+    private const val CHEST_SWEEP_MOVE_SQR = 36.0
+    private const val MAX_VERDICT_CACHES = 4
     private const val PREVIEW_INTERVAL_NANOS = 250_000_000L
     private const val LIVE_OPEN_KEEPALIVE_MS = 300_000L
     private const val FILLED_STARS = "★✦✪✫✬✭✮✯⭐✵✶✷"

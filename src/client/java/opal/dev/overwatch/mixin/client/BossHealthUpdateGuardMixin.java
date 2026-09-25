@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(targets = "net.minecraft.client.gui.components.BossHealthOverlay$1")
 public abstract class BossHealthUpdateGuardMixin {
-
     @Shadow
     @Final
     BossHealthOverlay this$0;

@@ -221,6 +221,9 @@ BLADES = {
     "SPEAR:SLAM": ("leaf", 9.0, 2.5),
     "SPEAR:TWIRL": ("leaf", 9.0, 2.5),
     "SPEAR:SCYTHE": ("sickle", 14.0, 13.0),
+    "SPEAR:RUBY": ("sickle", 14.0, 13.0),
+    "SPEAR:RUBY_VAULT": ("sickle", 14.0, 13.0),
+    "SPEAR:RUBY_SPIN": ("sickle", 14.0, 13.0),
     "DAGGER": ("blade", 11.0, 2.5),
     "DAGGER:STAB": ("blade", 11.0, 2.5),
     "DAGGER:WHIRL": ("blade", 11.0, 2.5),
@@ -307,27 +310,33 @@ def parse_array(text):
     return [float(v) for v in re.findall(r"-?\d+\.?\d*f?", text.replace("f", ""))]
 
 
+def load_states(src):
+    states = {}
+    pat = r'"([A-Z_:]+)" to stance\(\s*' + r'\s*'.join([r'floatArrayOf\(([^)]*)\),'] * 4) + r'\s*(\d+f)?'
+    for m in re.finditer(pat, src):
+        arrays = [np.array(parse_array(m.group(i))) for i in range(2, 6)]
+        offset = float(m.group(6).replace("f", "")) if m.group(6) else 7.0
+        states[m.group(1)] = (*arrays, offset)
+    return states
+
+
 def load_stances(src):
-    stances = {}
-    for m in re.finditer(r'"([A-Z_:]+)" to stance\(\s*floatArrayOf\(([^)]*)\),\s*floatArrayOf\(([^)]*)\),?\s*(\d+f)?', src):
-        stances[m.group(1)] = (np.array(parse_array(m.group(2))), np.array(parse_array(m.group(3))), float(m.group(4).replace("f", "")) if m.group(4) else 7.0)
-    return stances
+    return {k: (v[0], v[1], v[4]) for k, v in load_states(src).items()}
 
 
-WEAPON_LEN = {"SPEAR": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (2, 12), "WAND": (2, 14), "RELIK": (2, 16), "BOW": (14, 14), "BOW:FIREARM": (10, 16)}
+WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (2, 12), "WAND": (2, 14), "RELIK": (2, 16), "BOW": (14, 14), "BOW:FIREARM": (10, 16)}
 
 
 def render_stances(src, out_dir, only=None):
-    stances = load_stances(src)
-    for key, (carry, ready, offset) in stances.items():
+    for key, (carry, ready, idle, sprint, offset) in load_states(src).items():
         if only and key not in only:
             continue
-        fig, axes = plt.subplots(2, 3, figsize=(10, 7.4))
-        for j, (label, ch) in enumerate((("carry", carry), ("ready", ready))):
+        fig, axes = plt.subplots(4, 3, figsize=(10, 14.6))
+        for j, (label, ch) in enumerate((("carry", carry), ("ready", ready), ("idle", idle), ("sprint", sprint))):
             for k, view in enumerate(("front", "side", "top")):
                 scene(axes[j][k], ch, view, offset, WEAPON_LEN.get(key, (4, 14)), f"{key} {label} {view}", BLADES.get(key))
         fig.tight_layout()
-        fig.savefig(out_dir / f"stance_{key.replace(':', '_')}.png", dpi=70)
+        fig.savefig(out_dir / f"stance_{key.replace(':', '_')}.png", dpi=60)
         plt.close(fig)
 
 
@@ -398,14 +407,14 @@ def load_poses(src):
 PARAMS = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step"]
 
 
-SPIN_KEYS = {"SPEAR:TWIRL"}
+SPIN_KEYS = {"SPEAR:TWIRL", "SPEAR:RUBY_SPIN"}
 
 
 def sample_pose(curves, t, base, key=None):
     out = np.array(base, dtype=float)
     for i, name in enumerate(PARAMS):
         if name in curves:
-            if i == HEAD_Y and key in SPIN_KEYS:
+            if i in (HEAD_Y, TWIST) and key in SPIN_KEYS:
                 out[i] = base[i] + curves[name].at(t, 0.0)
             else:
                 out[i] = curves[name].at(t, base[i])
@@ -453,9 +462,22 @@ def audit(src):
     print("total", total_pre, total_post)
 
 
-FP_MOVE = 1.1 / 16
-FP_ROT = 0.9
-FP_LIMITS = (0.4, 0.5, 0.7)
+FP_UNIT = 1 / 16
+FP_EYE_Y = -1.9
+FP_HAND_GAIN = 1.0
+FP_LIMIT_OUT = 0.18
+FP_LIMIT_IN = 0.7
+FP_LIMIT_UP = 0.55
+FP_LIMIT_DOWN = 0.06
+FP_LIMIT_BACK = 0.1
+FP_LIMIT_FORWARD = 0.5
+FP_MIN_FORWARD = 0.4
+FP_CONE = 1.2
+FP_ROLL = 1.2
+FP_SCALE = 0.82
+FP_SHRINK = 0.1
+FP_RAMP_IN = 0.08
+FP_RAMP_OUT = 0.16
 FP_AXIS = np.array([0, 0.8, -0.5]) / np.linalg.norm([0, 0.8, -0.5])
 FP_HAND = (0.56, -0.52, -0.72)
 
@@ -468,27 +490,45 @@ def fp_grip(ch, s):
     return g
 
 
-def fp_orient(a, y, turn, twist, s):
-    return rot_y(s * (y + turn)) @ rot_x(-a) @ rot_z(-s * twist)
+def fp_rig(ch, s):
+    pos = fp_grip(ch, s)
+    cos_a = math.cos(ch[HEAD_A])
+    d = rot_y(-s * ch[TURN]) @ np.array([s * math.sin(ch[HEAD_Y]) * cos_a, math.sin(ch[HEAD_A]), -math.cos(ch[HEAD_Y]) * cos_a])
+    lean = ch[LEAN]
+    if lean != 0:
+        pos = pos - np.array([0, HIP_Y, 0])
+        pos = rot_x(lean) @ pos
+        pos = pos + np.array([0, HIP_Y, 0])
+        d = rot_x(lean) @ d
+    pos = np.array([-pos[0] * FP_UNIT, -(pos[1] - FP_EYE_Y) * FP_UNIT, pos[2] * FP_UNIT])
+    d = np.array([-d[0], -d[1], d[2]])
+    if d[2] > -FP_MIN_FORWARD:
+        d[2] = -FP_MIN_FORWARD
+    return pos, d / np.linalg.norm(d)
 
 
-def slerp_matrix(m, f):
-    axis_ang = np.arccos(max(-1.0, min(1.0, (np.trace(m) - 1) / 2)))
-    if axis_ang < 1e-6:
-        return np.eye(3)
-    w = np.array([m[2, 1] - m[1, 2], m[0, 2] - m[2, 0], m[1, 0] - m[0, 1]])
-    n = np.linalg.norm(w)
-    if n < 1e-9:
-        return m
-    return axis_angle(w / n, axis_ang * f)
+def soft_limit(v, pos, neg):
+    return pos * math.tanh(v / pos) if v >= 0 else -neg * math.tanh(-v / neg)
 
 
-def fp_transform(ch, s=1.0):
-    g, r = fp_grip(ch, s), fp_grip(REST_BASE, s)
-    d = np.array([-(g[0] - r[0]), -(g[1] - r[1]), g[2] - r[2]]) * FP_MOVE * np.array([1, 1, 1.5])
-    d = np.array([max(-l, min(l, v)) for v, l in zip(d, FP_LIMITS)])
-    q = fp_orient(ch[HEAD_A], ch[HEAD_Y], ch[TURN], ch[TWIST], s) @ fp_orient(REST_BASE[HEAD_A], 0, 0, 0, s).T
-    return d, slerp_matrix(q, FP_ROT)
+def fp_transform(ch, start, t, s=1.0):
+    p1, d1 = fp_rig(ch, s)
+    p0, d0 = fp_rig(start, s)
+    dx = soft_limit((p1[0] - p0[0]) * s * FP_HAND_GAIN, FP_LIMIT_OUT, FP_LIMIT_IN) * s
+    dy = soft_limit((p1[1] - p0[1]) * FP_HAND_GAIN, FP_LIMIT_UP, FP_LIMIT_DOWN)
+    dz = soft_limit((p1[2] - p0[2]) * FP_HAND_GAIN, FP_LIMIT_BACK, FP_LIMIT_FORWARD)
+    arc = rotation_to(d0, d1)
+    ang = math.acos(max(-1.0, min(1.0, (np.trace(arc) - 1) / 2)))
+    if ang > 1e-6:
+        w = np.array([arc[2, 1] - arc[1, 2], arc[0, 2] - arc[2, 0], arc[1, 0] - arc[0, 1]])
+        n = np.linalg.norm(w)
+        arc = axis_angle(w / n, FP_CONE * math.tanh(ang / FP_CONE)) if n > 1e-9 else np.eye(3)
+    roll = FP_ROLL * math.tanh(-s * (ch[TWIST] - start[TWIST]) / FP_ROLL)
+    m = axis_angle(d1, roll) @ arc
+    ramp = max(0.0, min(t / FP_RAMP_IN, (1 - t) / FP_RAMP_OUT, 1.0))
+    ramp = ramp * ramp * (3 - 2 * ramp)
+    scale = FP_SCALE * (1 - FP_SHRINK * ramp)
+    return np.array([dx, dy, dz]), m, scale
 
 
 def fp_project(p):
@@ -507,15 +547,16 @@ def render_fp(src, key, path, frames=8):
     for f, ax in enumerate(axes.flat):
         t = f / (frames - 1)
         ch = sample_pose(poses[key], t, ready, key)
-        d, m = fp_transform(ch)
+        start = sample_pose(poses[key], 0.0, ready, key)
+        d, m, sc = fp_transform(ch, start, t)
         origin = np.array(FP_HAND) + d
-        pts = [origin + m @ (FP_AXIS * k) for k in (-0.05, 0.4, 0.95)]
+        pts = [origin + m @ (FP_AXIS * k * sc) for k in (-0.05, 0.4, 0.95)]
         proj = [fp_project(p) for p in pts]
         ax.add_patch(plt.Rectangle((-half_w, -half_h), 2 * half_w, 2 * half_h, fill=False, ec="#999"))
         ax.plot([p[0] for p in proj], [p[1] for p in proj], color="#e8a020", lw=4)
         ax.plot(*proj[0], "o", color="#d33", ms=6)
         ax.plot(*proj[2], "o", color="#7fd1ff", ms=4)
-        rest = [np.array(FP_HAND) + FP_AXIS * k for k in (-0.05, 0.95)]
+        rest = [np.array(FP_HAND) + FP_AXIS * k * FP_SCALE for k in (-0.05, 0.95)]
         rp = [fp_project(p) for p in rest]
         ax.plot([p[0] for p in rp], [p[1] for p in rp], color="#bbb", lw=1, ls="--")
         ax.set_xlim(-half_w * 1.15, half_w * 1.15)
@@ -529,6 +570,78 @@ def render_fp(src, key, path, frames=8):
     plt.close(fig)
 
 
+
+def kotlin_const(src, name):
+    m = re.search(r"const val " + name + r" = (-?[\d.]+)f", src)
+    return float(m.group(1))
+
+
+def stance_block(src, key):
+    start = src.index('"' + key + '" to stance(')
+    nxt = re.search(r'\n        "[A-Z_:]+" to stance\(', src[start + 10:])
+    end = start + 10 + nxt.start() if nxt else len(src)
+    return src[start:end]
+
+
+def load_gait(src, block):
+    m = re.search(r"gait = Gait\(([^)]*)\)", block, re.S)
+    if m:
+        return {k: float(v) for k, v in re.findall(r"(\w+) = (-?[\d.]+)f", m.group(1))}
+    return {
+        "mainWalk": kotlin_const(src, "WALK_MAIN_SWING"),
+        "offWalk": kotlin_const(src, "WALK_OFF_SWING"),
+        "mainSprint": kotlin_const(src, "SPRINT_MAIN_SWING"),
+        "offSprint": kotlin_const(src, "SPRINT_OFF_SWING"),
+        "across": kotlin_const(src, "SPRINT_ACROSS"),
+        "lean": kotlin_const(src, "SPRINT_LEAN"),
+        "leanBounce": kotlin_const(src, "SPRINT_BOUNCE"),
+        "tipWalk": kotlin_const(src, "WALK_TIP_BOUNCE"),
+        "tipSprint": kotlin_const(src, "SPRINT_TIP_BOUNCE"),
+        "yaw": 0.06,
+        "armBob": 0.0,
+    }
+
+
+def gait_channels(src, key, mode, phase):
+    block = stance_block(src, key)
+    carry, ready, idle, sprint, offset = load_states(src)[key]
+    m = re.search(r"walk = floatArrayOf\(([^)]*)\)", block)
+    if mode == "sprint":
+        base = sprint.copy()
+        walk_amt, sprint_amt = 0.0, 1.0
+    else:
+        base = np.array(parse_array(m.group(1))) if m else carry + (sprint - carry) * 0.35
+        walk_amt, sprint_amt = 1.0, 0.0
+    g = load_gait(src, block)
+    move = walk_amt + sprint_amt
+    swing = math.cos(phase)
+    bounce = math.sin(phase * 2)
+    main_amp = g["mainWalk"] * walk_amt + g["mainSprint"] * sprint_amt
+    off_amp = g["offWalk"] * walk_amt + g["offSprint"] * sprint_amt
+    arm_bob = bounce * g["armBob"] * move
+    out = base.copy()
+    out[PITCH] += arm_bob - swing * main_amp
+    out[OFF_PITCH] += arm_bob + swing * off_amp
+    out[ACROSS] += swing * g["across"] * sprint_amt
+    out[OFF_ACROSS] -= swing * g["across"] * sprint_amt
+    out[LEAN] += g["lean"] * sprint_amt + bounce * g["leanBounce"] * sprint_amt
+    out[HEAD_A] += bounce * (g["tipSprint"] * sprint_amt + g["tipWalk"] * walk_amt)
+    out[HEAD_Y] += swing * g["yaw"] * move
+    out[TWIST] += swing * g.get("twist", 0.0) * move
+    return out, offset
+
+
+def render_gait(src, key, mode, path, frames=8):
+    fig, axes = plt.subplots(3, frames, figsize=(2.2 * frames, 6.6))
+    for f in range(frames):
+        phase = 2 * math.pi * f / frames
+        ch, offset = gait_channels(src, key, mode, phase)
+        for r, view in enumerate(("front", "side", "top")):
+            scene(axes[r][f], ch, view, offset, WEAPON_LEN.get(key, (4, 14)), f"{key} {mode} {f}/{frames} {view}", BLADES.get(key))
+    fig.tight_layout()
+    fig.savefig(path, dpi=80)
+    plt.close(fig)
+
 if __name__ == "__main__":
     src = SRC.read_text(encoding="utf-8")
     if sys.argv[1] == "--audit":
@@ -539,7 +652,13 @@ if __name__ == "__main__":
     args = sys.argv[2:]
     swings = [a[6:] for a in args if a.startswith("swing:")]
     fps = [a[3:] for a in args if a.startswith("fp:")]
-    only = [a for a in args if not a.startswith("swing:") and not a.startswith("fp:")]
+    gaits = [a[5:] for a in args if a.startswith("gait:")]
+    only = [a for a in args if not a.startswith("swing:") and not a.startswith("fp:") and not a.startswith("gait:")]
+    for key in gaits:
+        for mode in ("walk", "sprint"):
+            render_gait(src, key, mode, out_dir / f"gait_{key.replace(':', '_')}_{mode}.png")
+    if gaits and not swings and not only and not fps:
+        sys.exit(0)
     for key in fps:
         render_fp(src, key, out_dir / f"fp_{key.replace(':', '_')}.png")
     if fps and not swings and not only:

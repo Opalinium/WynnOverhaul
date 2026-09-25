@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object WynnMountPickupTracker {
-
     data class Pickup(val title: String, val words: List<String>, val atMillis: Long)
 
     @Volatile

@@ -1,7 +1,6 @@
 package opal.dev.overwatch.client
 
 object MountFeedingSummary {
-
     private var cacheKey: String? = null
     private var cacheResult: MountShoppingList? = null
 

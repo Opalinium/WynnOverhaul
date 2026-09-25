@@ -7,6 +7,7 @@ plugins {
     id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
     id("com.gradleup.shadow") version "9.6.1"
     id("maven-publish")
+    eclipse
 }
 
 version = project.property("mod_version") as String
@@ -59,6 +60,21 @@ dependencies {
     runtimeOnly("maven.modrinth:voxy:${project.property("voxy_version")}")
 }
 
+val ideKotlinClasses: Configuration by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+dependencies {
+    ideKotlinClasses(files(layout.buildDirectory.dir("classes/kotlin/main"), layout.buildDirectory.dir("classes/kotlin/client")))
+}
+
+eclipse {
+    classpath {
+        plusConfigurations.add(ideKotlinClasses)
+    }
+}
+
 tasks.processResources {
     inputs.property("version", project.version)
     inputs.property("minecraft_version", project.property("minecraft_version"))
@@ -79,6 +95,7 @@ tasks.processResources {
 tasks.shadowJar {
     configurations = listOf(shadowBundle)
     from(sourceSets.getByName("client").output)
+    dependsOn(tasks.named("clientClasses"))
     archiveClassifier.set("")
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from("LICENSE.txt") {

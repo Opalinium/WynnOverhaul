@@ -16,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(BossHealthOverlay.class)
 public abstract class BossBarSuppressionMixin {
-
     @Shadow
     @Final
     private Map<UUID, LerpingBossEvent> events;

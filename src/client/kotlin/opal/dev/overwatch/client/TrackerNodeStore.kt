@@ -4,7 +4,6 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.Minecraft
-import net.minecraft.world.level.storage.LevelResource
 import opal.dev.overwatch.Overwatch
 import java.nio.file.Files
 import kotlin.io.path.exists
@@ -14,7 +13,6 @@ import kotlin.io.path.writeText
 data class NodeRecord(val label: String, val profession: String = "", val availableAtMillis: Long = 0L)
 
 object TrackerNodeStore {
-
     private val PATH = FabricLoader.getInstance().configDir.resolve("overwatch-nodes.json")
     private val GSON = GsonBuilder().setPrettyPrinting().create()
     private val MAP_TYPE = object : TypeToken<MutableMap<String, MutableMap<String, NodeRecord>>>() {}.type
@@ -30,7 +28,7 @@ object TrackerNodeStore {
     }
 
     fun sync(client: Minecraft, nodes: MutableMap<Long, NodeRecord>) {
-        val key = contextKey(client) ?: return
+        val key = WorldContext.key(client) ?: return
         if (key != context) {
             if (context != null) write(nodes)
             context = key
@@ -88,21 +86,6 @@ object TrackerNodeStore {
                 Overwatch.LOGGER.error("overwatch-nodes.json unreadable, starting a fresh store", t)
             }
             mutableMapOf()
-        }
-    }
-
-    private fun contextKey(client: Minecraft): String? {
-        return try {
-            val singleplayer = client.singleplayerServer
-            if (singleplayer != null) {
-                val dir = singleplayer.getWorldPath(LevelResource.ROOT).fileName?.toString()
-                if (dir.isNullOrBlank()) null else "sp/$dir"
-            } else {
-                val ip = client.currentServer?.ip?.trim()?.lowercase()
-                if (ip.isNullOrBlank()) null else "mp/${ip.substringBefore(':')}"
-            }
-        } catch (t: Throwable) {
-            null
         }
     }
 

@@ -1,5 +1,6 @@
 package opal.dev.overwatch.client
 
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
@@ -7,7 +8,6 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 
 class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.literal("Customize HUD")) {
-
     private var activeId: String? = null
     private var dragStartX: Int = 0
     private var dragStartY: Int = 0
@@ -23,6 +23,13 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
     private var resizeStartH: Double = 0.0
     private var resizeDx: Double = 0.0
     private var resizeDy: Double = 0.0
+    private var resizeOriginX: Int = 0
+    private var resizeOriginY: Int = 0
+
+    private fun altHeld(): Boolean {
+        val window = Minecraft.getInstance().window
+        return InputConstants.isKeyDown(window, InputConstants.KEY_LALT) || InputConstants.isKeyDown(window, InputConstants.KEY_RALT)
+    }
 
     override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
     }
@@ -86,7 +93,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
             graphics.fill(0, guideY, width, guideY + 1, GUIDE_LINE)
         }
 
-        val hint = "Drag to move (magnetic snap, hold Alt to drag free) -- corner handle resizes the box (Alt+handle scales) -- click a lock to pin it (right-click toggles too) -- Esc to close"
+        val hint = "Drag to move (magnetic snap, hold Alt to drag free) -- corner handle resizes the box with the same snapping (Alt frees it; Alt+click the handle scales) -- click a lock to pin it (right-click toggles too) -- Esc to close"
         graphics.centeredText(font, hint, width / 2, height - 22, OwTheme.TEXT_DIM)
     }
 
@@ -133,6 +140,11 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
                 }
                 resizeDx = 0.0
                 resizeDy = 0.0
+                val origin = boxOf(spec)
+                resizeOriginX = origin[0]
+                resizeOriginY = origin[1]
+                snapGuidesX = emptyList()
+                snapGuidesY = emptyList()
                 return true
             }
             activeId = spec.id
@@ -155,7 +167,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
             dragRawY += amountY
             val tx = dragStartX + dragRawX.toInt()
             val ty = dragStartY + dragRawY.toInt()
-            if (event.hasAltDown()) {
+            if (altHeld()) {
                 HudLayoutManager.moveTo(dragId, tx, ty, width, height)
                 snapGuidesX = emptyList()
                 snapGuidesY = emptyList()
@@ -177,18 +189,28 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
                     val scaled = minOf(((resizeStartW + resizeDx) / w).toFloat(), 2.5f, fitScale)
                     HudLayoutManager.setScale(resizeId, scaled)
                 }
-            } else if (resizeBarStretch) {
-                val scale = HudLayoutManager.scale(resizeId)
-                HudLayoutManager.setBoxSize(
-                    resizeId,
-                    (resizeStartW + resizeDx).toInt().coerceIn(MIN_BAR_W, width),
-                    ((resizeStartH + resizeDy) / scale).toInt().coerceIn(MIN_BOX_H, height),
-                )
             } else {
                 val scale = HudLayoutManager.scale(resizeId)
-                val newW = ((resizeStartW + resizeDx) / scale).toInt().coerceIn(MIN_BOX_W, width)
-                val newH = ((resizeStartH + resizeDy) / scale).toInt().coerceIn(MIN_BOX_H, height)
-                HudLayoutManager.setBoxSize(resizeId, newW, newH)
+                val unit = if (resizeBarStretch) 1f else scale
+                var rawW = resizeStartW + resizeDx / unit
+                var rawH = resizeStartH + resizeDy / unit
+                var guideX: Int? = null
+                var guideY: Int? = null
+                if (!altHeld()) {
+                    val right = HudLayoutManager.snapEdge(resizeId, true, (resizeOriginX + rawW * unit).toInt(), width, height)
+                    val bottom = HudLayoutManager.snapEdge(resizeId, false, (resizeOriginY + rawH * unit).toInt(), width, height)
+                    rawW = (right.value - resizeOriginX) / unit.toDouble()
+                    rawH = (bottom.value - resizeOriginY) / unit.toDouble()
+                    guideX = right.guide
+                    guideY = bottom.guide
+                }
+                snapGuidesX = listOfNotNull(guideX)
+                snapGuidesY = listOfNotNull(guideY)
+                val minW = if (resizeBarStretch) MIN_BAR_W else MIN_BOX_W
+                val maxW = ((width - resizeOriginX) / unit).toInt().coerceAtLeast(minW)
+                val maxH = ((height - resizeOriginY) / unit).toInt().coerceAtLeast(MIN_BOX_H)
+                HudLayoutManager.setBoxSize(resizeId, rawW.toInt().coerceIn(minW, maxW), rawH.toInt().coerceIn(MIN_BOX_H, maxH))
+                HudLayoutManager.moveTo(resizeId, resizeOriginX, resizeOriginY, width, height)
             }
             HudLayoutManager.applyDrag(resizeId, 0, 0, width, height)
             return true
@@ -208,6 +230,8 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
         }
         if (resizingId != null) {
             resizingId = null
+            snapGuidesX = emptyList()
+            snapGuidesY = emptyList()
             HudLayoutManager.persist()
             return true
         }

@@ -6,7 +6,6 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
 class OverwatchQuestBookScreen(parent: Screen) : OwScreen(Component.literal("Overwatch - Quest Book"), parent) {
-
     private var query: String = ""
 
     override fun init() {

@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(EntityRenderer.class)
 public class QuestBeaconRenderMixin {
-
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
     private void overwatch$hideOverriddenQuestBeacon(
             Entity entity,

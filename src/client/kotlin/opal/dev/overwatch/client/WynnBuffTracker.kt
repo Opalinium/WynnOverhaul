@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
 object WynnBuffTracker {
-
     data class Buff(val name: String, val amount: Int, val expiresAtMillis: Long) {
         val remainingSeconds: Int
             get() = ((expiresAtMillis - System.currentTimeMillis()) / 1000L).toInt().coerceAtLeast(0)
@@ -31,7 +30,7 @@ object WynnBuffTracker {
     }
 
     private fun onMessage(message: Component) {
-        val text = clean(message.string)
+        val text = TextClean.clean(message.string)
         val match = BUFF_PATTERN.find(text) ?: return
         val amount = match.groupValues[1].toIntOrNull() ?: return
         val name = match.groupValues[2].trim()
@@ -39,21 +38,6 @@ object WynnBuffTracker {
         if (name.isEmpty() || seconds <= 0) return
         buffs[name] = Buff(name, amount, System.currentTimeMillis() + seconds * 1000L)
         active = buffs.values.toList()
-    }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (cp < 0xE000 && cp != 0xFFFD) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        return sb.toString().trim()
     }
 
     private val BUFF_PATTERN = Regex("""\[([+-]\d+)\s+(.+?)\s+for\s+(\d+)\s+seconds]""")

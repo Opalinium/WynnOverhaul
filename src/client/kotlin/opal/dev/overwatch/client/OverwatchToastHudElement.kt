@@ -12,7 +12,6 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class OverwatchToastHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -69,11 +68,10 @@ class OverwatchToastHudElement : HudElement {
         pose.pushMatrix()
         pose.translate(originX, originY)
         pose.scale(total)
-        graphics.fill(0, 0, boxW, boxH, withAlpha(OwTheme.PANEL, alpha))
-        graphics.outline(0, 0, boxW, boxH, withAlpha(OwTheme.BORDER, alpha))
-        graphics.fill(0, 0, boxW, 2, withAlpha(toast.colorArgb, alpha))
-        graphics.text(font, toast.title, (boxW - font.width(toast.title)) / 2, PAD, withAlpha(toast.colorArgb, alpha), true)
-        graphics.text(font, subtitle, (boxW - font.width(subtitle)) / 2, PAD + LINE_HEIGHT, withAlpha(OwTheme.TEXT, alpha), true)
+        HudStyle.plate(graphics, 0, 0, boxW, boxH, toast.colorArgb, alpha / 255f)
+        HudStyle.fadeRule(graphics, 4, 2, boxW - 8, HudStyle.withAlpha(toast.colorArgb, alpha), leftSolid = true)
+        graphics.text(font, toast.title, (boxW - font.width(toast.title)) / 2, PAD, HudStyle.withAlpha(toast.colorArgb, alpha), true)
+        graphics.text(font, subtitle, (boxW - font.width(subtitle)) / 2, PAD + LINE_HEIGHT, HudStyle.withAlpha(OwTheme.TEXT, alpha), true)
         pose.popMatrix()
     }
 
@@ -119,7 +117,8 @@ class OverwatchToastHudElement : HudElement {
 
         val ruleW = max(contentW * 0.95f, MIN_RULE_W)
         fadeBand(graphics, -ruleW / 2f, RULE_Y, ruleW, 1, 0.9f * af, withRgb(accent))
-        diamond(graphics, 0, RULE_Y.toInt(), withAlphaF(accent, af))
+        val diamondColor = withAlphaF(accent, af)
+        if ((diamondColor ushr 24) >= MIN_TEXT_ALPHA) HudStyle.diamond(graphics, 0, RULE_Y.toInt(), DIAMOND_R, diamondColor)
 
         if (toast.detail.isNotBlank()) {
             drawSpaced(graphics, font, toast.detail, -detailW / 2f, DETAIL_Y, DETAIL_SPACING, withAlphaF(DETAIL_COLOR, 0.8f * af), false, 1f)
@@ -128,12 +127,10 @@ class OverwatchToastHudElement : HudElement {
     }
 
     private fun soulsAlpha(fraction: Float): Float {
-        val fadeIn = smooth((fraction / SOULS_FADE_IN_END).coerceIn(0f, 1f))
-        val fadeOut = smooth(((1f - fraction) / (1f - SOULS_FADE_OUT_START)).coerceIn(0f, 1f))
+        val fadeIn = HudStyle.smoothstep((fraction / SOULS_FADE_IN_END).coerceIn(0f, 1f))
+        val fadeOut = HudStyle.smoothstep(((1f - fraction) / (1f - SOULS_FADE_OUT_START)).coerceIn(0f, 1f))
         return minOf(fadeIn, fadeOut)
     }
-
-    private fun smooth(t: Float): Float = t * t * (3f - 2f * t)
 
     private fun spacedWidth(font: Font, text: String, spacing: Float): Float {
         var w = 0f
@@ -179,17 +176,7 @@ class OverwatchToastHudElement : HudElement {
         }
     }
 
-    private fun diamond(graphics: GuiGraphicsExtractor, cx: Int, cy: Int, color: Int) {
-        if ((color ushr 24) < MIN_TEXT_ALPHA) return
-        for (dy in -DIAMOND_R..DIAMOND_R) {
-            val half = DIAMOND_R - abs(dy)
-            graphics.fill(cx - half, cy + dy, cx + half + 1, cy + dy + 1, color)
-        }
-    }
-
-    private fun withAlpha(argb: Int, alpha: Int): Int = (argb and 0xFFFFFF) or (alpha.coerceIn(0, 255) shl 24)
-
-    private fun withAlphaF(argb: Int, alpha: Float): Int = withAlpha(argb, (alpha.coerceIn(0f, 1f) * 255f).roundToInt())
+    private fun withAlphaF(argb: Int, alpha: Float): Int = HudStyle.withAlpha(argb, (alpha.coerceIn(0f, 1f) * 255f).roundToInt())
 
     private fun withRgb(argb: Int): Int = argb and 0xFFFFFF
 

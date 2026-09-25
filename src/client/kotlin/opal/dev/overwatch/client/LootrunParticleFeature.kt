@@ -4,7 +4,6 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 
 object LootrunParticleFeature {
-
     @Volatile
     var taskCenter: Vec3? = null
         private set
@@ -19,7 +18,7 @@ object LootrunParticleFeature {
             if (LootrunModel.state == LootrunModel.State.NOT_RUNNING) return null
             if (System.currentTimeMillis() - taskCenterAtMillis > STALE_MILLIS) return null
             val box = AABB(center.x - 5.0, center.y, center.z - 5.0, center.x + 5.0, center.y + 2.0, center.z + 5.0)
-            return EntityTracker.Match(anchor = null, blockBox = box, label = "Task", colorArgb = TASK_COLOR, throughWalls = true)
+            return EntityTracker.Match(anchor = null, blockBox = box, label = "Task", colorArgb = TASK_COLOR, throughWalls = true, icon = WaypointIcons.task)
         }
 
     fun onParticle(x: Double, y: Double, z: Double) {

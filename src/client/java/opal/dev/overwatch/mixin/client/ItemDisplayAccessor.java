@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(Display.ItemDisplay.class)
 public interface ItemDisplayAccessor {
-
     @Invoker("getItemStack")
     ItemStack overwatch$getItemStack();
 }

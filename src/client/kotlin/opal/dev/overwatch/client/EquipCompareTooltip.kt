@@ -14,7 +14,6 @@ import net.minecraft.world.item.ItemStack
 import org.joml.Vector2i
 
 object EquipCompareTooltip {
-
     private class Target(val label: String, val stack: ItemStack)
 
     private class Laid(val components: List<ClientTooltipComponent>, val width: Int, val height: Int)

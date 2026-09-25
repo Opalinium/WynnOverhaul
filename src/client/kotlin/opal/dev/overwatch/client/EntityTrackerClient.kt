@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 
 class EntityTrackerClient : ClientModInitializer {
-
     private lateinit var toggleKey: KeyMapping
 
     override fun onInitializeClient() {

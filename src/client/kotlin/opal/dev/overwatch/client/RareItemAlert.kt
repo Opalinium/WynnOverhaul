@@ -8,7 +8,6 @@ import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.item.ItemStack
 
 object RareItemAlert {
-
     private var lastCounts: Map<String, Int> = emptyMap()
     private var initialized = false
     private var nextScanNanos = 0L

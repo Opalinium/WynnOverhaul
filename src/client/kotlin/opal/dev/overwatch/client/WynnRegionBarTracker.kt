@@ -7,7 +7,6 @@ import net.minecraft.network.protocol.game.ClientboundBossEventPacket
 import net.minecraft.world.BossEvent
 
 object WynnRegionBarTracker : ClientboundBossEventPacket.Handler {
-
     data class RegionState(val name: String)
 
     @Volatile

@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object WynnSprintTracker {
-
     const val ACTION_STEPS = 25
 
     data class Meter(

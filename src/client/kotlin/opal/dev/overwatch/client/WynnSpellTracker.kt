@@ -7,7 +7,6 @@ import net.minecraft.network.chat.Style
 import java.util.Optional
 
 object WynnSpellTracker {
-
     data class Cast(val name: String, val costs: List<WynnSpellSegments.SpellCost>, val atMillis: Long)
 
     @Volatile

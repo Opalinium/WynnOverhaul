@@ -11,8 +11,8 @@ import net.minecraft.world.item.ItemStack
 import opal.dev.overwatch.Overwatch
 
 class HotbarHudElement : HudElement {
-
     private var loggedError = false
+    private var lastStyle = ""
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
         try {
@@ -42,6 +42,12 @@ class HotbarHudElement : HudElement {
         }
         val mainW = (lastKept + 1) * SLOT_W + 2
         val visibleSlots = lastKept + 1
+        val style = OverwatchConfig.current.hotbarStyle
+        if (style != HotbarStyles.CLASSIC && style in HotbarStyles.STYLES) {
+            renderStyled(graphics, player, style, visibleSlots, selected, offhand, showOffhand && !isHidden(offhand), offhandLeft)
+            return
+        }
+        lastStyle = style
         val contentW = mainW + if (showOffhand) OFF_W else 0
         val contentH = if (showOffhand) OFF_H else MAIN_H
         HudLayoutManager.stableSize(ID, contentW, contentH)
@@ -107,6 +113,39 @@ class HotbarHudElement : HudElement {
         if (scaled) graphics.pose().popMatrix()
     }
 
+    private fun renderStyled(
+        graphics: GuiGraphicsExtractor,
+        player: net.minecraft.world.entity.player.Player,
+        style: String,
+        visibleSlots: Int,
+        selected: Int,
+        offhand: ItemStack,
+        showOffhand: Boolean,
+        offhandLeft: Boolean,
+    ) {
+        val inventory = player.inventory
+        val slots = ArrayList<ItemStack>(visibleSlots)
+        for (slot in 0 until visibleSlots) {
+            val stack = inventory.getItem(slot)
+            slots.add(if (isHidden(stack)) ItemStack.EMPTY else stack)
+        }
+        if (style != lastStyle) {
+            lastStyle = style
+            HudLayoutManager.forgetSize(ID)
+        }
+        val (contentW, contentH) = HotbarStyles.size(style, visibleSlots, showOffhand)
+        val (w, h) = HudLayoutManager.stableSize(ID, contentW, contentH)
+        val scale = HudLayoutManager.scale(ID)
+        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(baseX.toFloat(), baseY.toFloat())
+        if (scale != 1f) pose.scale(scale)
+        val frame = HotbarStyles.Frame(player, Minecraft.getInstance().font, slots, selected, if (showOffhand) offhand else ItemStack.EMPTY, offhandLeft)
+        HotbarStyles.draw(graphics, style, frame, w, h)
+        pose.popMatrix()
+    }
+
     companion object {
         const val ID = "hotbar"
         const val MAIN_W = 182
@@ -125,11 +164,17 @@ class HotbarHudElement : HudElement {
         val HOTBAR_OFFHAND_LEFT_SPRITE: Identifier = Identifier.withDefaultNamespace("hud/hotbar_offhand_left")
         val HOTBAR_OFFHAND_RIGHT_SPRITE: Identifier = Identifier.withDefaultNamespace("hud/hotbar_offhand_right")
 
+        private val hiddenCache = java.util.IdentityHashMap<ItemStack, Boolean>()
+
         fun isHidden(stack: ItemStack): Boolean {
             if (stack.isEmpty) return false
-            return CharacterInfo.isInfo(stack) ||
+            hiddenCache[stack]?.let { return it }
+            val hidden = CharacterInfo.isInfo(stack) ||
                 ContentBookInterceptor.isContentBook(stack) ||
                 WynnPouches.isIngredientPouch(stack)
+            if (hiddenCache.size > 256) hiddenCache.clear()
+            hiddenCache[stack] = hidden
+            return hidden
         }
     }
 }

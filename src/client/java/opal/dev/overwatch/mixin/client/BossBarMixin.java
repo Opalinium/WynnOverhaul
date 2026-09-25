@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public class BossBarMixin {
-
     @Inject(method = "handleBossUpdate", at = @At("HEAD"))
     private void overwatch$onBossUpdate(ClientboundBossEventPacket packet, CallbackInfo ci) {
         packet.dispatch(WynnResourceBarTracker.INSTANCE);

@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.network.chat.Component
 
 object WynnStatusEffectTracker {
-
     data class Cooldown(val name: String, val remainingSeconds: Int, val maxSeconds: Int, val receivedAtMillis: Long) {
         fun displaySeconds(): Int {
             val elapsed = ((System.currentTimeMillis() - receivedAtMillis) / 1000L).toInt()

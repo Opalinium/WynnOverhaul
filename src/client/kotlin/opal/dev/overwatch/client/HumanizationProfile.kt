@@ -4,7 +4,6 @@ import kotlin.math.ln
 import kotlin.math.max
 
 object HumanizationProfile {
-
     private val rng = java.util.Random()
 
     private fun range(min: Double, max: Double): Double = min + rng.nextDouble() * (max - min)

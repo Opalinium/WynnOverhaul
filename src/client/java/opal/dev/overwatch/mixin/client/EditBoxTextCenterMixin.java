@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(EditBox.class)
 public abstract class EditBoxTextCenterMixin {
-
     @Shadow
     @Mutable
     private int textX;

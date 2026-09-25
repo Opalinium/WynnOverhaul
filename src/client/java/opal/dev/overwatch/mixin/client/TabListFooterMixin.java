@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public class TabListFooterMixin {
-
     @Inject(method = "handleTabListCustomisation", at = @At("HEAD"))
     private void overwatch$onTabListFooter(ClientboundTabListPacket packet, CallbackInfo ci) {
         WynnStatusEffectTracker.INSTANCE.onFooterUpdate(packet.footer());

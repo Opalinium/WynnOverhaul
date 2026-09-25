@@ -7,7 +7,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 object LootrunRecorder {
-
     @Volatile
     var recordedPointCount: Int = 0
         private set

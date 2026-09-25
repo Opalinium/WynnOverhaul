@@ -1,24 +1,71 @@
 package opal.dev.overwatch.client
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import opal.dev.overwatch.Overwatch
 
 object WynnLevelUpToastOverride {
-
     fun register() {
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay -> if (overlay) true else onMessage(message) }
+        ClientTickEvents.END_CLIENT_TICK.register { flushPending(false) }
+    }
+
+    private class Pending(val startedAt: Long, val lines: MutableList<String>, val headerOnly: Boolean) {
+        var followUps = 0
+    }
+
+    private var pending: Pending? = null
+
+    private fun flushPending(force: Boolean) {
+        val p = pending ?: return
+        if (!force && System.currentTimeMillis() - p.startedAt < FOLLOW_UP_WINDOW_MILLIS) return
+        pending = null
+        val pet = p.lines.any { PET_HINT.containsMatchIn(it) } || (p.headerOnly && p.followUps > 0)
+        Overwatch.LOGGER.info("Level-up message lines (pet={}): {}", pet, p.lines)
+        if (pet) petToast(p.lines) else richLevelUpToast(p.lines)
+    }
+
+    private fun petToast(lines: List<String>) {
+        val leveled = lines.firstNotNullOfOrNull { PET_LEVELED.find(it) }
+        val unlocks = lines.mapNotNull { UNLOCK_LINE.matchEntire(it)?.groupValues?.get(1)?.trim() }.map { "+ $it" }
+        val progress = lines.firstNotNullOfOrNull { PROGRESS_LINE.matchEntire(it)?.value }.orEmpty()
+        val subtitle = when {
+            leveled != null -> "${leveled.groupValues[1].trim()} reached level ${leveled.groupValues[2]}"
+            unlocks.isNotEmpty() -> unlocks.joinToString(" · ")
+            else -> "Your pet leveled up!"
+        }
+        OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, "Pet Level Up!", subtitle, PET_TOAST_COLOR, progress))
     }
 
     private fun onMessage(message: Component): Boolean {
         if (!OverwatchGate.inGame) return true
         if (!OverwatchConfig.current.levelUpToastEnabled) return true
-        val lines = clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        val open = pending
+        if (open != null) {
+            if (System.currentTimeMillis() - open.startedAt >= FOLLOW_UP_WINDOW_MILLIS) {
+                flushPending(true)
+            } else if (lines.isEmpty() || lines.all { PROGRESS_LINE.matches(it) || UNLOCK_LINE.matches(it) }) {
+                if (lines.isNotEmpty()) {
+                    open.lines.addAll(lines)
+                    open.followUps++
+                }
+                return false
+            }
+        }
         if (RICH_HEADER in lines) {
-            richLevelUpToast(lines)
+            flushPending(true)
+            val complete = lines.any { PROGRESS_LINE.matches(it) || UNLOCK_LINE.matches(it) || REWARD_LINE.matches(it) }
+            if (complete && lines.none { PET_HINT.containsMatchIn(it) }) {
+                richLevelUpToast(lines)
+                return false
+            }
+            pending = Pending(System.currentTimeMillis(), lines.toMutableList(), headerOnly = !complete)
             return false
         }
-        val text = clean(message.string)
+        val text = TextClean.clean(message.string)
         PERSONAL_COMBAT.matchEntire(text)?.let { m ->
             personalToast(m.groupValues[1].trim().trimEnd('!'))
             return false
@@ -63,26 +110,14 @@ object WynnLevelUpToastOverride {
     private fun richLevelUpToast(lines: List<String>) {
         lastPersonalAt = System.currentTimeMillis()
         val rewards = lines.mapNotNull { REWARD_LINE.matchEntire(it) }
-            .joinToString(" · ") { "+${it.groupValues[1]} ${it.groupValues[2]}" }
-        val subtitle = rewards.ifEmpty {
+            .map { "+${it.groupValues[1]} ${it.groupValues[2]}" }
+        val unlocks = lines.mapNotNull { UNLOCK_LINE.matchEntire(it)?.groupValues?.get(1)?.trim() }
+            .map { "+ $it" }
+        val progress = lines.firstNotNullOfOrNull { PROGRESS_LINE.matchEntire(it)?.value }.orEmpty()
+        val subtitle = (rewards + unlocks).joinToString(" · ").ifEmpty {
             lines.getOrNull(lines.indexOf(RICH_HEADER) + 1)?.takeIf { it != RICH_HEADER } ?: "Level up!"
         }
-        OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, RICH_HEADER, subtitle, TOAST_COLOR))
-    }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (cp < 0xE000 && cp != 0xFFFD) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        return sb.toString().trim()
+        OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, RICH_HEADER, subtitle, TOAST_COLOR, progress))
     }
 
     private const val TOAST_COLOR = 0xFFFFD700.toInt()
@@ -94,6 +129,12 @@ object WynnLevelUpToastOverride {
     private val PERSONAL_PROFESSION = Regex("""^You are now level (\d+) in (.+)$""")
     private val PERSONAL_GENERIC = Regex("""^(.+) is now ((?:combat )?level .+?)(?: in .+)?!?$""")
     private val BROADCAST_LEVEL_UP = Regex("""^(?:\[!]|!!) Congratulations to (.+) for reaching ((?:combat )?level .+?)!$""")
+    private const val FOLLOW_UP_WINDOW_MILLIS = 700L
+    private const val PET_TOAST_COLOR = 0xFF5FD6A6.toInt()
+    private val PET_HINT = Regex("""(?i)\bpet\b""")
+    private val PET_LEVELED = Regex("""^(?:Your )?(.+?) (?:has )?level(?:l)?ed up to level (\d+)!?$""")
     private const val RICH_HEADER = "Level Up!"
     private val REWARD_LINE = Regex("""^-\s*\+([\d,]+)\s+(Experience Points|Emeralds)$""")
+    private val UNLOCK_LINE = Regex("""^\+\s*(\D.*)$""")
+    private val PROGRESS_LINE = Regex("""^\d+ more levels? until .+$""")
 }

@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.overwatch.Overwatch
 
 class WynnSpellCastHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -49,6 +48,8 @@ class WynnSpellCastHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         OwTheme.hudPanel(graphics, ox, oy, boxW, boxH)
+        HudStyle.fadeRule(graphics, ox, oy + boxH - 2, boxW, OwTheme.ACCENT_DIM, leftSolid = true)
+        HudStyle.diamond(graphics, ox + 1, oy + boxH - 2, 2, OwTheme.ACCENT)
         var tx = ox + PAD
         for ((text, color) in parts) {
             graphics.text(font, text, tx, oy + 3, color, true)

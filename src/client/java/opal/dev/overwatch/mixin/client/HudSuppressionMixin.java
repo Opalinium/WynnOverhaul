@@ -20,7 +20,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Hud.class)
 public abstract class HudSuppressionMixin {
-
     @Shadow
     private Component overlayMessageString;
 

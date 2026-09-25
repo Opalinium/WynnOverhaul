@@ -7,7 +7,6 @@ import net.minecraft.world.BossEvent
 import opal.dev.overwatch.Overwatch
 
 object WynnResourceBarTracker : ClientboundBossEventPacket.Handler {
-
     private const val S = "\u00A7"
 
     enum class ResourceBarKind(

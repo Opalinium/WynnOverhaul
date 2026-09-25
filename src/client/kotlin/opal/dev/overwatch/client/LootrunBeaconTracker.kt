@@ -15,7 +15,6 @@ import opal.dev.overwatch.mixin.client.TextDisplayAccessor
 import java.util.Optional
 
 object LootrunBeaconTracker {
-
     @Volatile
     var current: List<EntityTracker.Match> = emptyList()
         private set
@@ -63,7 +62,7 @@ object LootrunBeaconTracker {
 
     private fun waypointMatch(pos: Vec3, colorArgb: Int): EntityTracker.Match {
         val box = AABB(pos.x - 0.3, pos.y, pos.z - 0.3, pos.x + 0.3, pos.y + 1.2, pos.z + 0.3)
-        return EntityTracker.Match(anchor = null, blockBox = box, label = "Beacon", colorArgb = colorArgb, throughWalls = true)
+        return EntityTracker.Match(anchor = null, blockBox = box, label = "Beacon", colorArgb = colorArgb, throughWalls = true, icon = WaypointIcons.beacon)
     }
 
     private fun beaconColor(entity: Display.ItemDisplay): Int? {

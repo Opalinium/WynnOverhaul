@@ -9,7 +9,6 @@ import opal.dev.overwatch.Overwatch
 import java.time.Instant
 
 class DiscordRichPresence : ClientModInitializer {
-
     @Volatile
     private var connection: DiscordIpcConnection? = null
     private var nextConnectAttemptNanos = 0L
@@ -84,7 +83,7 @@ class DiscordRichPresence : ClientModInitializer {
         assets.addProperty("large_text", server ?: "Overwatch")
         activity.add("assets", assets)
 
-        val onWynncraft = player != null && mc.level != null && isOnWynncraft(mc)
+        val onWynncraft = player != null && mc.level != null && WorldContext.isWynncraft(mc)
         if (!onWynncraft) WynnLevelTracker.clear()
 
         if (player == null || mc.level == null) {
@@ -127,11 +126,6 @@ class DiscordRichPresence : ClientModInitializer {
         }
         WynnScoreboardTracker.current?.let { return "${it.type}: ${it.name}" }
         return "Adventuring"
-    }
-
-    private fun isOnWynncraft(mc: Minecraft): Boolean {
-        val ip = mc.currentServer?.ip ?: return false
-        return ip.contains("wynncraft", ignoreCase = true)
     }
 
     private fun disconnect() {

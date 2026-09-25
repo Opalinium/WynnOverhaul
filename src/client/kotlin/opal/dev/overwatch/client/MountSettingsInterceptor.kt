@@ -8,7 +8,6 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.world.inventory.AbstractContainerMenu
 
 object MountSettingsInterceptor {
-
     const val MOUNT_TITLE_MARKER = "󏿭"
 
     fun register() {

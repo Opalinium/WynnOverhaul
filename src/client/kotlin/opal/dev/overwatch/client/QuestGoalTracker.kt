@@ -4,7 +4,6 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 object QuestGoalTracker {
-
     enum class Source { LIVE, WIKI, WIKI_APPROX }
 
     class Goal(val x: Int, val y: Int, val z: Int, val label: String, val source: Source) {
@@ -44,9 +43,12 @@ object QuestGoalTracker {
             questKey = key
         }
 
+        val questName = WynncraftQuests.findTracked(tracked.name)?.name ?: tracked.name
+        val wiki = QuestWaypoints.findStageWaypoint(questName, tracked.nextTask, stageNumber)
+        if (wiki != null) return applyWiki(px, py, pz, wiki)
         val live = parseLive(tracked.nextTask)
         if (live.isNotEmpty()) return applyLive(live)
-        return applyWiki(px, py, pz, tracked)
+        return applyWiki(px, py, pz, null)
     }
 
     private fun snapshot(): List<Goal> = held.values.map { it.goal }
@@ -79,13 +81,11 @@ object QuestGoalTracker {
         return snapshot()
     }
 
-    private fun applyWiki(px: Double, py: Double, pz: Double, tracked: WynnScoreboardTracker.Tracked): List<Goal> {
+    private fun applyWiki(px: Double, py: Double, pz: Double, result: QuestWaypoints.WaypointResult?): List<Goal> {
         if (held.values.any { it.goal.source == Source.LIVE }) {
             held.clear()
             stageNumber = null
         }
-        val questName = WynncraftQuests.findTracked(tracked.name)?.name ?: tracked.name
-        val result = QuestWaypoints.findStageWaypoint(questName, tracked.nextTask, stageNumber)
         if (result == null) {
             if (ticks - lastMatchTick > GRACE_TICKS) {
                 held.clear()

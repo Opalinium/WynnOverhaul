@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Player
 
 object PartyFriendNametags {
-
     fun decorate(player: Player, original: Component): Component {
         val config = OverwatchConfig.current
         if (!config.customPartyNametagsEnabled) return original

@@ -16,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemInHandLayer.class)
 public abstract class WeaponAnimationWristMixin {
-
     @Inject(
             method = "submitArmWithItem",
             at = @At(

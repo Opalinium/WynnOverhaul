@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class WeaponAnimationRegisterMixin {
-
     @Shadow
     protected Slot hoveredSlot;
 

@@ -7,7 +7,6 @@ import net.minecraft.world.inventory.InventoryMenu
 import opal.dev.overwatch.Overwatch
 
 object OverwatchInventory {
-
     fun register() {
         ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
             if (!OverwatchGate.inGame) return@register

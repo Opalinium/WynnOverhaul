@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(MouseHandler.class)
 public abstract class SoulsCameraMouseMixin {
-
     @Redirect(
         method = "turnPlayer",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V")
