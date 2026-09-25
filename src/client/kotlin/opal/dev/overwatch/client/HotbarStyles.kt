@@ -122,20 +122,48 @@ object HotbarStyles {
         g.fill(x + w - 1, y, x + w, y + h, color)
     }
 
+    private fun halfWidth(r: Int, dy: Int): Int {
+        val a = abs(dy)
+        return if (a > r) 0 else sqrt((r * r - a * a).toFloat()).roundToInt()
+    }
+
     private fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
-        for (dy in -r..r) {
-            val hw = sqrt((r * r - dy * dy).toFloat()).roundToInt()
-            g.fill(cx - hw, cy + dy, cx + hw + 1, cy + dy + 1, color)
+        if (r < 0 || (color ushr 24) == 0) return
+        var start = -r
+        var hw = halfWidth(r, -r)
+        for (dy in -r + 1..r + 1) {
+            val next = if (dy > r) -1 else halfWidth(r, dy)
+            if (next != hw) {
+                g.fill(cx - hw, cy + start, cx + hw + 1, cy + dy, color)
+                start = dy
+                hw = next
+            }
         }
     }
 
     private fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
-        val steps = (r * 7).coerceAtLeast(24)
-        for (i in 0 until steps) {
-            val a = i * 2.0 * PI / steps
-            val px = cx + (cos(a) * r).roundToInt()
-            val py = cy + (sin(a) * r).roundToInt()
-            g.fill(px, py, px + 1, py + 1, color)
+        if (r < 0 || (color ushr 24) == 0) return
+        var start = -r
+        var hi = halfWidth(r, -r)
+        var lo = halfWidth(r, -r + 1).coerceAtMost(hi)
+        for (dy in -r + 1..r + 1) {
+            var nhi = -1
+            var nlo = -1
+            if (dy <= r) {
+                nhi = halfWidth(r, dy)
+                nlo = if (abs(dy) >= r) 0 else halfWidth(r, abs(dy) + 1).coerceAtMost(nhi)
+            }
+            if (nhi != hi || nlo != lo) {
+                if (lo == 0) {
+                    g.fill(cx - hi, cy + start, cx + hi + 1, cy + dy, color)
+                } else {
+                    g.fill(cx - hi, cy + start, cx - lo + 1, cy + dy, color)
+                    g.fill(cx + lo, cy + start, cx + hi + 1, cy + dy, color)
+                }
+                start = dy
+                hi = nhi
+                lo = nlo
+            }
         }
     }
 
