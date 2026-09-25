@@ -122,6 +122,10 @@ WynnOverhaul connects to these services and nothing else:
 | `wynnventory.com` | market prices |
 | `wynncraft.wiki.gg` | quest data |
 
+## Support
+
+WynnOverhaul is free. If you'd like to support development, you can donate on [Ko-fi](https://ko-fi.com/opalinium). Donations are optional and don't unlock anything.
+
 ## License
 
 WynnOverhaul is source-available under a custom non-commercial license. You can share and modify it, but modified versions must stay open source under the same terms, and it can't be sold, resold or included in anything paid. See [LICENSE.txt](LICENSE.txt) for the full terms.
