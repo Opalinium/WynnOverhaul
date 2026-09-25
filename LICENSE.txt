@@ -1,2 +1,57 @@
-Copyright (c) 2026 
-All rights reserved.
+Overwatch Source-Available Non-Commercial License
+
+Copyright (c) 2026 Opal
+
+Permission is granted to any person obtaining a copy of this software and its
+source code (the "Software") to use, copy, modify and share the Software,
+subject to the following conditions.
+
+1. Sharing. You may redistribute the Software and modified versions of it, in
+   source or compiled form, provided you include this license and the
+   copyright notice above with every copy.
+
+2. Source stays open. If you distribute a modified version of the Software,
+   or any work that incorporates a substantial part of it, you must make the
+   complete corresponding source code of that work publicly available under
+   this same license. Closed-source forks and derivatives are not permitted.
+
+3. No commercial use. You may not sell, resell, sublicense for a fee, rent or
+   otherwise charge for the Software or any modified version of it. You may
+   not include the Software or any part of it in a paid product, paid
+   service, paid subscription, paid modpack or paid bundle, or distribute it
+   behind a paywall, paid download, paid early access or paid membership tier.
+   You may not use it to generate revenue directly, including through
+   advertising placed on or wrapped around a download of the Software.
+   Donations that are not required or rewarded with access to the Software
+   are not considered payment.
+
+4. Attribution. Modified versions must state clearly that they are modified
+   and must not present themselves as the original or as an official release.
+
+5. No affiliation. This license grants no rights to any names, logos, assets
+   or trademarks belonging to third parties, including Wynncraft, Minecraft,
+   Mojang and Microsoft.
+
+DISCLAIMER OF AFFILIATION
+
+Overwatch is an independent, unofficial project. It is not affiliated with,
+endorsed by, sponsored by or otherwise associated with Wynncraft, the
+Wynncraft team or Wynncraft's owners, Minecraft, Mojang Studios, Microsoft,
+Fabric, Discord, or any other third-party game, service or company mentioned
+in the Software or its documentation. All product names, trademarks and
+registered trademarks are the property of their respective owners and are
+used only to describe compatibility.
+
+DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. USE OF THE
+SOFTWARE ON ANY GAME SERVER IS AT YOUR OWN RISK AND IS SUBJECT TO THAT
+SERVER'S RULES.
+
+Violating these terms ends your permission to use the Software. Permission is
+restored if you stop the violation and it is not repeated.

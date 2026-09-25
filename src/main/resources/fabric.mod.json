@@ -12,7 +12,7 @@
     "sources": "https://github.com/Opalinium/WynnOverhaul",
     "issues": "https://github.com/Opalinium/WynnOverhaul/issues"
   },
-  "license": "All-Rights-Reserved",
+  "license": "LicenseRef-Overwatch-Source-Available-NC",
   "environment": "client",
   "entrypoints": {
     "client": [
