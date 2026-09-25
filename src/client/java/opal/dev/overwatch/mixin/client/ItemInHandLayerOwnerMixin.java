@@ -19,6 +19,7 @@ public abstract class ItemInHandLayerOwnerMixin {
     @Inject(method = "submitArmWithItem", at = @At("HEAD"))
     private void overwatch$ownerStart(ArmedEntityRenderState state, ItemStackRenderState item, ItemStack stack, HumanoidArm arm, PoseStack poseStack, SubmitNodeCollector collector, int light, CallbackInfo ci) {
         WeaponTrail.handOwner = state instanceof AvatarRenderState avatar ? avatar.id : -1;
+        WeaponTrail.captureOrigin(poseStack);
     }
 
     @Inject(method = "submitArmWithItem", at = @At("RETURN"))

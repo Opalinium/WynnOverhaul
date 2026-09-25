@@ -36,6 +36,9 @@ object WeaponTrail {
         val by: Double,
         val bz: Double,
         val strength: Float,
+        val ox: Float,
+        val oy: Float,
+        val oz: Float,
     )
 
     private val samples = ArrayDeque<Sample>()
@@ -51,6 +54,12 @@ object WeaponTrail {
     private val rel = Matrix4f()
     private val ghostPose = Matrix4f()
     private val probe = Vector3f()
+    private val origin = Vector3f()
+
+    @JvmStatic
+    fun captureOrigin(stack: PoseStack) {
+        origin.set(0f, 0f, 0f).mulPosition(stack.last().pose())
+    }
 
     fun clear() {
         samples.clear()
@@ -113,7 +122,7 @@ object WeaponTrail {
         val ay = cy + probe.y
         val az = cz + probe.z
         probe.set(0f, 1f, 0f).mulPosition(matrix)
-        return Sample(first, now, cx, cy, cz, Matrix4f(matrix), ax, ay, az, cx + probe.x, cy + probe.y, cz + probe.z, strength)
+        return Sample(first, now, cx, cy, cz, Matrix4f(matrix), ax, ay, az, cx + probe.x, cy + probe.y, cz + probe.z, strength, origin.x, origin.y, origin.z)
     }
 
     private fun distance(a: Sample, b: Sample): Double =
@@ -145,7 +154,7 @@ object WeaponTrail {
                     if (first) {
                         ghostPose.set(handRoot).mul(s.matrix)
                     } else {
-                        ghostPose.identity().translation((s.camX - camX).toFloat(), (s.camY - camY).toFloat(), (s.camZ - camZ).toFloat()).mul(s.matrix)
+                        ghostPose.identity().translation(origin.x - s.ox, origin.y - s.oy, origin.z - s.oz).mul(s.matrix)
                     }
                     stack.pushPose()
                     stack.setIdentity()
