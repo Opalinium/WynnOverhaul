@@ -32,13 +32,6 @@ object WynnPouches {
             val raw = POUCH_TOTAL.find(line)?.groupValues?.get(1) ?: continue
             raw.replace(Regex("[,.\\s']"), "").toLongOrNull()?.let { return it }
         }
-        for (line in lore) {
-            val runs = DIGIT_RUN.findAll(line).mapNotNull { it.value.toLongOrNull() }.toList()
-            if (runs.size >= 3) {
-                val last = runs.takeLast(3)
-                return last[0] * 4096L + last[1] * 64L + last[2]
-            }
-        }
         return null
     }
 
@@ -70,7 +63,6 @@ object WynnPouches {
     private fun lettersOf(stack: ItemStack): String =
         stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
 
-    private val POUCH_TOTAL = Regex("""([\d][\d,.\s']*)\s*E\b""")
-    private val DIGIT_RUN = Regex("[0-9]+")
+    private val POUCH_TOTAL = Regex("""^\s*(\d[\d,.']*)\s*(?:E\b|\(\d)""")
     private val INGREDIENT_LINE = Regex("""(\d+)\s*[×x]\s*(.+)""")
 }
