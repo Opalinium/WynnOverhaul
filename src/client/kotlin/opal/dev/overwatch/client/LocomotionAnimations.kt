@@ -8,12 +8,18 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState
 import net.minecraft.world.entity.Avatar
 import net.minecraft.world.item.ItemUseAnimation
+import net.minecraft.world.level.ClipContext
+import net.minecraft.world.phys.HitResult
+import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 
 object LocomotionAnimations {
@@ -150,7 +156,7 @@ object LocomotionAnimations {
     private const val TAU = 0.08f
     private const val STALE_NANOS = 5_000_000_000L
     private const val LEG_SWING = 1.4f
-    private const val GAIT_PHASE = 0.6662f
+    private const val GAIT_PHASE = 0.4f
     private const val MASTER = 0.7f
     private const val PACE_REFERENCE = 0.22f
     private const val LAUNCH_MIN_VY = 0.15f
@@ -195,6 +201,18 @@ object LocomotionAnimations {
     private const val BODY_YAW_LIMIT = 0.25f
     private const val BODY_ROLL_LIMIT = 0.18f
 
+    private const val LEG_HALF = 6f
+    private const val LEG_FULL = 12f
+    private const val LEG_LATERAL = 1.9f
+    private const val TERRAIN_STEP_UP = 0.56
+    private const val TERRAIN_REACH_DOWN = 0.6
+    private const val TERRAIN_R_MIN = 5.4f
+    private const val TERRAIN_REACH_CAP = 11.6f
+    private const val TERRAIN_PELVIS_LIMIT = 6f
+    private const val TERRAIN_TAU = 0.07f
+    private const val TERRAIN_FAR_SQ = 576.0
+    private const val TERRAIN_DEADBAND = 0.05f
+
     private const val USE_NONE = 0
     private const val USE_CONSUME = 1
     private const val USE_BLOCK = 2
@@ -233,6 +251,11 @@ object LocomotionAnimations {
         var wHurt = 0f
         var wDead = 0f
         var wCrouch = 0f
+        var entity: Avatar? = null
+        var terrainNanos = 0L
+        var groundRight = 0f
+        var groundLeft = 0f
+        var pelvis = 0f
     }
 
     private val bodies = HashMap<Int, Body>()
@@ -254,6 +277,7 @@ object LocomotionAnimations {
             else -> USE_NONE
         }
         body.styleIndex = Math.floorMod(entity.uuid.hashCode() * -1640531535, STYLES.size)
+        body.entity = entity
         body.seenNanos = System.nanoTime()
     }
 
@@ -706,11 +730,104 @@ object LocomotionAnimations {
         clampParts(model, armsFree, body.wClimb > 0.3f)
         applyTorso(model, armsFree)
         guardJoints(model, armsFree)
-        if (config.locomotionBend) setBends(model, body, style, armsFree, owned, k) else clearBends(model)
+        val wTerrain = grounded * (1f - body.wDead)
+        val terrainActive = config.locomotionTerrain && config.locomotionBend && applyTerrain(model, state, body, wTerrain, k)
+        if (config.locomotionBend) setBends(model, body, style, armsFree, owned, k, if (terrainActive) terrainKnees else null) else clearBends(model)
+    }
+
+    private val terrainKnees = FloatArray(2)
+    private val footRight = FloatArray(2)
+    private val footLeft = FloatArray(2)
+    private val solved = FloatArray(2)
+
+    private fun legFoot(theta: Float, bend: Float, out: FloatArray) {
+        val ly = LEG_HALF + LEG_HALF * cos(bend)
+        val lz = LEG_HALF * sin(bend)
+        out[0] = ly * sin(theta) + lz * cos(theta)
+        out[1] = ly * cos(theta) - lz * sin(theta)
+    }
+
+    private fun solveLeg(dz: Float, dy: Float, out: FloatArray) {
+        val r = hypot(dz, dy).coerceIn(TERRAIN_R_MIN, LEG_FULL)
+        val bend = acos((r * r / (2f * LEG_HALF * LEG_HALF) - 1f).coerceIn(-1f, 1f))
+        out[0] = atan2(dz, dy.coerceAtLeast(0.5f)) - bend * 0.5f
+        out[1] = bend
+    }
+
+    private fun groundDelta(entity: Avatar, x: Double, z: Double, baseY: Double): Float {
+        val hit = entity.level().clip(
+            ClipContext(Vec3(x, baseY + TERRAIN_STEP_UP, z), Vec3(x, baseY - TERRAIN_REACH_DOWN, z), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity),
+        )
+        if (hit.type == HitResult.Type.MISS || hit.isInside) return 0f
+        val delta = ((hit.location.y - baseY) * 16.0).toFloat()
+        return if (abs(delta) < 0.4f) 0f else delta
+    }
+
+    private fun reachHeight(base: Float, dz: Float, cap: Float): Float =
+        base - Math.sqrt(max(0f, cap * cap - dz * dz).toDouble()).toFloat()
+
+    private fun applyTerrain(model: HumanoidModel<*>, state: AvatarRenderState, body: Body, weight: Float, k: Float): Boolean {
+        val entity = body.entity
+        val now = System.nanoTime()
+        val dt = if (body.terrainNanos == 0L) 0f else ((now - body.terrainNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        body.terrainNanos = now
+        val a = 1f - exp(-dt / TERRAIN_TAU)
+        val rLeg = model.rightLeg
+        val lLeg = model.leftLeg
+        val kneeRight = knee(rLeg, body, k)
+        val kneeLeft = knee(lLeg, body, k)
+        legFoot(rLeg.xRot, kneeRight, footRight)
+        legFoot(lLeg.xRot, kneeLeft, footLeft)
+
+        var goalRight = 0f
+        var goalLeft = 0f
+        if (entity != null && weight > 0.01f && state.distanceToCameraSq < TERRAIN_FAR_SQ) {
+            val rad = state.bodyRot * (PI.toFloat() / 180f)
+            val fx = -sin(rad).toDouble()
+            val fz = cos(rad).toDouble()
+            val lx = cos(rad).toDouble()
+            val lz = sin(rad).toDouble()
+            val side = LEG_LATERAL / 16.0
+            val forwardRight = -footRight[0] / 16.0
+            val forwardLeft = -footLeft[0] / 16.0
+            goalRight = groundDelta(entity, state.x + fx * forwardRight - lx * side, state.z + fz * forwardRight - lz * side, state.y)
+            goalLeft = groundDelta(entity, state.x + fx * forwardLeft + lx * side, state.z + fz * forwardLeft + lz * side, state.y)
+        }
+        body.groundRight = approach(body.groundRight, goalRight, a)
+        body.groundLeft = approach(body.groundLeft, goalLeft, a)
+        val dRight = body.groundRight * weight
+        val dLeft = body.groundLeft * weight
+
+        val baseRight = footRight[1] - dRight
+        val baseLeft = footLeft[1] - dLeft
+        val capRight = max(hypot(footRight[0], footRight[1]), TERRAIN_REACH_CAP)
+        val capLeft = max(hypot(footLeft[0], footLeft[1]), TERRAIN_REACH_CAP)
+        var pelvisGoal = max(0f, max(reachHeight(baseRight, footRight[0], capRight), reachHeight(baseLeft, footLeft[0], capLeft)))
+        val ceiling = min(reachHeight(baseRight, footRight[0], TERRAIN_R_MIN), reachHeight(baseLeft, footLeft[0], TERRAIN_R_MIN))
+        pelvisGoal = min(pelvisGoal, max(0f, ceiling)).coerceAtMost(TERRAIN_PELVIS_LIMIT)
+        body.pelvis = approach(body.pelvis, pelvisGoal, a)
+
+        if (abs(dRight) < TERRAIN_DEADBAND && abs(dLeft) < TERRAIN_DEADBAND && body.pelvis < TERRAIN_DEADBAND) return false
+
+        solveLeg(footRight[0], baseRight - body.pelvis, solved)
+        rLeg.xRot = solved[0]
+        terrainKnees[0] = solved[1]
+        solveLeg(footLeft[0], baseLeft - body.pelvis, solved)
+        lLeg.xRot = solved[0]
+        terrainKnees[1] = solved[1]
+
+        val drop = body.pelvis
+        rLeg.y += drop
+        lLeg.y += drop
+        model.body.y += drop
+        model.head.y += drop
+        model.rightArm.y += drop
+        model.leftArm.y += drop
+        return true
     }
 
     private fun setBend(part: ModelPart, angle: Float, stamp: Long) {
-        (part as BendHolder).setLimbBend(angle, stamp)
+        ((part as Any) as BendHolder).setLimbBend(angle, stamp)
     }
 
     private fun freshBendOf(part: ModelPart): Float = LimbBend.freshBend(part)
@@ -758,10 +875,10 @@ object LocomotionAnimations {
         return -(ELBOW_REST + ELBOW_FORWARD * forward).coerceIn(0f, ELBOW_LIMIT)
     }
 
-    private fun setBends(model: HumanoidModel<*>, body: Body, style: Style, armsFree: Boolean, owned: Boolean, k: Float) {
+    private fun setBends(model: HumanoidModel<*>, body: Body, style: Style, armsFree: Boolean, owned: Boolean, k: Float, kneeOverride: FloatArray?) {
         val stamp = System.nanoTime()
-        val rKnee = knee(model.rightLeg, body, k)
-        val lKnee = knee(model.leftLeg, body, k)
+        val rKnee = kneeOverride?.get(0) ?: knee(model.rightLeg, body, k)
+        val lKnee = kneeOverride?.get(1) ?: knee(model.leftLeg, body, k)
         val rElbow = if (owned) combatElbow(model.rightArm, true) else elbow(model.rightArm, armsFree, false)
         val lElbow = if (owned) combatElbow(model.leftArm, false) else elbow(model.leftArm, armsFree, false)
         setBend(model.rightLeg, rKnee, stamp)

@@ -17,25 +17,41 @@ object LimbBend {
     private const val EDGE = 1e-4f
 
     private var angle = 0f
+    private var fullCos = 1f
+    private var fullSin = 0f
     private val normalIn = Vector3f()
     private val normalOut = Vector3f()
     private val position = Vector3f()
 
     @JvmStatic
+    fun configured(): Boolean {
+        val config = OverwatchConfig.current
+        return config.locomotionBend && (config.locomotionEnabled || config.weaponAnimationsEnabled)
+    }
+
+    @JvmStatic
     fun select(bend: Float, stamp: Long) {
-        angle = if (bend != 0f && System.nanoTime() - stamp < STALE_NANOS) bend else 0f
+        if (bend == 0f || !configured() || System.nanoTime() - stamp >= STALE_NANOS) {
+            angle = 0f
+            return
+        }
+        angle = bend
+        fullCos = cos(bend)
+        fullSin = sin(bend)
     }
 
     private const val HAND_JOINT = 4f
 
     @JvmStatic
     fun freshBend(part: ModelPart): Float {
-        val holder = part as BendHolder
-        return if (System.nanoTime() - holder.limbBendStamp < STALE_NANOS) holder.limbBend else 0f
+        val holder = (part as Any) as BendHolder
+        val bend = holder.limbBend
+        return if (bend != 0f && System.nanoTime() - holder.limbBendStamp < STALE_NANOS) bend else 0f
     }
 
     @JvmStatic
     fun applyHandFrame(part: ModelPart, stack: PoseStack) {
+        if (!configured()) return
         val bend = freshBend(part)
         if (bend == 0f) return
         stack.translate(0f, HAND_JOINT / UNIT, 0f)
@@ -96,23 +112,49 @@ object LimbBend {
         val jointY = (cube.minY + cube.maxY) * 0.5f
         val jointZ = (cube.minZ + cube.maxZ) * 0.5f
         val matrix = pose.pose()
+        val lowY = jointY - ZONE * 0.5f
+        val highY = jointY + ZONE * 0.5f
         for (polygon in cube.polygons) {
             val n = polygon.normal()
+            var cachedState = -1
             for (vertex in polygon.vertices()) {
-                val u = ((vertex.y() - jointY) / ZONE + 0.5f).coerceIn(0f, 1f)
-                val theta = bend * u * u * (3f - 2f * u)
-                val c = cos(theta)
-                val s = sin(theta)
-                val ry = vertex.y() - jointY
-                val rz = vertex.z() - jointZ
-                matrix.transformPosition(
-                    vertex.x() / UNIT,
-                    (jointY + ry * c - rz * s) / UNIT,
-                    (jointZ + ry * s + rz * c) / UNIT,
-                    position,
-                )
-                normalIn.set(n.x(), n.y() * c - n.z() * s, n.y() * s + n.z() * c)
-                pose.transformNormal(normalIn, normalOut)
+                val vy = vertex.y()
+                val state = if (vy <= lowY) 0 else if (vy >= highY) 1 else 2
+                val c: Float
+                val s: Float
+                when (state) {
+                    0 -> {
+                        c = 1f
+                        s = 0f
+                    }
+                    1 -> {
+                        c = fullCos
+                        s = fullSin
+                    }
+                    else -> {
+                        val u = (vy - jointY) / ZONE + 0.5f
+                        val theta = bend * u * u * (3f - 2f * u)
+                        c = cos(theta)
+                        s = sin(theta)
+                    }
+                }
+                if (state == 0) {
+                    matrix.transformPosition(vertex.x() / UNIT, vy / UNIT, vertex.z() / UNIT, position)
+                } else {
+                    val ry = vy - jointY
+                    val rz = vertex.z() - jointZ
+                    matrix.transformPosition(
+                        vertex.x() / UNIT,
+                        (jointY + ry * c - rz * s) / UNIT,
+                        (jointZ + ry * s + rz * c) / UNIT,
+                        position,
+                    )
+                }
+                if (state == 2 || state != cachedState) {
+                    normalIn.set(n.x(), n.y() * c - n.z() * s, n.y() * s + n.z() * c)
+                    pose.transformNormal(normalIn, normalOut)
+                    cachedState = state
+                }
                 buffer.addVertex(
                     position.x, position.y, position.z, color, vertex.u(), vertex.v(),
                     overlay, light, normalOut.x, normalOut.y, normalOut.z,

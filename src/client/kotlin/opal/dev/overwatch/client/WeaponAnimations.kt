@@ -60,7 +60,7 @@ object WeaponAnimations {
     private const val SPRINT_BOB_NANOS = 450_000_000L
     private const val SPRINT_BOB_AMP = 0.02f
     private const val WALK_SHARE = 0.35f
-    private const val GAIT_PHASE = 0.6662f
+    private const val GAIT_PHASE = 0.4f
     private const val WALK_MAIN_SWING = 0.2f
     private const val WALK_OFF_SWING = 0.5f
     private const val SPRINT_MAIN_SWING = 0.55f
@@ -114,6 +114,53 @@ object WeaponAnimations {
     private const val GRIP_SLIDE_STEPS = 8
     private const val GRIP_MIN_OFFSET = 3f
     private var gripRelaxNanos = 0L
+    private const val SPRING_OMEGA = 26f
+    private const val SPRING_DAMPING = 0.5f
+    private const val SPRING_MIX = 0.85f
+    private const val SPRING_MAX_LAG = 0.6f
+    private const val SPRING_RESET_GAP = 0.25f
+    private const val SPRING_MAX_DT = 0.05f
+    private const val SPRING_STEPS = 2
+    private const val TWO_PI = 6.2831855f
+    private const val PI_F = 3.1415927f
+    private var springReady = false
+    private var springNanos = 0L
+    private var springA = 0f
+    private var springAV = 0f
+    private var springY = 0f
+    private var springYV = 0f
+
+    private fun wrapPi(v: Float): Float {
+        val r = v % TWO_PI
+        return if (r > PI_F) r - TWO_PI else if (r < -PI_F) r + TWO_PI else r
+    }
+
+    private fun springTip(out: FloatArray) {
+        val now = System.nanoTime()
+        val gap = (now - springNanos) / 1_000_000_000f
+        springNanos = now
+        if (!springReady || gap > SPRING_RESET_GAP) {
+            springA = out[HEAD_A]
+            springY = out[HEAD_Y]
+            springAV = 0f
+            springYV = 0f
+            springReady = true
+            return
+        }
+        val h = gap.coerceIn(0f, SPRING_MAX_DT) / SPRING_STEPS
+        val k = SPRING_OMEGA * SPRING_OMEGA
+        val c = 2f * SPRING_DAMPING * SPRING_OMEGA
+        repeat(SPRING_STEPS) {
+            springAV += (k * (out[HEAD_A] - springA) - c * springAV) * h
+            springA += springAV * h
+            springYV += (k * wrapPi(out[HEAD_Y] - springY) - c * springYV) * h
+            springY += springYV * h
+        }
+        val lagA = (out[HEAD_A] - springA).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
+        val lagY = wrapPi(out[HEAD_Y] - springY).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
+        out[HEAD_A] -= lagA * SPRING_MIX
+        out[HEAD_Y] -= lagY * SPRING_MIX
+    }
     private val GUARD_POINTS = floatArrayOf(0.6f, 0.85f, 1f)
     private const val GRIP_LEN_SQ = GRIP_Y * GRIP_Y + GRIP_Z * GRIP_Z
 
@@ -1717,6 +1764,7 @@ object WeaponAnimations {
         val swinging = t >= 0f && pose != null
         if (!swinging && !SwingClock.idleActive()) {
             headActive = false
+            springReady = false
             return false
         }
 
@@ -1757,6 +1805,7 @@ object WeaponAnimations {
 
         val out = outBuffer
         if (pose != null && swinging) SwingClock.sample(pose, t, base, k, out) else base.copyInto(out)
+        springTip(out)
 
         val yaw = if (swinging) -s * out[TURN] else 0f
         if (swinging) {
@@ -1773,7 +1822,7 @@ object WeaponAnimations {
         applyBody(model, right, yaw, out[LEAN], out[STEP])
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
-        val guardKey = if (swinging && pose != null) pose.key else SwingClock.idleKey()
+        val guardKey = if (swinging) pose.key else SwingClock.idleKey()
         if (guardKey != null && guardKey in HAND_SHIFT) {
             val guardSpan = trailSpan(guardKey)
             if (guardSpan != null) keepShaftClear(main, s, yaw, out, guardSpan, HAND_SHIFT.getValue(guardKey))
@@ -1836,7 +1885,7 @@ object WeaponAnimations {
         headSide = s
         lastReach = out[REACH]
         headActive = true
-        val shiftKey = if (swinging && pose != null) pose.key else SwingClock.idleKey()
+        val shiftKey = if (swinging) pose.key else SwingClock.idleKey()
         headBow = shiftKey != "BOW:FIREARM" && Minecraft.getInstance().player?.let { ActiveWeapon.isRanged(it) } == true
         handShift = (HAND_SHIFT[shiftKey] ?: 0f) + (HAND_SPRINT_EXTRA[shiftKey] ?: 0f) * SwingClock.sprintAmount()
         headFrame = System.nanoTime()
