@@ -29,6 +29,8 @@ object QuestWikiFetcher {
     private val byKey: Map<String, WikiPage> by lazy { load() }
     private val byDisambiguatedKey: Map<String, WikiPage> by lazy { buildDisambiguatedIndex() }
 
+    fun allPages(): Collection<WikiPage> = byKey.values
+
     fun find(type: ActivityType, name: String): WikiPage? {
         val labels = labelsFor(type)
         for (label in labels) {

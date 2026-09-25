@@ -50,6 +50,7 @@ object TrackerEsp {
         val discoveredMatches = if (trackerActive) EntityTracker.discovered else emptyList()
         val questMatches = QuestBeaconTracker.current
         val npcMatches = if (config.townNpcMarkersEnabled) TownNpcTracker.current else emptyList()
+        val discoveryMatches = DiscoveryTracker.matches()
         val lootrunMatches = if (config.lootrunEnabled && LootrunModel.state != LootrunModel.State.NOT_RUNNING) {
             val playerPos = client.player?.position()
             val pathMatches = if (playerPos != null) LootrunRecorder.renderMatches(playerPos) else emptyList()
@@ -57,7 +58,7 @@ object TrackerEsp {
         } else {
             emptyList()
         }
-        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty() && npcMatches.isEmpty()) {
+        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty() && npcMatches.isEmpty() && discoveryMatches.isEmpty()) {
             if (waypoints.isNotEmpty()) waypoints = emptyList()
             return
         }
@@ -66,14 +67,14 @@ object TrackerEsp {
             val level = client.level ?: return
             val player = client.player
             val cam = ctx.levelState().cameraRenderState
-            val camPos = cam.pos ?: return
+            val camPos = cam.pos
             val vp = Matrix4f(cam.projectionMatrix).mul(cam.viewRotationMatrix)
             val view = cam.viewRotationMatrix
             val clip = Vector4f()
 
             val now = System.nanoTime()
             liveLosKeys.clear()
-            val out = ArrayList<Waypoint>(liveMatches.size + discoveredMatches.size + questMatches.size + lootrunMatches.size + npcMatches.size)
+            val out = ArrayList<Waypoint>(liveMatches.size + discoveredMatches.size + questMatches.size + lootrunMatches.size + npcMatches.size + discoveryMatches.size)
 
             for (match in liveMatches) {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
@@ -89,6 +90,9 @@ object TrackerEsp {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
             }
             for (match in lootrunMatches) {
+                projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
+            }
+            for (match in discoveryMatches) {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
             }
             for (match in npcMatches) {

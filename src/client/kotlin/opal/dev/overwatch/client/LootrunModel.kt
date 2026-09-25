@@ -25,6 +25,11 @@ object LootrunModel {
         private set
 
     fun tick(mc: Minecraft) {
+        val config = OverwatchConfig.current
+        if (!config.lootrunEnabled && !(config.discordRpcEnabled && config.discordShowActivity)) {
+            if (state != State.NOT_RUNNING) reset()
+            return
+        }
         val scoreboard = mc.level?.scoreboard
         val objective = scoreboard?.getDisplayObjective(DisplaySlot.SIDEBAR)
         if (scoreboard == null || objective == null) {
