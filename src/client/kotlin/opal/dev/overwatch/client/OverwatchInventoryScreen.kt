@@ -53,6 +53,7 @@ class OverwatchInventoryScreen(
     )
 
     private var searchField: OwTextField? = null
+    private var inventorySortButton: OwButton? = null
     private var searchText: String = ""
     private val tabButtons = ArrayList<OwButton>()
     private var scrollY: Int = 0
@@ -192,12 +193,23 @@ class OverwatchInventoryScreen(
         if (invTab == InvTab.INVENTORY) {
             val fieldX = ox + MARGIN
             val fieldY = pt + SEARCH_Y_REL
-            searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2, SEARCH_H).also {
+            val sortW = font.width("Sort: Default") + 16
+            searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2 - sortW - 4, SEARCH_H).also {
                 it.value = searchText
                 addRenderableWidget(it)
             }
+            inventorySortButton = OwButton(
+                fieldX + panelWidth() - MARGIN * 2 - sortW, fieldY, sortW, SEARCH_H,
+                Component.literal("Sort: ${InventorySort.parse(OverwatchConfig.current.inventorySort).label}"),
+            ) {
+                val config = OverwatchConfig.current
+                config.inventorySort = InventorySort.parse(config.inventorySort).next().name
+                config.save()
+                rebuildWidgets()
+            }.also { addRenderableWidget(it) }
         } else {
             searchField = null
+            inventorySortButton = null
         }
         if (invTab == InvTab.JOURNAL) {
             val gx = ox + MARGIN
@@ -243,9 +255,16 @@ class OverwatchInventoryScreen(
             journalActionsTop = header.actionsTop
             val selected = selectedJournal
             if (selected != null) {
+                val mapLocated = if (selected.trackingState == ActivityTrackingState.UNTRACKABLE) DiscoveryTracker.locate(selected) else null
+                val trackText = when {
+                    mapLocated == null -> trackLabel(selected)
+                    DiscoveryTracker.isTracked(selected.name) -> "Untrack"
+                    mapLocated.approximate -> "Track (approx.)"
+                    else -> "Track"
+                }
                 journalTrackButton = OwButton(
-                    gx, rowY(header.actionsTop), 120, JOURNAL_ACTION_BTN_H, Component.literal(trackLabel(selected)),
-                    enabled = { selected.trackingState != ActivityTrackingState.UNTRACKABLE },
+                    gx, rowY(header.actionsTop), 120, JOURNAL_ACTION_BTN_H, Component.literal(trackText),
+                    enabled = { selected.trackingState != ActivityTrackingState.UNTRACKABLE || mapLocated != null },
                 ) {
                     toggleJournalTrack(selected)
                 }.also { addRenderableWidget(it) }
@@ -374,7 +393,7 @@ class OverwatchInventoryScreen(
                         if (s.points < 0) old.skills.firstOrNull { it.slot == s.slot }?.copy(isConfirm = true) ?: s else s
                     })
                     if (System.nanoTime() - lastStatClickNanos < STAT_GRACE_NANOS) {
-                        val missing = old.skills.filter { o -> snap!!.skills.none { it.slot == o.slot } }
+                        val missing = old.skills.filter { o -> snap.skills.none { it.slot == o.slot } }
                         if (missing.isNotEmpty()) snap = snap.copy(skills = (snap.skills + missing).sortedBy { it.slot })
                     }
                 }
@@ -409,6 +428,7 @@ class OverwatchInventoryScreen(
 
                 for (button in tabButtons) button.y = pt + TAB_Y_REL
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
+                inventorySortButton?.let { button -> button.y = pt + SEARCH_Y_REL }
                 journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL }
                 journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
                 journalRefreshButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
@@ -500,7 +520,8 @@ class OverwatchInventoryScreen(
             val pouchSlot = findIngredientPouch()
 
             val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
-            val filtered = storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }
+            val filtered = InventorySort.parse(OverwatchConfig.current.inventorySort)
+                .apply(storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }, ::slotStack)
             labels.add(PlacedLabel("Inventory", x, y, color = OwTheme.ACCENT))
             y += CAPTION_H
             val gridTop = y
@@ -1178,7 +1199,7 @@ class OverwatchInventoryScreen(
 
     private fun toggleJournalTrack(activity: ActivityInfo) {
         if (activity.trackingState == ActivityTrackingState.UNTRACKABLE) {
-            showJournalMessage("${activity.name} can't be tracked")
+            if (DiscoveryTracker.toggle(activity)) rebuildWidgets() else showJournalMessage("${activity.name} can't be tracked")
             return
         }
         val client = Minecraft.getInstance()
@@ -1187,6 +1208,10 @@ class OverwatchInventoryScreen(
         if (menu == null || player.containerMenu !== menu) {
             showJournalMessage("Reopen the journal to track")
             return
+        }
+        if (ContentBookQuery.isEnumerating) {
+            ContentBookQuery.cancel()
+            journalBusy = false
         }
         if (journalBusy) {
             showJournalMessage("Still working on the last change")
