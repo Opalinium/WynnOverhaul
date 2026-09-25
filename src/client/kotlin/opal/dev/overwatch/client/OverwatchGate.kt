@@ -40,6 +40,8 @@ object OverwatchGate {
             HudLayoutManager.clearSizes()
             ContentBookCache.clearTracking()
             ObjectiveClaims.clear()
+            DiscoveryTracker.clear()
+            XaeroHook.clear()
         }
         onWynncraft = onWynn
         inGame = inGameNow
