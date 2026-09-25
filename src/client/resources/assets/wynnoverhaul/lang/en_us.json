@@ -1,0 +1,9 @@
+{
+  "key.wynnoverhaul.toggle": "Toggle Hold-to-Attack",
+  "key.wynnoverhaul.config": "Open WynnOverhaul Config",
+  "key.wynnoverhaul.souls_camera": "Toggle Souls Camera",
+  "key.wynnoverhaul.souls_recenter": "Recenter Souls Camera",
+  "key.wynnoverhaul.weapon_anim": "Register Weapon for Animations",
+  "key.wynnoverhaul.tracker.toggle": "Toggle Entity Tracker",
+  "key.category.wynnoverhaul.main": "WynnOverhaul"
+}

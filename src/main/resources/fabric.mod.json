@@ -1,31 +1,31 @@
 {
   "schemaVersion": 1,
-  "id": "overwatch",
+  "id": "wynnoverhaul",
   "version": "${version}",
-  "name": "Overwatch",
+  "name": "WynnOverhaul",
   "description": "Client-side automation for a server you control: humanized hold-to-attack combat, an entity/chest/gathering-node tracker, small Wynncraft QoL tweaks and an optional Discord Rich Presence.",
   "authors": [],
   "contact": {},
-  "license": "LicenseRef-Overwatch-Source-Available-NC",
+  "license": "LicenseRef-WynnOverhaul-Source-Available-NC",
   "environment": "client",
   "entrypoints": {
     "client": [
-      "opal.dev.overwatch.client.OverwatchClient",
-      "opal.dev.overwatch.client.EntityTrackerClient",
-      "opal.dev.overwatch.client.WynnQolClient",
-      "opal.dev.overwatch.client.DiscordRichPresence",
-      "opal.dev.overwatch.client.ContentBookInterceptor"
+      "opal.dev.wynnoverhaul.client.WynnOverhaulClient",
+      "opal.dev.wynnoverhaul.client.EntityTrackerClient",
+      "opal.dev.wynnoverhaul.client.WynnQolClient",
+      "opal.dev.wynnoverhaul.client.DiscordRichPresence",
+      "opal.dev.wynnoverhaul.client.ContentBookInterceptor"
     ],
     "main": [
-      "opal.dev.overwatch.Overwatch"
+      "opal.dev.wynnoverhaul.WynnOverhaul"
     ],
     "modmenu": [
-      "opal.dev.overwatch.client.OverwatchModMenu"
+      "opal.dev.wynnoverhaul.client.WynnOverhaulModMenu"
     ]
   },
   "mixins": [
     {
-      "config": "overwatch.client.mixins.json",
+      "config": "wynnoverhaul.client.mixins.json",
       "environment": "client"
     }
   ],

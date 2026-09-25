@@ -1,4 +1,4 @@
-rootProject.name = "overwatch"
+rootProject.name = "wynnoverhaul"
 
 pluginManagement {
     repositories {

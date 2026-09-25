@@ -1,4 +1,4 @@
-<h1 align="center">Overwatch</h1>
+<h1 align="center">WynnOverhaul</h1>
 
 <p align="center">
   A client-side Fabric mod for Wynncraft with a custom HUD, weapon animations, an entity tracker and a set of quality-of-life tools.
@@ -76,12 +76,12 @@
 ## Installation
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.2.
-2. Put Fabric API, Fabric Language Kotlin and the Overwatch jar in your `mods` folder.
+2. Put Fabric API, Fabric Language Kotlin and the WynnOverhaul jar in your `mods` folder.
 3. Launch the game and join Wynncraft.
 
 ## Usage
 
-Open the settings hub with the **Open Overwatch Config** keybind, or through Mod Menu if you have it. From there you can configure every feature and open the HUD designer.
+Open the settings hub with the **Open WynnOverhaul Config** keybind, or through Mod Menu if you have it. From there you can configure every feature and open the HUD designer.
 
 ### Keybinds
 
@@ -90,7 +90,7 @@ All keybinds can be changed under Options > Controls.
 | Keybind | What it does |
 | --- | --- |
 | Toggle Hold-to-Attack | Turns auto-attack on or off |
-| Open Overwatch Config | Opens the settings hub |
+| Open WynnOverhaul Config | Opens the settings hub |
 | Toggle Entity Tracker | Turns the tracker on or off |
 | Toggle Souls Camera | Switches the orbit camera on or off |
 | Recenter Souls Camera | Resets the camera behind you |
@@ -98,15 +98,15 @@ All keybinds can be changed under Options > Controls.
 
 ### Configuration
 
-Settings are saved to `config/overwatch.json`. Unknown keys are ignored and missing keys use their defaults, so a config from an older version keeps working.
+Settings are saved to `config/wynnoverhaul.json`. Unknown keys are ignored and missing keys use their defaults, so a config from an older version keeps working.
 
 ## Building from source
 
 Requires JDK 25.
 
 ```
-git clone https://github.com/Opalinium/Overwatch.git
-cd Overwatch
+git clone https://github.com/Opalinium/WynnOverhaul.git
+cd WynnOverhaul
 ./gradlew build
 ```
 
@@ -114,7 +114,7 @@ The jar is written to `build/libs/`. The project uses Fabric Loom, Kotlin and Sh
 
 ## Network access
 
-Overwatch connects to these services and nothing else:
+WynnOverhaul connects to these services and nothing else:
 
 | Service | Used for |
 | --- | --- |
@@ -124,8 +124,8 @@ Overwatch connects to these services and nothing else:
 
 ## License
 
-Overwatch is source-available under a custom non-commercial license. You can share and modify it, but modified versions must stay open source under the same terms, and it can't be sold, resold or included in anything paid. See [LICENSE.txt](LICENSE.txt) for the full terms.
+WynnOverhaul is source-available under a custom non-commercial license. You can share and modify it, but modified versions must stay open source under the same terms, and it can't be sold, resold or included in anything paid. See [LICENSE.txt](LICENSE.txt) for the full terms.
 
 ## Disclaimer
 
-Overwatch is an unofficial, independent project. It is not affiliated with or endorsed by Wynncraft, Minecraft, Mojang, Microsoft, Fabric, Discord or any other company or service it mentions.
+WynnOverhaul is an unofficial, independent project. It is not affiliated with or endorsed by Wynncraft, Minecraft, Mojang, Microsoft, Fabric, Discord or any other company or service it mentions.
