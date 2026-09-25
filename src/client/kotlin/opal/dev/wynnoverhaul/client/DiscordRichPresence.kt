@@ -1,5 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
@@ -7,6 +8,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import opal.dev.wynnoverhaul.WynnOverhaul
 import java.time.Instant
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DiscordRichPresence : ClientModInitializer {
     @Volatile
@@ -15,6 +19,10 @@ class DiscordRichPresence : ClientModInitializer {
     private var nextUpdateNanos = 0L
     private var sessionStartEpochSeconds: Long = Instant.now().epochSecond
     private var loggedConnectError = false
+    private val connecting = AtomicBoolean(false)
+    private val worker: ExecutorService = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "wynnoverhaul-discord").apply { isDaemon = true }
+    }
 
     override fun onInitializeClient() {
         WynnOverhaulConfig.ensureLoaded()
@@ -33,7 +41,15 @@ class DiscordRichPresence : ClientModInitializer {
         if (connection == null) {
             if (now < nextConnectAttemptNanos) return
             nextConnectAttemptNanos = now + RECONNECT_INTERVAL_NANOS
-            connect()
+            if (connecting.compareAndSet(false, true)) {
+                worker.execute {
+                    try {
+                        connect()
+                    } finally {
+                        connecting.set(false)
+                    }
+                }
+            }
             return
         }
 
@@ -102,11 +118,22 @@ class DiscordRichPresence : ClientModInitializer {
             activity.addProperty("state", if (stateParts.isEmpty()) (server ?: "Wynncraft") else stateParts.joinToString(" · "))
         }
 
-        try {
-            conn.sendActivity(CURRENT_PID, activity)
-        } catch (t: Throwable) {
-            WynnOverhaul.LOGGER.warn("WynnOverhaul Discord RPC: failed to update presence ({})", t.message)
-            disconnect()
+        if (config.discordShowButton) {
+            val button = JsonObject()
+            button.addProperty("label", BUTTON_LABEL)
+            button.addProperty("url", BUTTON_URL)
+            val buttons = JsonArray()
+            buttons.add(button)
+            activity.add("buttons", buttons)
+        }
+
+        worker.execute {
+            try {
+                conn.sendActivity(CURRENT_PID, activity)
+            } catch (t: Throwable) {
+                WynnOverhaul.LOGGER.warn("WynnOverhaul Discord RPC: failed to update presence ({})", t.message)
+                if (connection === conn) disconnect()
+            }
         }
     }
 
@@ -137,6 +164,8 @@ class DiscordRichPresence : ClientModInitializer {
     private companion object {
         const val APPLICATION_ID = 1549796946862940180L
         const val LARGE_IMAGE_KEY = "wynnoverhaul"
+        const val BUTTON_LABEL = "Get WynnOverhaul"
+        const val BUTTON_URL = "https://github.com/Opalinium/WynnOverhaul"
         const val RECONNECT_INTERVAL_NANOS = 15_000_000_000L
         const val UPDATE_INTERVAL_NANOS = 15_000_000_000L
         val CURRENT_PID: Int = ProcessHandle.current().pid().toInt()

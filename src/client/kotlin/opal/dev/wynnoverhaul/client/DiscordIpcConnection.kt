@@ -22,6 +22,18 @@ class DiscordIpcConnection private constructor(private val transport: Transport)
         payload.add("args", args)
         payload.addProperty("nonce", UUID.randomUUID().toString())
         writeFrame(OP_FRAME, payload.toString())
+        readResponse()
+    }
+
+    private fun readResponse() {
+        repeat(MAX_RESPONSE_FRAMES) {
+            val (opcode, payload) = readFrame()
+            when (opcode) {
+                OP_PING -> writeFrame(OP_PONG, payload)
+                OP_CLOSE -> throw IOException("Discord closed the connection")
+                else -> return
+            }
+        }
     }
 
     fun close() {
@@ -51,6 +63,10 @@ class DiscordIpcConnection private constructor(private val transport: Transport)
     companion object {
         private const val OP_HANDSHAKE = 0
         private const val OP_FRAME = 1
+        private const val OP_CLOSE = 2
+        private const val OP_PING = 3
+        private const val OP_PONG = 4
+        private const val MAX_RESPONSE_FRAMES = 4
 
         fun connect(applicationId: Long): DiscordIpcConnection? {
             for (index in 0 until 10) {
@@ -140,15 +156,24 @@ class DiscordIpcConnection private constructor(private val transport: Transport)
                     ?: System.getenv("TEMP")
                     ?: "/tmp"
 
+            private val subdirs = listOf("", "app/com.discordapp.Discord", "snap.discord")
+
             fun open(index: Int): Transport? {
-                val path = Path.of(base, "discord-ipc-$index")
-                return try {
-                    val channel = SocketChannel.open(StandardProtocolFamily.UNIX)
-                    channel.connect(UnixDomainSocketAddress.of(path))
-                    UnixSocketTransport(channel)
-                } catch (_: IOException) {
-                    null
+                for (subdir in subdirs) {
+                    val path = Path.of(base, subdir, "discord-ipc-$index")
+                    try {
+                        val channel = SocketChannel.open(StandardProtocolFamily.UNIX)
+                        try {
+                            channel.connect(UnixDomainSocketAddress.of(path))
+                        } catch (e: IOException) {
+                            channel.close()
+                            continue
+                        }
+                        return UnixSocketTransport(channel)
+                    } catch (_: IOException) {
+                    }
                 }
+                return null
             }
         }
     }

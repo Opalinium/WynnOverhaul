@@ -70,6 +70,7 @@ data class WynnOverhaulConfig(
     var discordShowActivity: Boolean = true,
     var discordShowLevel: Boolean = true,
     var discordShowRegion: Boolean = true,
+    var discordShowButton: Boolean = true,
     var contentBookOverrideEnabled: Boolean = true,
     var contentBookSort: String = "RECOMMENDED",
     var inventorySort: String = "DEFAULT",

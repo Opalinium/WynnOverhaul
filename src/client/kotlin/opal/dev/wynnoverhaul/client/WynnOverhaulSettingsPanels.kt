@@ -1039,9 +1039,15 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             )
             rows += regionCheckbox to OwTheme.ROW_H
 
+            val buttonCheckbox = OwCheckbox(left, 0, w, Component.literal("Show project link button"), config.discordShowButton) {
+                config.discordShowButton = it
+            }
+            buttonCheckbox.setTooltip(Tooltip.create(Component.literal("Adds a button to your status that links to the WynnOverhaul project page.")))
+            rows += buttonCheckbox to OwTheme.ROW_H
+
             val info = listOf(
                 "Requires the Discord desktop app to be running.",
-                "Nothing is sent anywhere but your own local Discord client.",
+                "Only your local Discord client receives this data.",
             )
             for (line in info) rows += OwLabel(left, 0, w, 10, line, OwTheme.TEXT_DIM) to 11
         }
