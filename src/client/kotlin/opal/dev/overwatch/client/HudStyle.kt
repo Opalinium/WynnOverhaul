@@ -61,6 +61,7 @@ object HudStyle {
     fun darken(argb: Int, t: Float): Int = mix(argb, 0xFF000000.toInt(), t)
 
     fun plate(g: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, accent: Int = OwTheme.ACCENT, fade: Float = 1f) {
+        if (w <= 0 || h <= 0 || fade <= 0f) return
         g.fill(x, y, x + w, y + h, alpha(GLASS, fade))
         g.fill(x, y, x + w, y + 1, alpha(EDGE, fade))
         g.fill(x, y + h - 1, x + w, y + h, alpha(EDGE, fade))
@@ -82,6 +83,7 @@ object HudStyle {
     }
 
     fun diamond(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
+        if (r < 0 || (color ushr 24) == 0) return
         for (dy in -r..r) {
             val half = r - abs(dy)
             g.fill(cx - half, cy + dy, cx + half + 1, cy + dy + 1, color)
@@ -89,14 +91,28 @@ object HudStyle {
     }
 
     fun fadeRule(g: GuiGraphicsExtractor, x: Int, y: Int, w: Int, color: Int, leftSolid: Boolean = true) {
-        val slices = 12
+        if (w <= 0 || (color ushr 24) == 0) return
+        val slices = (w / 3).coerceIn(1, 12)
         val sliceW = w.toFloat() / slices
-        for (i in 0 until slices) {
-            val t = (i + 0.5f) / slices
-            val a = if (leftSolid) 1f - t * t else t * t
-            val x0 = x + (i * sliceW).roundToInt()
-            val x1 = x + ((i + 1) * sliceW).roundToInt()
-            g.fill(x0, y, x1, y + 1, alpha(color, a))
+        var runStart = x
+        var runColor = 0
+        for (i in 0..slices) {
+            var c = 0
+            var x1 = x + w
+            if (i < slices) {
+                val t = (i + 0.5f) / slices
+                c = alpha(color, if (leftSolid) 1f - t * t else t * t)
+                x1 = x + (i * sliceW).roundToInt()
+            }
+            if (i == 0) {
+                runColor = c
+                continue
+            }
+            if (c != runColor) {
+                if ((runColor ushr 24) != 0 && x1 > runStart) g.fill(runStart, y, x1, y + 1, runColor)
+                runStart = x1
+                runColor = c
+            }
         }
     }
 

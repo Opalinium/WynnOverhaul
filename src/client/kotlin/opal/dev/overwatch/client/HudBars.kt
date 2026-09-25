@@ -28,6 +28,7 @@ object HudBars {
         label: String,
         style: String = OverwatchConfig.current.hudBarStyle,
     ) {
+        if (w <= 0 || h <= 0) return
         when (style) {
             STYLE_ELDEN -> drawElden(graphics, font, x, y, w, h, fraction, fillArgb, label)
             STYLE_MINIMAL -> drawMinimal(graphics, font, x, y, w, h, fraction, fillArgb, label)
