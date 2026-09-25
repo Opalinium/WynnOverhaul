@@ -6,6 +6,7 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
         NAME("Name"),
         LEVEL("Level"),
         STATUS("Status"),
+        PROXIMITY("Proximity"),
     }
 
     var activities: List<ActivityInfo> = initialActivities
@@ -33,6 +34,7 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
             Sort.NAME -> result.sortedBy { it.name }
             Sort.LEVEL -> result.sortedByDescending { it.levelReq }
             Sort.STATUS -> result.sortedBy { it.status.ordinal }
+            Sort.PROXIMITY -> result.sortedBy { DiscoveryTracker.distanceTo(it) }
         }
         result = result.sortedByDescending { it.trackingState == ActivityTrackingState.TRACKED }
         return result

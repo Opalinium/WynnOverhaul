@@ -12,7 +12,8 @@ object ContentBookQuery {
     private const val CONTAINER_SIZE = 54
     private const val MAX_FILTERS = 14
     private const val MAX_PAGES_PER_FILTER = 20
-    private const val STABLE_TICKS_REQUIRED = 2
+    private const val STABLE_TICKS_REQUIRED = 1
+    private const val CHANGE_WAIT_TICKS = 8
     private const val TIMEOUT_TICKS = 100
 
     private enum class Mode { ENUMERATE, FIND_AND_CLICK }
@@ -38,6 +39,8 @@ object ContentBookQuery {
     private var stableCount = 0
     private var ticksSinceAction = 0
     private var awaitingClick = false
+    private var baselineHash = 0
+    private var awaitingChange = false
 
     val isActive: Boolean get() = active
     val isEnumerating: Boolean get() = active && mode == Mode.ENUMERATE
@@ -73,6 +76,8 @@ object ContentBookQuery {
         ticksSinceAction = 0
         lastSnapshotHash = 0
         awaitingClick = true
+        awaitingChange = false
+        baselineHash = 0
         active = true
     }
 
@@ -100,6 +105,13 @@ object ContentBookQuery {
         }
 
         val hash = snapshotHash(m)
+        if (awaitingChange) {
+            if (hash == baselineHash && ticksSinceAction < CHANGE_WAIT_TICKS) return
+            awaitingChange = false
+            lastSnapshotHash = hash
+            stableCount = 0
+            return
+        }
         if (hash == lastSnapshotHash) {
             stableCount++
         } else {
@@ -163,6 +175,8 @@ object ContentBookQuery {
     }
 
     private fun click(client: Minecraft, m: AbstractContainerMenu, player: Player, slot: Int) {
+        baselineHash = snapshotHash(m)
+        awaitingChange = true
         client.gameMode?.handleContainerInput(m.containerId, slot, 0, ContainerInput.PICKUP, player)
         ticksSinceAction = 0
         stableCount = 0
