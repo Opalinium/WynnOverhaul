@@ -6,7 +6,7 @@
   "description": "Client-side automation for a server you control: humanized hold-to-attack combat, an entity/chest/gathering-node tracker, small Wynncraft QoL tweaks and an optional Discord Rich Presence.",
   "authors": [],
   "contact": {},
-  "license": "All-Rights-Reserved",
+  "license": "LicenseRef-Overwatch-Source-Available-NC",
   "environment": "client",
   "entrypoints": {
     "client": [
