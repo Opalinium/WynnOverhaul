@@ -16,3 +16,6 @@ bin/
 
 # OS / misc
 *.class
+
+__pycache__/
+*.pyc
