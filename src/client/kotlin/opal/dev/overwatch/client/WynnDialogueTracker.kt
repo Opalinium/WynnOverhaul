@@ -114,6 +114,7 @@ object WynnDialogueTracker {
                 val prev = choiceTexts[c.number]
                 choiceTexts[c.number] = if (prev == null) c.text else stitch(prev, c.text)
             }
+
             if (selNumber == null) selNumber = oddOneOut(live) ?: choiceTexts.keys.minOrNull()
         }
         stableSpeaker = speaker

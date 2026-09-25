@@ -27,6 +27,7 @@ class WynnGuildHudElement : HudElement {
         val font = Minecraft.getInstance().font
         val sub = "Lv ${guild.level}  ${guild.xpPercent}%"
         val lineH = font.lineHeight + 3
+
         val contentW = maxOf(font.width(guild.name) + font.width(sub) + 24, MIN_W) + PAD * 2
         val contentH = PAD * 2 + lineH + BAR_H + 2
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, contentH)

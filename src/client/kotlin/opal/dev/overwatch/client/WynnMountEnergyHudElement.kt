@@ -28,6 +28,7 @@ class WynnMountEnergyHudElement : HudElement {
         val label = "Mount Energy  $energy/${WynnMountEnergyTracker.MAX_ENERGY}"
 
         val font = Minecraft.getInstance().font
+
         val contentW = font.width(label) + PAD * 2
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())

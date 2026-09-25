@@ -28,6 +28,7 @@ class WynnQuestLogHudElement : HudElement {
 
         val font = Minecraft.getInstance().font
         val lineH = font.lineHeight + 1
+
         var contentW = 0
         if (title.isNotEmpty()) contentW = maxOf(contentW, font.width(title) + PAD * 2 + 24)
         for (line in lines) contentW = maxOf(contentW, font.width(line) + PAD * 2)

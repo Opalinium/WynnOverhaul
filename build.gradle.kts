@@ -20,6 +20,7 @@ base {
 val targetJavaVersion = 25
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+
     withSourcesJar()
 }
 
@@ -48,6 +49,7 @@ configurations.implementation.get().extendsFrom(shadowBundle)
 
 dependencies {
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
+
     implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
     implementation("net.fabricmc:fabric-language-kotlin:${project.property("kotlin_loader_version")}")
 
@@ -94,9 +96,12 @@ tasks.processResources {
 
 tasks.shadowJar {
     configurations = listOf(shadowBundle)
+
     from(sourceSets.getByName("client").output)
     dependsOn(tasks.named("clientClasses"))
+
     archiveClassifier.set("")
+
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from("LICENSE.txt") {
         rename { "${it}_${project.base.archivesName.get()}" }

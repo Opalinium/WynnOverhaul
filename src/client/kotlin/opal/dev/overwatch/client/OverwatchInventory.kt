@@ -12,6 +12,7 @@ object OverwatchInventory {
             if (!OverwatchGate.inGame) return@register
             if (!OverwatchConfig.current.customInventoryEnabled) return@register
             if (screen !is InventoryScreen) return@register
+
             val tab = pendingTransitionTab
             pendingCapture = Minecraft.getInstance().player?.inventoryMenu?.let {
                 it to tab
@@ -23,6 +24,7 @@ object OverwatchInventory {
         val capture = pendingCapture ?: return
         pendingCapture = null
         val (menu, targetTab) = capture
+
         pendingTransitionTab = null
         if (!OverwatchGate.inGame) return
         if (!OverwatchConfig.current.customInventoryEnabled) return

@@ -33,6 +33,7 @@ class WynnSpellCastHudElement : HudElement {
             val color = if (cost.mana) MANA_TEXT else HP_TEXT
             parts.add("  -${cost.amount} $label" to color)
         }
+
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, parts.sumOf { font.width(it.first) } + PAD * 2, CONTENT_H)
 
         val scale = HudLayoutManager.scale(ID)

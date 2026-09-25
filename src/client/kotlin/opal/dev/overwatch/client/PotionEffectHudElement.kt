@@ -43,6 +43,7 @@ class PotionEffectHudElement : HudElement {
         if (rows.isEmpty()) return
 
         val font = Minecraft.getInstance().font
+
         val (boxW, _) = HudLayoutManager.stableSize(ID, rows.maxOf { font.width(it.text) + font.width(it.timer) + TIMER_GAP } + ICON_SIZE + 6, LINE_HEIGHT * rows.size)
 
         val scale = HudLayoutManager.scale(ID)

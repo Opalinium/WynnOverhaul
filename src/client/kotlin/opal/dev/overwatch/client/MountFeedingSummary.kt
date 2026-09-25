@@ -9,6 +9,7 @@ object MountFeedingSummary {
         if (MountMaterials.STATS.any { resolved.stats[it] == null }) return null
         val cur = IntArray(8) { resolved.stats.getValue(MountMaterials.STATS[it]).current }
         val lim = IntArray(8) { resolved.stats.getValue(MountMaterials.STATS[it]).limit }
+
         if (MountMaterials.STATS.any { resolved.stats.getValue(it).max == null }) {
             val trainable = MountMaterials.STATS.filter { resolved.stats.getValue(it).current < resolved.stats.getValue(it).limit }
             return MountShoppingList(emptyList(), 0, emptySet(), allMaxed = false, noMaterialsAvailable = false, rawH = cur.max(), maxUnknown = true, trainable = trainable)

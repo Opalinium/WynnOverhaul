@@ -26,6 +26,7 @@ class ResourceBarHudElement : HudElement {
         val label = if (bar.displayText.isEmpty()) bar.kind.displayName else "${bar.kind.displayName}  ${bar.displayText}"
 
         val font = Minecraft.getInstance().font
+
         val contentW = font.width(label) + PAD * 2
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())

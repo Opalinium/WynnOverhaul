@@ -1,5 +1,6 @@
 package opal.dev.overwatch.client
 
+import net.minecraft.core.component.DataComponents
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.item.ItemStack
 
@@ -30,6 +31,7 @@ object CharacterMenuModel {
         val skills = ArrayList<SkillEntry>()
         val openers = ArrayList<Pair<String, Int>>()
         val total = menu.slots.size
+
         val own = if (total > 36) total - 36 else total
         for (slot in 0 until own) {
             val stack = menu.slots[slot].item
@@ -45,8 +47,10 @@ object CharacterMenuModel {
                     openers.add("View Your Guild" to slot)
                 letters.contains("Recruit A Friend", ignoreCase = true) ->
                     openers.add("Recruit a Friend" to slot)
-                letters.contains("Daily Reward", ignoreCase = true) ->
+                letters.contains("Daily Reward", ignoreCase = true) -> {
                     openers.add("Daily Reward" to slot)
+                    ObjectiveClaims.dailyClaimable = dailyClaimable(stack)
+                }
                 letters.contains("Store", ignoreCase = true) && letters.contains("Wardrobe", ignoreCase = true) ->
                     openers.add("Store" to slot)
                 else -> skillFor(letters)?.let { name ->
@@ -82,6 +86,7 @@ object CharacterMenuModel {
         var percent: String? = null
         for (line in lore) {
             val clean = line.trim()
+
             Regex("""(\d+)\s+points""").find(clean)?.let {
                 if (points == null) points = it.groupValues[1].toIntOrNull()
             }
@@ -91,6 +96,13 @@ object CharacterMenuModel {
             if (points != null && percent != null) break
         }
         return if (points != null) points to (percent ?: "--") else null
+    }
+
+    private val DAILY_BLOCKERS = Regex("""already|claimed|come back|tomorrow|available in|next reward|cooldown|\d+\s*[hm]\b""", RegexOption.IGNORE_CASE)
+
+    private fun dailyClaimable(stack: ItemStack): Boolean {
+        val lore = stack.get(DataComponents.LORE)?.lines()?.joinToString(" ") { TextClean.clean(it.string) } ?: return false
+        return lore.contains("claim", ignoreCase = true) && !DAILY_BLOCKERS.containsMatchIn(lore)
     }
 
     private fun lettersOf(stack: ItemStack): String =

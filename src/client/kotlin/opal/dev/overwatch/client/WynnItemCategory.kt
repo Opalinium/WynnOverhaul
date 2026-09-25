@@ -17,8 +17,11 @@ enum class WynnItemCategory(val displayName: String, val colorArgb: Int) {
     companion object {
         fun of(stack: ItemStack): WynnItemCategory {
             if (stack.isEmpty) return MISC
+
             loreGearCategory(stack)?.let { return it }
+
             if (WynnWeapons.attacksPerSecond(stack) != null) return WEAPONS
+
             if (stack.get(DataComponents.EQUIPPABLE)?.slot()?.type == EquipmentSlot.Type.HUMANOID_ARMOR) return ARMOR
 
             val name = stack.hoverName.string.trim()

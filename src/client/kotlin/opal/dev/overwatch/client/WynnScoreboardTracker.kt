@@ -40,9 +40,11 @@ object WynnScoreboardTracker {
 
         val texts = lines.map { clean(it.string) }
         sidebarText = joinWrapped(texts)
+
         val rawTitle = clean(objective.displayName.string)
         sidebarTitle = if (SERVER_BRAND_PATTERN.matches(rawTitle)) "" else rawTitle
         sidebarLines = texts.filter { it.isNotEmpty() }
+        ObjectiveClaims.onSidebar(sidebarText)
 
         val headerIndex = texts.indexOfFirst { HEADER_PATTERN.matches(it) }
         if (headerIndex < 0) {

@@ -24,6 +24,7 @@ object CharacterInfo {
             }
             val title = screen.title.string
             if (title.contains(ContentBookInterceptor.CONTENT_BOOK_TITLE_MARKER)) return@register
+
             pendingMenu = screen.menu
             pendingScreen = screen
             pendingTicks = 0
@@ -40,15 +41,18 @@ object CharacterInfo {
             clearPending()
             return
         }
+
         if (client.gui.screen() !== pendingScreen) {
             clearPending()
             return
         }
         val player = client.player ?: run { clearPending(); return }
+
         if (player.containerMenu !== menu) {
             clearPending()
             return
         }
+
         if (!menuHasContents(menu)) return
         if (!isCharacterMenuContent(menu)) {
             clearPending()
@@ -69,6 +73,7 @@ object CharacterInfo {
     fun openCharacterContainer(client: Minecraft, host: OverwatchInventoryScreen, menuSlot: Int): String? {
         val player = client.player ?: return "No player"
         if (player.containerMenu !== player.inventoryMenu) return "Close the current container first"
+
         val hand = characterHand(player)
         if (hand == null && menuSlot !in 0 until player.inventoryMenu.slots.size) {
             return "Character Info item not found in your inventory"
@@ -99,6 +104,7 @@ object CharacterInfo {
             if (it !in 0 until menu.slots.size) return@firstOrNull false
             isInfo(menu.slots[it].item)
         }?.let { return it }
+
         val open = player.containerMenu
         if (open !== menu) {
             ContentBookInterceptor.scanMirror(open, ::isInfo)?.let { return it }

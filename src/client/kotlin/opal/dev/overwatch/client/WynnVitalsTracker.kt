@@ -47,6 +47,7 @@ object WynnVitalsTracker {
         var parsed = false
         for (match in SEGMENT_PATTERN.findAll(raw)) {
             val segmentText = match.value
+
             val startChar = segmentText[0]
             val endChar = segmentText[segmentText.length - 2]
             val value = match.groups["value"]?.value ?: continue

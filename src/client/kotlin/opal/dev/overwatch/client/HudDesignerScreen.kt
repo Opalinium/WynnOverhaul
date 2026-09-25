@@ -60,6 +60,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
                 "${spec.displayName}  ${w}x$h"
             }
             val labelX0 = if (compact) lockX + LOCK_SIZE + 2 else x0 + 3
+
             val labelX1 = if (compact && (y1 - y0) < TEXT_H + 2 + HANDLE_SIZE) x1 - HANDLE_SIZE - 2 else if (compact) x1 - 1 else lockX - 1
             val labelW = (labelX1 - labelX0).coerceAtLeast(0)
             if (labelW > MIN_LABEL_W && (y1 - y0) >= TEXT_H + 3) {
@@ -263,6 +264,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
 
     private fun inLockGlyph(spec: HudLayoutManager.HudElementSpec, mx: Int, my: Int): Boolean {
         val b = boxOf(spec)
+
         val lockX = if ((b[3] - b[1]) < COMPACT_H) b[0] + 2 else b[2] - LOCK_SIZE - 2
         val lockY = b[1] + 2
         return mx >= lockX && mx < lockX + LOCK_SIZE && my >= lockY && my < lockY + LOCK_SIZE

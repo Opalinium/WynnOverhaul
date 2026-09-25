@@ -70,11 +70,13 @@ class OverwatchClient : ClientModInitializer {
             client.setScreenAndShow(OverwatchHubScreen())
         }
         OverwatchGate.refresh(client)
+        CameraMemory.tick(client)
         if (!OverwatchGate.inGame) {
             attackGate.reset()
             return
         }
         if (client.level != null) SpellComboGuard.tick(client)
+        TownNpcTracker.tick(client)
 
         while (toggleKey.consumeClick()) {
             config.enabled = !config.enabled

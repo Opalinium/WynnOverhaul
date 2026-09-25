@@ -56,6 +56,7 @@ class EntityTrackerHudElement : HudElement {
 
         val scale = HudLayoutManager.scale(ID)
         val lineH = LINE_HEIGHT
+
         HudLayoutManager.stableSize(ID, maxOf(cachedTexts.maxOf { font.width(it) } + CHIP_SIZE + 4, HEADER_MIN_W), lineH * cachedTexts.size + 3)
 
         val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())

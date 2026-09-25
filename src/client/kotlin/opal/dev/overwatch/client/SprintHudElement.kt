@@ -22,6 +22,7 @@ class SprintHudElement : HudElement {
 
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!OverwatchGate.inGame || !OverwatchConfig.current.customHudEnabled) return
+
         if (WynnMountEnergyTracker.energyVisible(System.currentTimeMillis())) return
         val meter = WynnSprintTracker.meter ?: return
         val label = when (meter.action) {
@@ -30,6 +31,7 @@ class SprintHudElement : HudElement {
         }
 
         val font = Minecraft.getInstance().font
+
         val contentW = font.width(label) + PAD * 2
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())
