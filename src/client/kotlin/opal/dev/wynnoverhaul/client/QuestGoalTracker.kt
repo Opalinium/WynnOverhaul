@@ -45,8 +45,8 @@ object QuestGoalTracker {
 
         val questName = WynncraftQuests.findTracked(tracked.name)?.name ?: tracked.name
         val wiki = QuestWaypoints.findStageWaypoint(questName, tracked.nextTask, stageNumber)
-        if (wiki != null) return applyWiki(px, py, pz, wiki)
         val live = parseLive(tracked.nextTask)
+        if (wiki != null && !(wiki.approximate && live.isNotEmpty())) return applyWiki(px, py, pz, wiki)
         if (live.isNotEmpty()) return applyLive(live)
         return applyWiki(px, py, pz, null)
     }
