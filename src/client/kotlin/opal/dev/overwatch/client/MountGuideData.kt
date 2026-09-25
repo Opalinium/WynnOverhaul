@@ -13,7 +13,6 @@ data class MountTypeInfo(
 data class MountStatInfo(val displayName: String, val description: String)
 
 object MountGuideData {
-
     val TYPES = listOf(
         MountTypeInfo(
             "Horse",

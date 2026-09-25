@@ -3,14 +3,12 @@ package opal.dev.overwatch.client
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import opal.dev.overwatch.Overwatch
 import opal.dev.overwatch.mixin.client.ContainerScreenHoveredSlotAccessor
 
 class MountFeederHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -48,7 +46,7 @@ class MountFeederHudElement : HudElement {
         val wrapped = ArrayList<Pair<String, Int>>()
 
         fun addLine(text: String, color: Int) {
-            for (w in wrap(font, text, textW)) wrapped.add(w to color)
+            for (w in HudStyle.wrap(font, text, textW)) wrapped.add(w to color)
         }
 
         readings.values.forEachIndexed { index, reading ->
@@ -106,26 +104,6 @@ class MountFeederHudElement : HudElement {
             graphics.text(font, text, panelX + PAD, y, color, true)
             y += LINE_H
         }
-    }
-
-    private fun wrap(font: Font, text: String, maxWidth: Int): List<String> {
-        if (font.width(text) <= maxWidth) return listOf(text)
-        val words = text.split(" ")
-        val lines = ArrayList<String>()
-        val current = StringBuilder()
-        for (word in words) {
-            val candidate = if (current.isEmpty()) word else "$current $word"
-            if (font.width(candidate) > maxWidth && current.isNotEmpty()) {
-                lines.add(current.toString())
-                current.clear()
-                current.append(word)
-            } else {
-                current.clear()
-                current.append(candidate)
-            }
-        }
-        if (current.isNotEmpty()) lines.add(current.toString())
-        return lines
     }
 
     private companion object {

@@ -12,7 +12,6 @@ import java.nio.charset.CodingErrorAction
 import java.util.Optional
 
 object ActivityItemParser {
-
     private val TITLE_PATTERN = Regex("""^(.+) \[(.+)]$""")
     private val LEGACY_CODE = Regex("§.")
     private val SPACER_RUN = Regex("À+")

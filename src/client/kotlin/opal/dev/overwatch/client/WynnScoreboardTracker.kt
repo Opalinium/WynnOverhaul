@@ -7,7 +7,6 @@ import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
 
 object WynnScoreboardTracker {
-
     data class Tracked(val type: String, val name: String, val nextTask: String)
 
     var current: Tracked? = null
@@ -72,22 +71,9 @@ object WynnScoreboardTracker {
     }
 
     private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == LEGACY_CODE_PREFIX) {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (!isPrivateUse(cp) && cp != 0xFFFD) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        val result = sb.toString().trim()
+        val result = TextClean.clean(text)
         return if (result.all { it == SIDEBAR_SPACER || it.isWhitespace() }) "" else result
     }
-
-    private fun isPrivateUse(cp: Int): Boolean = cp >= 0xE000
 
     private fun joinWrapped(parts: List<String>): String {
         val sb = StringBuilder()
@@ -102,7 +88,6 @@ object WynnScoreboardTracker {
     private fun startsWhite(component: Component): Boolean = component.string.startsWith(WHITE_LEGACY_CODE)
 
     private const val WHITE_LEGACY_CODE = "§f"
-    private const val LEGACY_CODE_PREFIX = '§'
     private const val SIDEBAR_SPACER = 'À'
     private val HEADER_PATTERN = Regex("^Tracked (.+):$")
     private val SPACER_PATTERN = Regex("""[^a-zA-Z\[\d-].*""")

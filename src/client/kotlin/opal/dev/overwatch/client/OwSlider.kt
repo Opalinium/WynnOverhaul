@@ -17,7 +17,6 @@ class OwSlider(
     private val label: String,
     private val onChange: (Double) -> Unit,
 ) : AbstractSliderButton(x, y, width, height, Component.literal(""), ((initial - min) / (max - min)).coerceIn(0.0, 1.0)) {
-
     init {
         updateMessage()
     }

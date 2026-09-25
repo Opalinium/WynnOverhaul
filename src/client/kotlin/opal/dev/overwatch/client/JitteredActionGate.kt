@@ -1,7 +1,6 @@
 package opal.dev.overwatch.client
 
 class JitteredActionGate {
-
     private var nextAtNanos: Long = 0L
     private var firedSinceReset: Boolean = false
 

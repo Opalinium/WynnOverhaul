@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(KeyboardInput.class)
 public abstract class SoulsCameraInputMixin extends ClientInput {
-
     @Inject(method = "tick", at = @At("TAIL"))
     private void overwatch$soulsMovement(CallbackInfo ci) {
         SoulsCamera.Move move = SoulsCamera.remap(Minecraft.getInstance(), this.keyPresses, this.moveVector);

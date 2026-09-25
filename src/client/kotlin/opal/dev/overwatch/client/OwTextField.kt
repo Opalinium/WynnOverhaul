@@ -12,7 +12,6 @@ class OwTextField(
     width: Int,
     height: Int,
 ) : EditBox(font, x, y, width, height, Component.literal("")), OwCenteredTextField {
-
     init {
         setBordered(false)
         setTextColor(OwTheme.TEXT)

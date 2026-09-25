@@ -8,7 +8,6 @@ import kotlin.math.ln
 import kotlin.math.sqrt
 
 object QuestWaypoints {
-
     data class Goal(val x: Int, val y: Int, val z: Int, val role: String? = null, val label: String? = null)
 
     data class Stage(

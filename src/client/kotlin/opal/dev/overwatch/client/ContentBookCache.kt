@@ -6,7 +6,6 @@ import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.Minecraft
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.minecraft.world.level.storage.LevelResource
 import opal.dev.overwatch.Overwatch
 import java.nio.file.Files
 import kotlin.io.path.exists
@@ -34,6 +33,18 @@ object ContentBookCache {
         val entry = readAll()[key]
         snapshot = entry?.activities?.mapNotNull { it.toActivityInfo() }
         lastFullScanAt = entry?.scannedAtMillis ?: 0L
+        clearTracking()
+    }
+
+    fun clearTracking(): List<ActivityInfo>? {
+        val current = snapshot ?: return null
+        if (current.none { it.trackingState == ActivityTrackingState.TRACKED }) return null
+        val updated = current.map { info ->
+            if (info.trackingState == ActivityTrackingState.TRACKED) info.copy(trackingState = ActivityTrackingState.TRACKABLE) else info
+        }
+        snapshot = updated
+        persist()
+        return updated
     }
 
     fun commit(activities: List<ActivityInfo>) {
@@ -123,18 +134,7 @@ object ContentBookCache {
 
     private fun contextKey(client: Minecraft): String? {
         val player = client.player ?: return null
-        val server = try {
-            val singleplayer = client.singleplayerServer
-            if (singleplayer != null) {
-                val dir = singleplayer.getWorldPath(LevelResource.ROOT).fileName?.toString()
-                if (dir.isNullOrBlank()) null else "sp/$dir"
-            } else {
-                val ip = client.currentServer?.ip?.trim()?.lowercase()
-                if (ip.isNullOrBlank()) null else "mp/${ip.substringBefore(':')}"
-            }
-        } catch (t: Throwable) {
-            null
-        } ?: return null
+        val server = WorldContext.key(client) ?: return null
         return "$server/${player.uuid}"
     }
 

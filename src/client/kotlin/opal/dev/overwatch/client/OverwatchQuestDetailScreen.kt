@@ -8,7 +8,6 @@ class OverwatchQuestDetailScreen(
     private val quest: WynncraftQuests.Quest,
     parent: Screen,
 ) : OwScreen(Component.literal(quest.name), parent) {
-
     override fun init() {
         super.init()
         val left = contentLeft

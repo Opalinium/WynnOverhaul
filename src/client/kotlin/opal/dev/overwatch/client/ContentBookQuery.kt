@@ -7,7 +7,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
 
 object ContentBookQuery {
-
     private const val CHANGE_VIEW_SLOT = 66
     private const val NEXT_PAGE_SLOT = 69
     private const val CONTAINER_SIZE = 54

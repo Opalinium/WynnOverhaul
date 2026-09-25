@@ -4,7 +4,6 @@ import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 
 object LootrunParticleVerifier {
-
     private val positions = ArrayList<Vec3>()
 
     fun onPosition(x: Double, y: Double, z: Double): Vec3? {

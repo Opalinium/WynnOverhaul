@@ -11,7 +11,6 @@ import net.minecraft.commands.SharedSuggestionProvider
 import net.minecraft.network.chat.Component
 
 object WynnChatChannels {
-
     enum class Channel(val id: String, val label: String, val color: ChatFormatting, val command: String?) {
         ALL("all", "ALL", ChatFormatting.WHITE, null),
         PARTY("party", "PARTY", ChatFormatting.YELLOW, "p"),
@@ -20,6 +19,14 @@ object WynnChatChannels {
 
     @Volatile
     var current: Channel = Channel.ALL
+        private set
+
+    @Volatile
+    var directTarget: String? = null
+        private set
+
+    @Volatile
+    var directAuto: Boolean = false
         private set
 
     fun register() {
@@ -63,7 +70,35 @@ object WynnChatChannels {
         }
     }
 
+    fun selectDirect(name: String, auto: Boolean = false) {
+        directTarget = name
+        directAuto = auto
+        WynnDirectMessages.markRead(name)
+        WynnDirectMessages.applyView(Minecraft.getInstance().gui.screen() is net.minecraft.client.gui.screens.ChatScreen)
+    }
+
+    fun clearDirect() {
+        if (directTarget == null) return
+        directTarget = null
+        directAuto = false
+        WynnDirectMessages.applyView(Minecraft.getInstance().gui.screen() is net.minecraft.client.gui.screens.ChatScreen)
+    }
+
+    fun applySmartReply() {
+        val config = OverwatchConfig.current
+        val target = directTarget
+        if (target != null) {
+            if (directAuto && !WynnDirectMessages.smartWindowOpen(target)) clearDirect()
+            return
+        }
+        if (!config.chatSmartReply || current != Channel.ALL || !OverwatchGate.onWynncraft) return
+        val smart = WynnDirectMessages.smartTarget() ?: return
+        selectDirect(smart, auto = true)
+    }
+
     fun select(channel: Channel) {
+        directTarget = null
+        directAuto = false
         current = channel
         OverwatchConfig.current.chatChannel = channel.id
         OverwatchConfig.current.save()
@@ -86,7 +121,15 @@ object WynnChatChannels {
             lastOverride = null
             return true
         }
-        val channel = consumeOverride() ?: chainedOverride() ?: current
+        val overridden = consumeOverride() ?: chainedOverride()
+        val target = directTarget
+        if (overridden == null && target != null) {
+            val connection = Minecraft.getInstance().connection ?: return true
+            connection.sendCommand("msg $target $message")
+            WynnDirectMessages.noteOutgoing(target)
+            return false
+        }
+        val channel = overridden ?: current
         if (channel == Channel.ALL) return true
         val connection = Minecraft.getInstance().connection ?: return true
         connection.sendCommand("${channel.command} $message")
@@ -128,10 +171,10 @@ object WynnChatChannels {
     private val CLEAN_CODES = Regex("(?i)§[0-9A-FK-OR]")
 
     private val OVERRIDE_PATTERNS: List<Pair<Regex, String?>> = listOf(
-        Regex("""(?s).+ Type the item name or type 'cancel' to.+cancel:.+""") to "all",
-        Regex("""(?s).+ Type the price in emeralds or formatted .+ \(e\.g '10eb', '10stx 5eb'\) or type .+ 'cancel' to cancel:.+""") to "all",
+        Regex("""(?s). Type the item name or type 'cancel' to.+cancel:.""") to "all",
+        Regex("""(?s). Type the price in emeralds or formatted .+ \(e\.g '10eb', '10stx 5eb'\) or type .+ 'cancel' to cancel:.""") to "all",
         Regex("""Party Finder: Type in chat the description you want to use for your party \(max 140 characters or cancel\):""") to "all",
-        Regex("""(?s).+ You moved and your chat input was canceled\.""") to null,
+        Regex("""(?s). You moved and your chat input was canceled\.""") to null,
     )
 
     private const val CHAIN_WINDOW_MS = 100L

@@ -10,7 +10,6 @@ import opal.dev.overwatch.Overwatch
 import kotlin.math.atan2
 
 class WynnCompassHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -67,7 +66,13 @@ class WynnCompassHudElement : HudElement {
 
         if (region.isNotEmpty()) {
             val name = region.uppercase(java.util.Locale.ROOT)
-            graphics.text(font, name, ox + (boxW - font.width(name)) / 2, oy + PAD, OwTheme.ACCENT, true)
+            val nameX = ox + (boxW - font.width(name)) / 2
+            graphics.text(font, name, nameX, oy + PAD, OwTheme.ACCENT, true)
+            val ruleY = oy + PAD + font.lineHeight / 2
+            HudStyle.fadeRule(graphics, ox + PAD, ruleY, nameX - ox - PAD - 8, OwTheme.HAIRLINE, leftSolid = false)
+            HudStyle.fadeRule(graphics, nameX + font.width(name) + 8, ruleY, ox + boxW - PAD - (nameX + font.width(name) + 8), OwTheme.HAIRLINE, leftSolid = true)
+            HudStyle.diamond(graphics, nameX - 5, ruleY, 2, OwTheme.ACCENT)
+            HudStyle.diamond(graphics, nameX + font.width(name) + 5, ruleY, 2, OwTheme.ACCENT)
         }
         val stripX = ox + PAD
         val stripW = boxW - PAD * 2
@@ -117,7 +122,7 @@ class WynnCompassHudElement : HudElement {
                 graphics.text(font, wind, tx - font.width(wind) / 2, labelY + 1, color, true)
             }
         }
-        diamond(graphics, cx, lineY, 3, OwTheme.ACCENT)
+        HudStyle.diamond(graphics, cx, lineY, 3, OwTheme.ACCENT)
         for (marker in markers) {
             val bearing = Math.toDegrees(
                 atan2(marker.pos.x - playerPos.x, -(marker.pos.z - playerPos.z)),
@@ -125,15 +130,8 @@ class WynnCompassHudElement : HudElement {
             val rel = norm180(bearing - heading)
             if (rel >= -HALF_RANGE && rel <= HALF_RANGE) {
                 val mx = (cx + rel / HALF_RANGE * halfW).toInt()
-                diamond(graphics, mx, y + MARKER_LANE_H / 2, 2, marker.colorArgb)
+                HudStyle.diamond(graphics, mx, y + MARKER_LANE_H / 2, 2, marker.colorArgb)
             }
-        }
-    }
-
-    private fun diamond(graphics: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
-        for (dy in -r..r) {
-            val hw = r - kotlin.math.abs(dy)
-            graphics.fill(cx - hw, cy + dy, cx + hw + 1, cy + dy + 1, color)
         }
     }
 

@@ -13,7 +13,6 @@ import net.minecraft.world.item.ItemStack
 import opal.dev.overwatch.Overwatch
 
 class ContentBookInterceptor : ClientModInitializer {
-
     override fun onInitializeClient() {
         OverwatchConfig.ensureLoaded()
         ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->

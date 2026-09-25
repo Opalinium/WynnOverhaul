@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(Display.TextDisplay.class)
 public interface TextDisplayAccessor {
-
     @Invoker("getText")
     Component overwatch$getText();
 }

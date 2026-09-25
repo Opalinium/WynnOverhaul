@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.overwatch.Overwatch
 
 class EntityTrackerHudElement : HudElement {
-
     private var loggedError = false
 
     private var cachedRows: List<EntityTrackerHudState.Row>? = null
@@ -57,7 +56,7 @@ class EntityTrackerHudElement : HudElement {
 
         val scale = HudLayoutManager.scale(ID)
         val lineH = LINE_HEIGHT
-        HudLayoutManager.stableSize(ID, cachedTexts.maxOf { font.width(it) } + CHIP_SIZE + 4, lineH * cachedTexts.size)
+        HudLayoutManager.stableSize(ID, maxOf(cachedTexts.maxOf { font.width(it) } + CHIP_SIZE + 4, HEADER_MIN_W), lineH * cachedTexts.size + 3)
 
         val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 
@@ -71,10 +70,10 @@ class EntityTrackerHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         var y = oy
-        graphics.text(font, texts[0], ox + CHIP_SIZE + 4, y, HEADER_COLOR, true)
-        y += lineH
+        HudStyle.header(graphics, font, ox, y, HudLayoutManager.peekSize(ID).first, "Tracking", "${rows.size}")
+        y += lineH + 3
         for (i in shown.indices) {
-            graphics.fill(ox, y + 1, ox + CHIP_SIZE, y + 1 + CHIP_SIZE, shown[i].colorArgb)
+            HudStyle.diamond(graphics, ox + CHIP_SIZE / 2, y + font.lineHeight / 2, CHIP_SIZE / 2, shown[i].colorArgb)
             graphics.text(font, texts[i + 1], ox + CHIP_SIZE + 4, y, ROW_COLOR, true)
             y += lineH
         }
@@ -87,6 +86,7 @@ class EntityTrackerHudElement : HudElement {
         const val ID = "tracker"
         const val LINE_HEIGHT = 10
         const val CHIP_SIZE = 7
+        const val HEADER_MIN_W = 110
         const val MAX_ROWS = 12
         val HEADER_COLOR = OwTheme.ACCENT
         val ROW_COLOR = OwTheme.TEXT

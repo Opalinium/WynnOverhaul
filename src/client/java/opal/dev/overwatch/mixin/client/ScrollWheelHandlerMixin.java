@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ScrollWheelHandler.class)
 public class ScrollWheelHandlerMixin {
-
     @Inject(method = "getNextScrollWheelSelection", at = @At("HEAD"), cancellable = true)
     private static void overwatch$hotbarScrollSelection(
             double scrollAmount,

@@ -5,7 +5,6 @@ import com.google.gson.reflect.TypeToken
 import opal.dev.overwatch.Overwatch
 
 object QuestWikiFetcher {
-
     data class WikiLine(
         val text: String,
         val italic: Boolean = false,

@@ -12,7 +12,6 @@ import net.minecraft.world.effect.MobEffectInstance
 import opal.dev.overwatch.Overwatch
 
 class PotionEffectHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -44,7 +43,7 @@ class PotionEffectHudElement : HudElement {
         if (rows.isEmpty()) return
 
         val font = Minecraft.getInstance().font
-        HudLayoutManager.stableSize(ID, rows.maxOf { font.width(it.text) } + ICON_SIZE + 4, LINE_HEIGHT * rows.size)
+        val (boxW, _) = HudLayoutManager.stableSize(ID, rows.maxOf { font.width(it.text) + font.width(it.timer) + TIMER_GAP } + ICON_SIZE + 6, LINE_HEIGHT * rows.size)
 
         val scale = HudLayoutManager.scale(ID)
         val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
@@ -60,17 +59,20 @@ class PotionEffectHudElement : HudElement {
 
         var y = oy
         for (row in rows) {
+            graphics.fill(ox, y + 1, ox + boxW, y + LINE_HEIGHT - 1, ROW_BG)
+            graphics.fill(ox, y + 1, ox + 2, y + LINE_HEIGHT - 1, row.color)
             if (row.sprite != null) {
-                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, row.sprite, ox, y, ICON_SIZE, ICON_SIZE)
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, row.sprite, ox + 3, y, ICON_SIZE, ICON_SIZE)
             }
-            graphics.text(font, row.text, ox + ICON_SIZE + 4, y + TEXT_Y_OFFSET, row.color, true)
+            graphics.text(font, row.text, ox + ICON_SIZE + 6, y + TEXT_Y_OFFSET, row.color, true)
+            graphics.text(font, row.timer, ox + boxW - font.width(row.timer) - 4, y + TEXT_Y_OFFSET, OwTheme.TEXT_DIM, true)
             y += LINE_HEIGHT
         }
 
         if (scaled) graphics.pose().popMatrix()
     }
 
-    private data class Row(val text: String, val color: Int, val sprite: Identifier?)
+    private data class Row(val text: String, val timer: String, val color: Int, val sprite: Identifier?)
 
     private fun formatEffectRow(instance: MobEffectInstance): Row {
         val effect = instance.effect.value()
@@ -82,13 +84,13 @@ class PotionEffectHudElement : HudElement {
             MobEffectCategory.HARMFUL -> COLOR_HARMFUL
             else -> COLOR_NEUTRAL
         }
-        return Row("$label  $duration", color, Hud.getMobEffectSprite(instance.effect))
+        return Row(label, duration, color, Hud.getMobEffectSprite(instance.effect))
     }
 
     private fun formatBuffRow(buff: WynnBuffTracker.Buff): Row {
         val sign = if (buff.amount >= 0) "+" else ""
         val color = if (buff.amount >= 0) COLOR_BENEFICIAL else COLOR_HARMFUL
-        return Row("$sign${buff.amount} ${buff.name}  ${formatDuration(buff.remainingSeconds)}", color, null)
+        return Row("$sign${buff.amount} ${buff.name}", formatDuration(buff.remainingSeconds), color, null)
     }
 
     private fun romanNumeral(amplifier: Int): String = ROMAN.getOrElse(amplifier) { (amplifier + 1).toString() }
@@ -104,6 +106,8 @@ class PotionEffectHudElement : HudElement {
         const val LINE_HEIGHT = 18
         const val ICON_SIZE = 18
         const val TEXT_Y_OFFSET = 5
+        const val TIMER_GAP = 12
+        const val ROW_BG = 0x6E0E0B08
         const val INFINITE_SYMBOL = "∞"
         val COLOR_BENEFICIAL = OwTheme.GOOD
         val COLOR_HARMFUL = OwTheme.BAD

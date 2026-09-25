@@ -12,7 +12,6 @@ class OwScrollPanel(
     width: Int,
     height: Int,
 ) : AbstractScrollArea(x, y, width, height, Component.literal(""), AbstractScrollArea.defaultSettings(OwTheme.SCROLL_RATE)) {
-
     var totalContentHeight: Int = 0
     var onReposition: (() -> Unit)? = null
 

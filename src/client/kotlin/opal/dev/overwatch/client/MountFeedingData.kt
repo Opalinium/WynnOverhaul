@@ -12,7 +12,6 @@ enum class MountMaterial(val displayName: String) {
 }
 
 object MountFeedingData {
-
     val LEVELS = listOf(1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 105, 110, 115)
 
     val STAT_KEYS = listOf("Speed", "Acceleration", "Altitude", "Energy", "Handling", "Toughness", "Boost", "Training")

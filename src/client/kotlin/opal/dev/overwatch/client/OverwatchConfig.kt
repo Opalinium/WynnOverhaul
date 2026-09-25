@@ -11,16 +11,16 @@ import kotlin.io.path.writeText
 data class OverwatchConfig(
     var enabled: Boolean = true,
     var maxCps: Double = 8.0,
-    var requireEntityTarget: Boolean = true,
-    var ignorePlayers: Boolean = true,
-    var ignoreFakePlayers: Boolean = false,
     var combatSpellGuardEnabled: Boolean = true,
     var combatSpellGuardMs: Double = 1500.0,
-    var wynnCombatEnabled: Boolean = false,
     var wynnAttackSpeed: Boolean = true,
     var qolPreventHotbarOverscroll: Boolean = false,
     var weaponAnimationsEnabled: Boolean = false,
     var weaponIdleEnabled: Boolean = true,
+    var weaponTrueIdleEnabled: Boolean = true,
+    var weaponTrueIdleDelaySeconds: Double = 3.0,
+    var weaponSprintEnabled: Boolean = true,
+    var weaponWalkEnabled: Boolean = true,
     var weaponAnimationCombo: Boolean = true,
     var weaponAnimationSpells: Boolean = true,
     var weaponAnimationSfx: Boolean = true,
@@ -30,6 +30,21 @@ data class OverwatchConfig(
     var weaponAnimationPreview: Boolean = false,
     var weaponAnimationPreviewT: Double = 0.5,
     var weaponAnimationEntries: MutableList<WeaponAnimationEntry>? = null,
+    var locomotionEnabled: Boolean = false,
+    var locomotionStyle: String = "HEROIC",
+    var locomotionOtherPlayers: Boolean = true,
+    var locomotionRandomizeOthers: Boolean = true,
+    var locomotionBend: Boolean = true,
+    var locomotionWalk: Boolean = true,
+    var locomotionJump: Boolean = true,
+    var locomotionCrouch: Boolean = true,
+    var locomotionSwim: Boolean = true,
+    var locomotionClimb: Boolean = true,
+    var locomotionRide: Boolean = true,
+    var locomotionElytra: Boolean = true,
+    var locomotionUseItem: Boolean = true,
+    var locomotionHurt: Boolean = true,
+    var locomotionDeath: Boolean = true,
     var soulsCameraEnabled: Boolean = false,
     var soulsCameraDistance: Double = 4.0,
     var soulsCameraHeight: Double = 0.0,
@@ -63,6 +78,12 @@ data class OverwatchConfig(
     var questLogHudEnabled: Boolean = true,
     var hudPanelsEnabled: Boolean = false,
     var hudBarStyle: String = "CLASSIC",
+    var hotbarStyle: String = "CLASSIC",
+    var shiftDragQuickMove: Boolean = true,
+    var chatHudEnabled: Boolean = true,
+    var chatStyle: String = "CLASSIC",
+    var chatSmartReply: Boolean = true,
+    var chatConversationView: Boolean = true,
     var questCompletionToastEnabled: Boolean = false,
     var levelUpToastEnabled: Boolean = false,
     var discoveryToastEnabled: Boolean = true,
@@ -78,6 +99,9 @@ data class OverwatchConfig(
     var customPartyNametagsEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var equipComparisonEnabled: Boolean = true,
+    var priceCheckEnabled: Boolean = true,
+    var priceCheckNpcEnabled: Boolean = true,
+    var wynnventoryApiKey: String = "",
     var mountFeederHudEnabled: Boolean = true,
     var lootrunEnabled: Boolean = true,
     var lootrunBeaconsEnabled: Boolean = true,
@@ -168,7 +192,9 @@ data class OverwatchConfig(
         trackerRules.forEach { it.minChestTier = it.minChestTier.coerceIn(0, 4) }
         weaponAnimationPreviewT = weaponAnimationPreviewT.coerceIn(0.0, 1.0)
         weaponAnimationSfxVolume = weaponAnimationSfxVolume.coerceIn(0.0, 1.0)
+        weaponTrueIdleDelaySeconds = weaponTrueIdleDelaySeconds.coerceIn(0.5, 15.0)
         weaponAnimationTrailIntensity = weaponAnimationTrailIntensity.coerceIn(0.2, 1.5)
+        if (LocomotionAnimations.styleNamed(locomotionStyle) == null) locomotionStyle = "HEROIC"
         mythicAlertVolume = mythicAlertVolume.coerceIn(0.0, 1.0)
         trackerPingVolume = trackerPingVolume.coerceIn(0.0, 1.0)
         OverwatchToastQueue.Kind.entries.forEach {

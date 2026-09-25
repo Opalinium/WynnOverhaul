@@ -8,7 +8,6 @@ import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 
 object NotificationSounds {
-
     val PRESETS = listOf(
         "Pling" to "minecraft:block.note_block.pling",
         "Bell" to "minecraft:block.note_block.bell",

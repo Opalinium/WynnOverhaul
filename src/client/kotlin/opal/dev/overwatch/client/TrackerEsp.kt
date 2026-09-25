@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.player.LocalPlayer
 import net.minecraft.core.BlockPos
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
@@ -16,7 +17,6 @@ import kotlin.math.floor
 import kotlin.math.sqrt
 
 object TrackerEsp {
-
     class Waypoint(
         val onScreen: Boolean,
         val ndcX: Float,
@@ -24,6 +24,7 @@ object TrackerEsp {
         val distance: Float,
         val label: String,
         val argb: Int,
+        val icon: ItemStack,
     )
 
     @Volatile
@@ -153,7 +154,7 @@ object TrackerEsp {
         val onScreen = !behind && !flip && ndcX >= -1f && ndcX < 1f && ndcY >= -1f && ndcY < 1f
         val distance = player?.position()?.distanceTo(center)?.toFloat() ?: 0f
 
-        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb))
+        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb, match.icon))
     }
 
     private fun losKey(match: EntityTracker.Match): Long {

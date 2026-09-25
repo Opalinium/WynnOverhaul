@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack
 import opal.dev.overwatch.Overwatch
 
 object OverwatchItemDebug {
-
     fun tryCopyToClipboard(stack: ItemStack): Boolean {
         if (!OverwatchConfig.current.debugItemCopyEnabled) return false
         if (stack.isEmpty) return false

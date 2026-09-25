@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.overwatch.Overwatch
 
 class WynnQuestLogHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -30,9 +29,9 @@ class WynnQuestLogHudElement : HudElement {
         val font = Minecraft.getInstance().font
         val lineH = font.lineHeight + 1
         var contentW = 0
-        if (title.isNotEmpty()) contentW = maxOf(contentW, font.width(title) + PAD * 2)
+        if (title.isNotEmpty()) contentW = maxOf(contentW, font.width(title) + PAD * 2 + 24)
         for (line in lines) contentW = maxOf(contentW, font.width(line) + PAD * 2)
-        val contentH = PAD * 2 + (if (title.isNotEmpty()) lineH + TITLE_GAP else 0) + lines.size * lineH
+        val contentH = PAD * 2 + (if (title.isNotEmpty()) font.lineHeight + 3 + TITLE_GAP else 0) + lines.size * lineH
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, contentH)
 
         val scale = HudLayoutManager.scale(ID)
@@ -50,8 +49,8 @@ class WynnQuestLogHudElement : HudElement {
         OwTheme.hudPanel(graphics, ox, oy, boxW, boxH)
         var ty = oy + PAD
         if (title.isNotEmpty()) {
-            graphics.text(font, title, ox + PAD, ty, OwTheme.ACCENT, true)
-            ty += lineH + TITLE_GAP
+            HudStyle.header(graphics, font, ox + PAD, ty, boxW - PAD * 2, title)
+            ty += font.lineHeight + 3 + TITLE_GAP
         }
         for (line in lines) {
             graphics.text(font, line, ox + PAD, ty, OwTheme.TEXT, true)

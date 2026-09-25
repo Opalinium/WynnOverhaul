@@ -29,7 +29,6 @@ data class MountShoppingList(
 )
 
 object MountOptimizer {
-
     fun maxUsableTier(h: Int): Int = MountMaterials.TIER_THRESHOLDS.fold(-1) { best, t -> if (t <= h) t else best }
 
     private fun dominates(a: MountMaterialRow, b: MountMaterialRow): Boolean {

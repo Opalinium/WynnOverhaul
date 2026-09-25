@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.client.gui.components.AbstractWidget
 
 class OwPanelList(private val addWidget: (AbstractWidget) -> Unit) {
-
     private var scrollPanel: OwScrollPanel? = null
 
     fun install(rows: List<Pair<AbstractWidget, Int>>, x: Int, y: Int, width: Int, height: Int) {

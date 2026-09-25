@@ -8,12 +8,13 @@ import net.minecraft.resources.Identifier
 import opal.dev.overwatch.Overwatch
 
 class WynnQolClient : ClientModInitializer {
-
     override fun onInitializeClient() {
         OverwatchConfig.ensureLoaded()
         WynnRegions.ensureLoaded()
         Overwatch.LOGGER.info("Overwatch client initialized (nw-style HUD)")
         ClientTickEvents.END_CLIENT_TICK.register(::onTick)
+        ChatHud.init()
+        WynnDirectMessages.register()
         PartyFriendModel.register()
         WynnBuffTracker.register()
         WynnLevelTracker.register()
@@ -32,6 +33,7 @@ class WynnQolClient : ClientModInitializer {
         WynnLevelUpToastOverride.register()
         WynnLocationToasts.register()
         MountTooltipFeature.register()
+        PriceCheck.register()
         registerHudLayouts()
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("overwatch", "mount_feeder"),
@@ -108,7 +110,7 @@ class WynnQolClient : ClientModInitializer {
     }
 
     private fun registerHudLayouts() {
-        HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_feeder", "Mount Feeder", "TOP_RIGHT", fallbackW = 230, fallbackH = 60))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_feeder", "Mount Feeder", "TOP_RIGHT", fallbackW = 230, fallbackH = 60, hidden = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("lootrun", "Lootrun", "TOP_LEFT", fallbackW = 180, fallbackH = 50))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("ability_cooldowns", "Ability Cooldowns", "BOTTOM_RIGHT", fallbackW = 140, fallbackH = 42))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("toast", "Toasts", "TOP_LEFT", defaultOffsetX = 220, defaultOffsetY = 24, fallbackW = 200, fallbackH = 34))
@@ -127,6 +129,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("guild", "Guild", "TOP_LEFT", defaultOffsetY = 44, fallbackW = 160, fallbackH = 26))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("quest_log", "Quest Log", "TOP_RIGHT", fallbackW = 260, fallbackH = 80))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("compass", "Compass", "TOP_LEFT", defaultOffsetX = 4, defaultOffsetY = 100, fallbackW = 300, fallbackH = 48))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("chat", "Chat", "BOTTOM_LEFT", defaultOffsetX = 0, defaultOffsetY = 40, fallbackW = 320, fallbackH = 180, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("hotbar", "Hotbar", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 4, fallbackW = 211, fallbackH = 24, barStretch = true))
     }
 
@@ -135,6 +138,7 @@ class WynnQolClient : ClientModInitializer {
         if (!OverwatchGate.inGame) return
         RareItemAlert.tick(client)
         WynnScoreboardTracker.tick(client)
+        WynnDirectMessages.tick(client)
         QuestBeaconTracker.tick(client)
         ContentBookQuery.tick(client)
         ContentBookInterceptor.tick(client)

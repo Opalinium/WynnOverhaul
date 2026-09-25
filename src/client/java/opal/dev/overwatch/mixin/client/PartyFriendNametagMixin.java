@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(EntityRenderer.class)
 public abstract class PartyFriendNametagMixin {
-
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void overwatch$decoratePlayerNametag(Entity entity, EntityRenderState renderState, float partialTick, CallbackInfo ci) {
         if (!OverwatchGate.INSTANCE.isInGame()) return;

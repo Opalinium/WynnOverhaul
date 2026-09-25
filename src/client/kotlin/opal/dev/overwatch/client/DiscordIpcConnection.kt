@@ -13,7 +13,6 @@ import java.nio.file.Path
 import java.util.UUID
 
 class DiscordIpcConnection private constructor(private val transport: Transport) {
-
     fun sendActivity(pid: Int, activity: JsonObject) {
         val args = JsonObject()
         args.addProperty("pid", pid)

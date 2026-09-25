@@ -9,7 +9,6 @@ class OverwatchQuestWikiScreen(
     private val activityName: String,
     parent: Screen,
 ) : OwScreen(Component.literal(activityName), parent) {
-
     private val page: QuestWikiFetcher.WikiPage? = QuestWikiFetcher.find(activityType, activityName)
     private val revealedSpoilers = HashSet<Int>()
     private val collapsedSections = HashSet<Int>()
@@ -71,13 +70,13 @@ class OverwatchQuestWikiScreen(
                         val id = spoilerId++
                         if (id in revealedSpoilers) {
                             clickableLine("[Spoiler] ${line.title} - click to hide", SPOILER_LABEL) { toggleSpoiler(id) }
-                            for (wrapped in wrap(line.text, w)) textLine(wrapped, SPOILER_TEXT)
+                            for (wrapped in HudStyle.wrap(font, line.text, w)) textLine(wrapped, SPOILER_TEXT)
                         } else {
                             clickableLine("[Spoiler] ${line.title} - click to reveal", SPOILER_LABEL) { toggleSpoiler(id) }
                         }
                     }
-                    line.objective -> for (wrapped in wrap(line.text, w)) textLine(wrapped, WHITE)
-                    else -> for (wrapped in wrap(line.text, w)) textLine(wrapped, if (line.italic) DIALOGUE else GRAY)
+                    line.objective -> for (wrapped in HudStyle.wrap(font, line.text, w)) textLine(wrapped, WHITE)
+                    else -> for (wrapped in HudStyle.wrap(font, line.text, w)) textLine(wrapped, if (line.italic) DIALOGUE else GRAY)
                 }
             }
 
@@ -109,25 +108,6 @@ class OverwatchQuestWikiScreen(
     private fun toggleSection(index: Int) {
         if (!collapsedSections.add(index)) collapsedSections.remove(index)
         rebuildWidgets()
-    }
-
-    private fun wrap(text: String, maxWidth: Int): List<String> {
-        val words = text.split(" ")
-        val lines = ArrayList<String>()
-        val current = StringBuilder()
-        for (word in words) {
-            val candidate = if (current.isEmpty()) word else "$current $word"
-            if (font.width(candidate) > maxWidth && current.isNotEmpty()) {
-                lines.add(current.toString())
-                current.clear()
-                current.append(word)
-            } else {
-                current.clear()
-                current.append(candidate)
-            }
-        }
-        if (current.isNotEmpty()) lines.add(current.toString())
-        return lines
     }
 
     private companion object {

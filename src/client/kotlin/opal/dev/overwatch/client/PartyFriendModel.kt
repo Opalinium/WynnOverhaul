@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
 object PartyFriendModel {
-
     @Volatile
     var partyMembers: Set<String> = emptySet()
         private set
@@ -55,7 +54,7 @@ object PartyFriendModel {
     }
 
     private fun onMessage(message: Component) {
-        val text = clean(message.string)
+        val text = TextClean.clean(message.string)
         if (text.isEmpty()) return
 
         PARTY_LIST.find(text)?.let { partyMembers = splitNames(it.groupValues[1]).toSet(); return }
@@ -74,16 +73,6 @@ object PartyFriendModel {
 
     private fun splitNames(raw: String): List<String> =
         raw.split(",").map { it.trim().removePrefix("and ").trim() }.filter { it.isNotEmpty() }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        for (cp in text.codePoints()) {
-            if (!isPrivateUse(cp)) sb.appendCodePoint(cp)
-        }
-        return sb.toString().trim()
-    }
-
-    private fun isPrivateUse(cp: Int): Boolean = cp >= 0xE000
 
     private val PARTY_LIST = Regex("""^Party members: (.*)$""")
     private val PARTY_COMMAND_FAILED = Regex("""^You must be in a party to use this\.?$""")

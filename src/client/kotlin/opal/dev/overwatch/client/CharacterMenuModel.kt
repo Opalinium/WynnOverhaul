@@ -4,7 +4,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.item.ItemStack
 
 object CharacterMenuModel {
-
     @Volatile
     var lastSnapshot: Snapshot? = null
 

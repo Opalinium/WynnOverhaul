@@ -22,7 +22,6 @@ class OwButton(
     private val swatch: Int? = null,
     private val onPress: () -> Unit,
 ) : AbstractWidget(x, y, width, height, label) {
-
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val active = enabled()
         val hovered = isHovered && active

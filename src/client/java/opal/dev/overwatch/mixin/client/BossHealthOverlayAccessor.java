@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(BossHealthOverlay.class)
 public interface BossHealthOverlayAccessor {
-
     @Accessor("events")
     Map<UUID, LerpingBossEvent> overwatch$getEvents();
 }

@@ -10,7 +10,6 @@ data class StoredMount(
 )
 
 object MountRegistry {
-
     fun keyOf(typeName: String, name: String, potential: Int?): String =
         if (potential != null) "$typeName|$name|$potential" else "$typeName|$name"
 

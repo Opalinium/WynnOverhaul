@@ -7,7 +7,6 @@ import net.minecraft.network.chat.Component
 
 class OverwatchHubScreen(parent: Screen? = null) : OwScreen(Component.literal("Overwatch"), parent),
     OverwatchSettingsPanels.Host {
-
     private val panels = OverwatchSettingsPanels(this)
 
     override val panelWidth: Int get() = (width * 0.75).toInt().coerceIn(400, 560)

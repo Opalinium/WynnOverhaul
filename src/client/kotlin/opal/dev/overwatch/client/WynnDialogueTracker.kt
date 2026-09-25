@@ -7,7 +7,6 @@ import net.minecraft.network.chat.FontDescription
 import net.minecraft.network.chat.FormattedText
 import net.minecraft.network.chat.Style
 object WynnDialogueTracker {
-
     data class Choice(val text: String, val selected: Boolean)
 
     @Volatile

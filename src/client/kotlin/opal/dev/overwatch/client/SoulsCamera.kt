@@ -19,7 +19,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 object SoulsCamera {
-
     private const val PITCH_MIN = -80f
     private const val PITCH_MAX = 70f
     private const val DEFAULT_PITCH = 15f

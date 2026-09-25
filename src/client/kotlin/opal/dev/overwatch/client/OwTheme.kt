@@ -52,11 +52,8 @@ object OwTheme {
 
     fun hudPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, alpha: Int = 255) {
         if (!OverwatchConfig.current.hudPanelsEnabled) return
-        graphics.fill(x, y, x + w, y + h, withAlpha(PANEL, alpha))
-        graphics.outline(x, y, w, h, withAlpha(BORDER, alpha))
+        HudStyle.plate(graphics, x, y, w, h, ACCENT, alpha / 255f)
     }
-
-    private fun withAlpha(argb: Int, alpha: Int): Int = (argb and 0xFFFFFF) or (alpha.coerceIn(0, 255) shl 24)
 
     fun drawPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, fill: Int = PANEL) {
         graphics.fill(x, y, x + w, y + h, fill)

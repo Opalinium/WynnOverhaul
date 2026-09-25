@@ -23,7 +23,6 @@ class OverwatchInventoryScreen(
     initialTab: InvTab = InvTab.INVENTORY,
 ) : Screen(Component.literal("Overwatch - Inventory")),
     OverwatchSettingsPanels.Host {
-
     enum class InvTab(val label: String) {
         INVENTORY("Inventory"),
         CHARACTER("Character"),
@@ -145,6 +144,10 @@ class OverwatchInventoryScreen(
     }
 
     private var painting = false
+    private var shiftDragging = false
+    private val shiftVisited = HashSet<Int>()
+    private var shiftDragX = 0
+    private var shiftDragY = 0
     private var paintRight = false
     private var paintOrigin = -1
     private val painted = HashSet<Int>()
@@ -453,7 +456,7 @@ class OverwatchInventoryScreen(
             y += TILE_STEP + SECTION_GAP
 
             val pouchSlot = findIngredientPouch()
-            val storage = if (isOnWynncraft()) MAIN_SLOTS.drop(4) else MAIN_SLOTS
+            val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
             val filtered = storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }
             labels.add(PlacedLabel("Inventory", x, y, color = OwTheme.ACCENT))
             y += CAPTION_H
@@ -729,9 +732,6 @@ class OverwatchInventoryScreen(
         }
         return n
     }
-
-    private fun isOnWynncraft(): Boolean =
-        Minecraft.getInstance().currentServer?.ip?.contains("wynncraft", ignoreCase = true) == true
 
     private fun extraSlots(): List<Int> = (VANILLA_MENU_SIZE until menu.slots.size).toList()
 
@@ -1141,7 +1141,6 @@ class OverwatchInventoryScreen(
         )
     }
 
-
     private fun dockedStack(slot: Int): ItemStack {
         val live = if (slot in 0 until menu.slots.size) menu.slots[slot].item else ItemStack.EMPTY
         if (!live.isEmpty) {
@@ -1406,7 +1405,6 @@ class OverwatchInventoryScreen(
         val listTop = statusTop + 12
         return JournalHeader(chips, detailLines, detailTop, actionsTop, statusTop, listTop)
     }
-
 
 
     private fun charScreenY(contentY: Int, panelTop: Int): Int = panelTop + CONTENT_TOP_REL + contentY - charScrollY
@@ -1839,8 +1837,13 @@ class OverwatchInventoryScreen(
             0 -> {
                 if (event.hasShiftDown()) {
                     sendInput(slot, 0, ContainerInput.QUICK_MOVE)
+                    shiftDragging = OverwatchConfig.current.shiftDragQuickMove
+                    shiftVisited.clear()
+                    shiftVisited.add(slot)
+                    shiftDragX = x
+                    shiftDragY = y
                 } else if (isIngredientPouch) {
-                    sendInput(slot, 1, ContainerInput.PICKUP)
+                    sendInput(slot, 0, ContainerInput.PICKUP)
                 } else {
                     val now = System.currentTimeMillis()
                     val doubled = slot == lastClickSlot && now - lastClickTime < DOUBLE_CLICK_MS && !menu.carried.isEmpty
@@ -1866,7 +1869,7 @@ class OverwatchInventoryScreen(
                 } else if (isIngredientPouch && event.hasShiftDown()) {
                     sendInput(slot, 1, ContainerInput.QUICK_MOVE)
                 } else if (isIngredientPouch) {
-                    sendInput(slot, 1, ContainerInput.PICKUP)
+                    sendInput(slot, 0, ContainerInput.PICKUP)
                 } else if (event.hasShiftDown()) {
                     sendInput(slot, 1, ContainerInput.QUICK_MOVE)
                 } else {
@@ -1938,6 +1941,10 @@ class OverwatchInventoryScreen(
 
     override fun mouseDragged(event: MouseButtonEvent, deltaX: Double, deltaY: Double): Boolean {
         if (super.mouseDragged(event, deltaX, deltaY)) return true
+        if (shiftDragging) {
+            shiftQuickMove(event.x().toInt(), event.y().toInt())
+            return true
+        }
         if (!painting) return false
         val layout = lastLayout ?: return false
         val slot = findTile(layout, event.x().toInt(), event.y().toInt())
@@ -1950,6 +1957,11 @@ class OverwatchInventoryScreen(
 
     override fun mouseReleased(event: MouseButtonEvent): Boolean {
         if (super.mouseReleased(event)) return true
+        if (shiftDragging) {
+            shiftDragging = false
+            shiftVisited.clear()
+            return true
+        }
         if (!painting) return false
         painting = false
         val hadDrag = painted.size > 1
@@ -2018,6 +2030,37 @@ class OverwatchInventoryScreen(
             return true
         }
         return super.keyPressed(event)
+    }
+
+    private fun shiftHeld(): Boolean {
+        val window = Minecraft.getInstance().window
+        return com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, com.mojang.blaze3d.platform.InputConstants.KEY_LSHIFT) ||
+            com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, com.mojang.blaze3d.platform.InputConstants.KEY_RSHIFT)
+    }
+
+    private fun shiftQuickMove(mx: Int, my: Int) {
+        if (!shiftHeld()) {
+            shiftDragging = false
+            shiftVisited.clear()
+            return
+        }
+        val layout = lastLayout ?: return
+        val player = Minecraft.getInstance().player ?: return
+        if (player.containerMenu !== menu) return
+        val dx = mx - shiftDragX
+        val dy = my - shiftDragY
+        val steps = maxOf(1, maxOf(kotlin.math.abs(dx), kotlin.math.abs(dy)) / SHIFT_DRAG_STEP)
+        for (i in 1..steps) {
+            val px = shiftDragX + dx * i / steps
+            val py = shiftDragY + dy * i / steps
+            val slot = findTile(layout, px, py)
+            if (slot < 0 || !shiftVisited.add(slot)) continue
+            val stack = slotStack(slot)
+            if (stack.isEmpty || WynnPouches.isIngredientPouch(stack) || WynnPouches.isSellConfirm(stack) || WynnPouches.isConfirmMorph(stack)) continue
+            sendInput(slot, 0, ContainerInput.QUICK_MOVE)
+        }
+        shiftDragX = mx
+        shiftDragY = my
     }
 
     private fun beginPaint(slot: Int, right: Boolean) {
@@ -2102,6 +2145,7 @@ class OverwatchInventoryScreen(
         const val MENU_BTN_GAP = 2
         const val CHAR_CARD_GAP = 8
         const val INGREDIENT_POUCH_SLOT = 13
+        const val SHIFT_DRAG_STEP = 4
         const val POUCH_LINES = 12
         const val PLAYER_INV_SIZE = 36
 

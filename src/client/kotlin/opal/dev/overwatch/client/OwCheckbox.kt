@@ -16,7 +16,6 @@ class OwCheckbox(
     height: Int = OwTheme.ROW_H - 2,
     private val onChange: (Boolean) -> Unit,
 ) : AbstractWidget(x, y, width, height, label) {
-
     companion object {
         private const val BOX = 14
     }

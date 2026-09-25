@@ -14,7 +14,6 @@ abstract class OwScreen(
     title: Component,
     protected val parent: Screen?,
 ) : Screen(title) {
-
     protected open val panelWidth: Int get() = (width * 0.7).toInt().coerceIn(320, 520)
     protected open val panelHeight: Int get() = (height * 0.82).toInt().coerceIn(240, 420)
     protected open val panelLeft: Int get() = (width - panelWidth) / 2

@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 
 object WynnLocationToasts {
-
     private var lastToastedRegion: String? = null
     private var lastToastedAt = 0L
     private var lastDiscoveryName: String? = null
@@ -40,7 +39,7 @@ object WynnLocationToasts {
         if (!OverwatchGate.inGame) return true
         if (!OverwatchConfig.current.discoveryToastEnabled) return true
         val now = System.currentTimeMillis()
-        val lines = clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
 
         val header = lines.firstNotNullOfOrNull { DISCOVERY.matchEntire(it) }
         if (header != null) {
@@ -67,21 +66,6 @@ object WynnLocationToasts {
 
     private fun isOtherKnownBlock(lines: List<String>): Boolean =
         lines.any { it == QUEST_HEADER || it == LEVEL_UP_HEADER }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (cp < 0xE000 && cp != 0xFFFD) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        return sb.toString()
-    }
 
     private const val ENTERING_TITLE = "Entering"
     private const val QUEST_HEADER = "[Quest Completed]"

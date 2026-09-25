@@ -10,7 +10,6 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 
 class OverwatchWeaponAnimationScreen(parent: Screen? = null) : OwScreen(Component.literal("Weapon Animations"), parent) {
-
     override val panelWidth: Int get() = (width * 0.36).toInt().coerceIn(320, 460).coerceAtMost((width - 20).coerceAtLeast(200))
     override val panelLeft: Int get() = (width - panelWidth - 12).coerceAtLeast(0)
     override val panelHeight: Int get() = (height * 0.85).toInt().coerceIn(280, 520)
@@ -54,7 +53,6 @@ class OverwatchWeaponAnimationScreen(parent: Screen? = null) : OwScreen(Componen
         private val entry: WeaponAnimationEntry,
         private val onRemoved: () -> Unit,
     ) : AbstractWidget(x, y, width, height, Component.literal(entry.name)) {
-
         private val preview = WeaponAnimationRegistry.preview(entry)
 
         override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {

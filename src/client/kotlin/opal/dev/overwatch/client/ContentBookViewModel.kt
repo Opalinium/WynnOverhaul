@@ -1,7 +1,6 @@
 package opal.dev.overwatch.client
 
 class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
-
     enum class Sort(val label: String) {
         RECOMMENDED("Recommended"),
         NAME("Name"),

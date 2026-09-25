@@ -30,7 +30,6 @@ import kotlin.math.sqrt
 import java.util.concurrent.ThreadLocalRandom
 
 object WeaponAnimations {
-
     private const val RAD_TO_DEG = 57.29578f
     private const val MIN_SECONDS = 0.18f
     private const val GAP_FRACTION = 0.95f
@@ -55,6 +54,26 @@ object WeaponAnimations {
     private const val READY_NANOS = 3_500_000_000L
     private const val BREATH_NANOS = 3_400_000_000L
     private const val BREATH_AMP = 0.025f
+    private const val IDLE_BREATH_BOOST = 0.7f
+    private const val SWAY_NANOS = 7_300_000_000L
+    private const val SWAY_AMP = 0.045f
+    private const val SPRINT_BOB_NANOS = 450_000_000L
+    private const val SPRINT_BOB_AMP = 0.02f
+    private const val WALK_SHARE = 0.35f
+    private const val GAIT_PHASE = 0.6662f
+    private const val WALK_MAIN_SWING = 0.2f
+    private const val WALK_OFF_SWING = 0.5f
+    private const val SPRINT_MAIN_SWING = 0.55f
+    private const val SPRINT_OFF_SWING = 1.05f
+    private const val SPRINT_LEAN = 0.14f
+    private const val SPRINT_ACROSS = 0.18f
+    private const val SPRINT_BOUNCE = 0.05f
+    private const val SPRINT_TIP_BOUNCE = 0.14f
+    private const val WALK_TIP_BOUNCE = 0.05f
+    private const val WALK_SPEED_SQ = 0.0006
+    private const val STILL_SPEED_SQ = 0.0004
+    private const val SPRINT_SPEED_SQ = 0.005
+    private const val TICK_NANOS = 50_000_000L
 
     private const val PITCH = 0
     private const val ACROSS = 1
@@ -84,10 +103,17 @@ object WeaponAnimations {
     private const val BODY_HALF_WIDTH = 4.5f
     private const val BODY_FRONT = -4.2f
     private const val BODY_BOTTOM = 14f
-    private const val CLIP_STEP = 0.1f
-    private const val CLIP_OUTWARD = 0.05f
-    private const val CLIP_STEPS = 9
-    private val GRIP_RELAX = floatArrayOf(1f, 0.8f, 0.6f, 0.4f, 0.2f, 0f)
+    private const val CLIP_STEP = 0.025f
+    private const val CLIP_OUTWARD = 0.0125f
+    private const val CLIP_STEPS = 36
+    private const val GRIP_BISECT = 6
+    private const val GRIP_RELAX_TAU = 0.06f
+    private var gripRelax = 1f
+    private var gripSlide = 0f
+    private const val GRIP_SLIDE_STEP = 1f
+    private const val GRIP_SLIDE_STEPS = 8
+    private const val GRIP_MIN_OFFSET = 3f
+    private var gripRelaxNanos = 0L
     private val GUARD_POINTS = floatArrayOf(0.6f, 0.85f, 1f)
     private const val GRIP_LEN_SQ = GRIP_Y * GRIP_Y + GRIP_Z * GRIP_Z
 
@@ -95,38 +121,118 @@ object WeaponAnimations {
 
     private val B = Float.NaN
 
-    private class Stance(val carry: FloatArray, val ready: FloatArray, val gripOffset: Float = 7f)
+    private class Gait(
+        val mainWalk: Float,
+        val offWalk: Float,
+        val mainSprint: Float,
+        val offSprint: Float,
+        val across: Float,
+        val lean: Float,
+        val leanBounce: Float,
+        val tipWalk: Float,
+        val tipSprint: Float,
+        val yaw: Float,
+        val armBob: Float,
+        val twist: Float = 0f,
+    )
 
-    private fun stance(carry: FloatArray, ready: FloatArray, gripOffset: Float = 7f) = Stance(carry, ready, gripOffset)
+    private val DEFAULT_GAIT = Gait(
+        WALK_MAIN_SWING, WALK_OFF_SWING, SPRINT_MAIN_SWING, SPRINT_OFF_SWING,
+        SPRINT_ACROSS, SPRINT_LEAN, SPRINT_BOUNCE, WALK_TIP_BOUNCE, SPRINT_TIP_BOUNCE, 0.06f, 0f,
+    )
+
+    private class Stance(
+        val carry: FloatArray,
+        val ready: FloatArray,
+        val idle: FloatArray,
+        val sprint: FloatArray,
+        val gripOffset: Float = 7f,
+        val walk: FloatArray? = null,
+        val gait: Gait = DEFAULT_GAIT,
+    )
+
+    private fun stance(
+        carry: FloatArray,
+        ready: FloatArray,
+        idle: FloatArray,
+        sprint: FloatArray,
+        gripOffset: Float = 7f,
+        walk: FloatArray? = null,
+        gait: Gait = DEFAULT_GAIT,
+    ) = Stance(carry, ready, idle, sprint, gripOffset, walk, gait)
 
     private val STANCES: Map<String, Stance> = mapOf(
         "SPEAR" to stance(
             floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
             floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-1.05f, 0.32f, 0.06f, -0.95f, 0.5f, 0.05f, 0.1f, -0.3f, 0.02f, 0.3f, 0f, 1f, 0.26f, 0f),
+            walk = floatArrayOf(-0.8f, 0.3f, 0.08f, -0.72f, 0.42f, 0.05f, 0.1f, 0f, -0.62f, 0.22f, 0f, 1f, 0.06f, 0f),
+            gait = Gait(
+                mainWalk = 0.05f, offWalk = 0.06f, mainSprint = 0.1f, offSprint = 0.12f,
+                across = 0.04f, lean = 0.06f, leanBounce = 0.03f,
+                tipWalk = 0.05f, tipSprint = 0.04f, yaw = 0.1f, armBob = 0.08f,
+            ),
+        ),
+        "SPEAR:SCYTHE" to stance(
+            floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.95f, 0.45f, 0.08f, -0.85f, 0.5f, 0.05f, 0.1f, -0.15f, -0.3f, 0.55f, -0.5f, 1f, 0.3f, 0f),
+            walk = floatArrayOf(-0.75f, 0.35f, 0.08f, -0.65f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.4f, 0.2f, 1f, 0.05f, 0f),
+            gait = Gait(
+                mainWalk = 0.06f, offWalk = 0.08f, mainSprint = 0.14f, offSprint = 0.16f,
+                across = 0.06f, lean = 0.06f, leanBounce = 0.03f,
+                tipWalk = 0.06f, tipSprint = 0.08f, yaw = 0.16f, armBob = 0.06f, twist = 0.25f,
+            ),
+        ),
+        "SPEAR:RUBY" to stance(
+            floatArrayOf(-0.5f, 0f, 0.3f, -0.05f, 0.05f, 0.1f, 0f, 0f, -0.15f, 3.35f, 1.2f, 0f, 0f, 0f),
+            floatArrayOf(-1.2f, 0.35f, 0.1f, -1.0f, 0.5f, 0.05f, 0.25f, -0.5f, -0.3f, 0.35f, -1.0f, 1f, 0f, 0f),
+            floatArrayOf(-0.6f, 0f, 0.35f, 0.1f, -0.1f, 0.5f, 0f, 0f, -0.7f, 3.25f, 1.2f, 0f, 0f, 0f),
+            floatArrayOf(-1.15f, 0.05f, 0.15f, 0.3f, 0.1f, 0.15f, 0.1f, -0.3f, 0.12f, 3.35f, 1.2f, 0f, 0.4f, 0f),
+            walk = floatArrayOf(-0.5f, 0f, 0.3f, -0.05f, 0.05f, 0.1f, 0f, 0f, -0.15f, 3.35f, 1.2f, 0f, 0.05f, 0f),
+            gait = Gait(
+                mainWalk = 0.03f, offWalk = 0.3f, mainSprint = 0.06f, offSprint = 0.5f,
+                across = 0.03f, lean = 0.1f, leanBounce = 0.025f,
+                tipWalk = 0.015f, tipSprint = 0.03f, yaw = 0.05f, armBob = 0.02f, twist = 0f,
+            ),
         ),
         "WAND:STAFF" to stance(
             floatArrayOf(-0.7f, 0.2f, 0.05f, -0.7f, 0.4f, 0.05f, 0.05f, 0f, -1.35f, -0.2f, 0f, 1f, 0f, 0f),
             floatArrayOf(-1.1f, 0.2f, 0.08f, -1.0f, 0.5f, 0.05f, 0.1f, -0.3f, -1.1f, -0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.4f, 0.15f, 0.08f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.45f, -0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.65f, 0.2f, 0.05f, -0.6f, 0.3f, 0.05f, 0.05f, 0f, -0.7f, -0.1f, 0f, 1f, 0.2f, 0f),
         ),
         "DAGGER" to stance(
             floatArrayOf(-0.6f, 0.15f, 0.1f, -0.3f, 0.1f, 0.2f, 0.15f, 0f, -0.15f, 0.15f, 0f, 0f, 0f, 0f),
             floatArrayOf(-0.9f, 0.3f, 0.15f, -0.4f, 0.15f, 0.35f, 0.3f, 0f, -0.3f, 0.35f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.25f, 0.1f, 0.12f, -0.1f, 0.05f, 0.15f, 0.1f, 0f, 0.35f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.5f, 0.1f, 0.1f, -0.3f, 0.1f, 0.2f, 0.1f, 0f, -0.3f, 0.1f, 0f, 0f, 0.24f, 0f),
         ),
         "WAND" to stance(
             floatArrayOf(-0.55f, 0.1f, 0.05f, -0.2f, 0.05f, 0.1f, 0.05f, 0f, -0.4f, 0.05f, 0f, 0f, 0f, 0f),
             floatArrayOf(-1.0f, 0.15f, 0.1f, -0.3f, 0.1f, 0.15f, 0.1f, 0f, -0.5f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.3f, 0.08f, 0.06f, -0.1f, 0.05f, 0.12f, 0.05f, 0f, -0.15f, 0.05f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.6f, 0.1f, 0.05f, -0.3f, 0.1f, 0.15f, 0.05f, 0f, -0.5f, 0.05f, 0f, 0f, 0.2f, 0f),
         ),
         "RELIK" to stance(
             floatArrayOf(-0.6f, 0.2f, 0.05f, -0.4f, 0.25f, 0.05f, 0.08f, 0f, -0.3f, 0.1f, 0f, 0f, 0f, 0f),
             floatArrayOf(-1.0f, 0.35f, 0.1f, -0.7f, 0.5f, 0.1f, 0.15f, 0f, -0.4f, 0.2f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.3f, 0.12f, 0.06f, -0.15f, 0.1f, 0.1f, 0.05f, 0f, -0.1f, 0.05f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.55f, 0.2f, 0.06f, -0.35f, 0.2f, 0.1f, 0.08f, 0f, -0.3f, 0.1f, 0f, 0f, 0.2f, 0f),
         ),
         "BOW" to stance(
             floatArrayOf(-0.8f, 0.15f, 0f, -0.6f, 0.3f, 0f, 0.15f, 0f, -0.1f, 0f, 0f, 0f, 0f, 0f),
             floatArrayOf(-1.45f, 0.25f, 0f, -1.5f, 0.7f, 0f, 0.35f, -0.6f, -0.1f, 0f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.3f, 0.1f, 0f, -0.1f, 0.05f, 0f, 0.05f, 0f, 0.5f, 0f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.5f, 0.12f, 0f, -0.3f, 0.2f, 0f, 0.1f, 0f, 0.15f, 0f, 0f, 0f, 0.22f, 0f),
         ),
         "BOW:FIREARM" to stance(
             floatArrayOf(-0.9f, 0.35f, 0f, -0.9f, 0.4f, 0f, 0.1f, 0f, -0.5f, 0f, 0f, 1f, 0f, 0f),
             floatArrayOf(-1.2f, 0.45f, 0f, -1.3f, 0.6f, 0f, 0.15f, -0.8f, -0.05f, 0f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.6f, 0.3f, 0f, -0.5f, 0.3f, 0f, 0.05f, 0f, 0.6f, 0f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.8f, 0.35f, 0f, -0.85f, 0.4f, 0f, 0.1f, 0f, 0.15f, 0f, 0f, 1f, 0.2f, 0f),
             9f,
         ),
     )
@@ -275,6 +381,48 @@ object WeaponAnimations {
             headY = curve(0f to B, 0.14f to -0.7f, 0.5f to 3.3f, 0.86f to 6.0f, 1f to 6.2832f),
             twist = curve(0f to B, 0.14f to 0.3f, 0.5f to 0.6f, 0.86f to 0.3f, 1f to B),
         ),
+        "SPEAR:RUBY" to Pose(
+            pitch = curve(0f to B, 0.18f to -1.15f, 0.42f to -1.0f, 0.72f to -0.85f, 1f to B),
+            across = curve(0f to B, 0.18f to -0.9f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
+            abduct = curve(0f to B, 0.18f to 0.3f, 0.42f to -0.1f, 1f to B),
+            offPitch = curve(0f to B, 0.18f to -1.0f, 0.42f to -0.9f, 0.72f to -0.8f, 1f to B),
+            offAcross = curve(0f to B, 0.18f to 0.2f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
+            turn = curve(0f to B, 0.18f to -0.7f, 0.42f to 0.75f, 0.72f to 0.4f, 1f to B),
+            reach = curve(0f to B, 0.18f to 0.8f, 0.42f to -2.0f, 1f to B),
+            headA = curve(0f to B, 0.18f to -0.35f, 0.42f to -0.1f, 0.72f to -0.3f, 1f to B),
+            headY = curve(0f to B, 0.18f to -1.6f, 0.42f to 1.3f, 0.72f to 0.9f, 1f to B),
+            twist = curve(0f to B, 0.18f to -2.4f, 0.42f to -1.3f, 0.72f to -1.3f, 1f to B),
+            lean = curve(0f to B, 0.18f to -0.12f, 0.42f to 0.3f, 0.72f to 0.2f, 1f to B),
+            step = curve(0f to B, 0.18f to -0.2f, 0.42f to 0.9f, 0.72f to 0.6f, 1f to B),
+        ),
+        "SPEAR:RUBY_VAULT" to Pose(
+            pitch = curve(0f to B, 0.16f to -1.0f, 0.34f to -1.3f, 0.6f to -1.1f, 1f to B),
+            across = curve(0f to B, 0.16f to 0.2f, 0.34f to 0.1f, 1f to B),
+            abduct = curve(0f to B, 0.16f to 0.15f, 0.34f to 0.05f, 1f to B),
+            offPitch = curve(0f to B, 0.16f to -0.9f, 0.34f to -1.4f, 0.6f to -1.2f, 1f to B),
+            offAcross = curve(0f to B, 0.16f to 0.5f, 0.34f to 0.55f, 0.6f to 0.5f, 1f to B),
+            turn = curve(0f to B, 0.16f to -0.3f, 0.34f to 0.3f, 0.6f to 0.15f, 1f to B),
+            reach = curve(0f to B, 0.16f to 1.2f, 0.34f to -3.2f, 0.6f to -2.4f, 1f to B),
+            headA = curve(0f to B, 0.16f to -1.7f, 0.34f to 0.8f, 0.6f to 0.6f, 1f to B),
+            headY = curve(0f to B, 0.16f to -0.2f, 0.34f to 0.05f, 0.6f to 0.1f, 1f to B),
+            twist = curve(0f to B, 0.16f to -1.3f, 0.34f to -1.2f, 0.6f to -1.3f, 1f to B),
+            lean = curve(0f to B, 0.16f to -0.2f, 0.34f to 0.7f, 0.6f to 0.5f, 1f to B),
+            step = curve(0f to B, 0.16f to -0.3f, 0.34f to 1.2f, 0.6f to 0.9f, 1f to B),
+        ),
+        "SPEAR:RUBY_SPIN" to Pose(
+            pitch = curve(0f to B, 0.14f to -1.0f, 0.5f to -0.95f, 0.86f to -1.0f, 1f to B),
+            across = curve(0f to B, 0.14f to 0.3f, 0.5f to 0.35f, 0.86f to 0.3f, 1f to B),
+            abduct = curve(0f to B, 0.14f to 0.1f, 1f to B),
+            offPitch = curve(0f to B, 0.14f to -1.1f, 0.5f to -1.0f, 0.86f to -1.1f, 1f to B),
+            offAcross = curve(0f to B, 0.14f to 0.5f, 0.5f to 0.5f, 0.86f to 0.5f, 1f to B),
+            turn = curve(0f to B, 0.14f to -0.6f, 0.5f to 0.2f, 0.86f to 0.9f, 1f to B),
+            reach = curve(0f to B, 0.14f to 0.9f, 0.3f to -1.6f, 0.5f to -1f, 1f to B),
+            headA = curve(0f to B, 0.14f to -0.3f, 0.86f to -0.3f, 1f to B),
+            headY = curve(0f to B, 0.14f to -0.7f, 0.5f to 3.3f, 0.86f to 6.0f, 1f to 6.2832f),
+            twist = curve(0f to 0f, 0.14f to -1.0f, 0.3f to -0.2f, 0.5f to 1.9f, 0.65f to 4.0f, 0.75f to 4.9f, 0.86f to 5.3f, 1f to 6.2832f),
+            lean = curve(0f to B, 0.14f to -0.1f, 0.3f to 0.25f, 0.86f to 0.2f, 1f to B),
+            step = curve(0f to B, 0.14f to -0.2f, 0.3f to 0.6f, 0.86f to 0.4f, 1f to B),
+        ),
         "DAGGER" to Pose(
             pitch = curve(0f to B, 0.1f to -1.1f, 0.28f to -1.3f, 0.55f to -0.8f, 1f to B),
             across = curve(0f to B, 0.1f to -0.7f, 0.28f to 0.8f, 0.55f to 0.4f, 1f to B),
@@ -341,6 +489,7 @@ object WeaponAnimations {
             offAcross = curve(0f to B, 0.16f to 0.7f, 0.7f to -0.1f, 0.84f to -0.5f, 1f to B),
             turn = curve(0f to B, 0.16f to 0.35f, 0.7f to 0.35f, 0.84f to 0.1f, 1f to B),
             reach = curve(0f to B, 0.16f to -0.6f, 0.7f to -0.6f, 1f to B),
+            twist = KEEP,
         ),
         "BOW:FIREARM" to Pose(
             pitch = curve(0f to B, 0.1f to -1.3f, 0.2f to -1.6f, 0.4f to -1.3f, 0.8f to -1.3f, 1f to B),
@@ -540,6 +689,7 @@ object WeaponAnimations {
             reach = curve(0f to B, 0.15f to -0.6f, 0.25f to 0.4f, 0.35f to -0.6f, 0.45f to 0.4f, 0.55f to -0.6f, 0.65f to 0.4f, 0.75f to -0.6f, 0.85f to -0.6f, 1f to B),
             headA = curve(0f to B, 0.15f to -0.5f, 0.85f to -0.5f, 1f to B),
             lean = curve(0f to B, 0.15f to -0.1f, 0.85f to -0.1f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:ESCAPE" to Pose(
             pitch = curve(0f to B, 0.3f to -0.8f, 0.6f to -1.0f, 1f to B),
@@ -548,6 +698,7 @@ object WeaponAnimations {
             headA = curve(0f to B, 0.3f to 0.4f, 0.6f to 0.1f, 1f to B),
             lean = curve(0f to B, 0.3f to -0.5f, 0.6f to -0.2f, 1f to B),
             step = curve(0f to B, 0.3f to -0.8f, 0.6f to -0.4f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:ARROW_BOMB" to Pose(
             pitch = curve(0f to B, 0.25f to -1.7f, 0.55f to -1.9f, 0.7f to -1.7f, 1f to B),
@@ -558,6 +709,7 @@ object WeaponAnimations {
             reach = curve(0f to B, 0.25f to -0.6f, 0.55f to -0.6f, 1f to B),
             headA = curve(0f to B, 0.25f to -0.5f, 0.55f to -0.7f, 1f to B),
             lean = curve(0f to B, 0.55f to -0.2f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:ARROW_SHIELD" to Pose(
             pitch = curve(0f to B, 0.3f to -1.2f, 0.6f to -1.4f, 1f to B),
@@ -567,6 +719,7 @@ object WeaponAnimations {
             offAcross = curve(0f to B, 0.3f to 0.8f, 0.6f to 0f, 1f to B),
             offAbduct = curve(0f to B, 0.6f to 0.5f, 1f to B),
             headA = curve(0f to B, 0.3f to -0.9f, 0.6f to -0.5f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:PHANTOM_RAY" to Pose(
             pitch = curve(0f to B, 0.2f to -1.5f, 0.9f to -1.5f, 1f to B),
@@ -577,6 +730,7 @@ object WeaponAnimations {
             reach = curve(0f to B, 0.2f to -0.6f, 0.9f to -0.6f, 1f to B),
             lean = curve(0f to B, 0.3f to 0.15f, 0.9f to 0.15f, 1f to B),
             step = curve(0f to B, 0.3f to 0.2f, 0.9f to 0.2f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:GRAPPLING_HOOK" to Pose(
             pitch = curve(0f to B, 0.2f to -1.5f, 0.45f to -1.5f, 0.8f to -1.2f, 1f to B),
@@ -587,6 +741,7 @@ object WeaponAnimations {
             reach = curve(0f to B, 0.2f to -0.8f, 0.45f to -1.5f, 0.7f to 0.5f, 1f to B),
             lean = curve(0f to B, 0.45f to 0.1f, 0.7f to 0.4f, 1f to B),
             step = curve(0f to B, 0.7f to 0.6f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:GUARDIAN_ANGELS" to Pose(
             pitch = curve(0f to B, 0.35f to -2.2f, 0.8f to -2.1f, 1f to B),
@@ -595,6 +750,7 @@ object WeaponAnimations {
             offAbduct = curve(0f to B, 0.35f to 0.9f, 0.8f to 0.9f, 1f to B),
             headA = curve(0f to B, 0.35f to -1.0f, 0.8f to -1.0f, 1f to B),
             lean = curve(0f to B, 0.35f to -0.2f, 0.8f to -0.2f, 1f to B),
+            twist = KEEP,
         ),
         "SPELL:SPIN_ATTACK" to Pose(
             pitch = curve(0f to B, 0.12f to -1.2f, 0.85f to -1.2f, 1f to B),
@@ -726,6 +882,9 @@ object WeaponAnimations {
         "SPEAR" to 0.3f,
         "SPEAR:SWEEP" to 0.36f,
         "SPEAR:SCYTHE" to 0.38f,
+        "SPEAR:RUBY" to 0.34f,
+        "SPEAR:RUBY_VAULT" to 0.44f,
+        "SPEAR:RUBY_SPIN" to 0.5f,
         "SPEAR:SLAM" to 0.42f,
         "SPEAR:TWIRL" to 0.44f,
         "DAGGER" to 0.26f,
@@ -780,6 +939,9 @@ object WeaponAnimations {
         "SPEAR" to 0.3f,
         "SPEAR:SWEEP" to 0.42f,
         "SPEAR:SCYTHE" to 0.42f,
+        "SPEAR:RUBY" to 0.42f,
+        "SPEAR:RUBY_VAULT" to 0.4f,
+        "SPEAR:RUBY_SPIN" to 0.5f,
         "SPEAR:SLAM" to 0.38f,
         "SPEAR:TWIRL" to 0.5f,
         "DAGGER" to 0.28f,
@@ -854,13 +1016,14 @@ object WeaponAnimations {
             }
         }
         POSES["SPEAR:TWIRL"]?.spin = true
+        POSES["SPEAR:RUBY_SPIN"]?.spin = true
         listOf("SPELL:SPIN_ATTACK", "SPELL:LACERATE", "SPELL:OPHANIM").forEach { POSES[it]?.spin = true }
         POSES.forEach { (key, value) -> if (!key.startsWith("BOW") && !key.startsWith("SPELL:")) value.curves[TURN] = value.curves[TURN].scaled(TURN_BOOST) }
         SECONDS.forEach { (key, value) -> POSES[key]?.seconds = value }
         HITS.forEach { (key, value) -> POSES[key]?.hit = value }
         POSES.forEach { (key, value) -> value.key = key }
         val gripOn = curve(0f to B, 0.12f to 1f, 0.65f to 1f, 1f to B)
-        listOf("SPELL:BASH", "SPELL:CHARGE", "SPELL:UPPERCUT", "SPELL:WAR_SCREAM", "SPEAR", "SPEAR:SWEEP", "SPEAR:SCYTHE", "SPEAR:SLAM", "SPEAR:TWIRL", "WAND:STAFF", "WAND:STAFF_SWEEP", "WAND:STAFF_RAISE", "BOW:FIREARM").forEach { key ->
+        listOf("SPELL:BASH", "SPELL:CHARGE", "SPELL:UPPERCUT", "SPELL:WAR_SCREAM", "SPEAR", "SPEAR:SWEEP", "SPEAR:SCYTHE", "SPEAR:RUBY", "SPEAR:RUBY_VAULT", "SPEAR:RUBY_SPIN", "SPEAR:SLAM", "SPEAR:TWIRL", "WAND:STAFF", "WAND:STAFF_SWEEP", "WAND:STAFF_RAISE", "BOW:FIREARM").forEach { key ->
             POSES[key]?.curves?.set(GRIP, gripOn)
         }
         POSES["BOW:FIREARM"]?.gripOffset = 9f
@@ -874,6 +1037,7 @@ object WeaponAnimations {
         "SPEAR" to listOf(step("SPEAR"), step("SPEAR:SWEEP"), step("SPEAR", true), step("SPEAR:SLAM", finisher = true)),
         "SPEAR:SWEEP" to listOf(step("SPEAR:SWEEP"), step("SPEAR:SWEEP", true), step("SPEAR"), step("SPEAR:TWIRL", finisher = true)),
         "SPEAR:SCYTHE" to listOf(step("SPEAR:SCYTHE"), step("SPEAR:SCYTHE", true), step("SPEAR:SLAM"), step("SPEAR:TWIRL", finisher = true)),
+        "SPEAR:RUBY" to listOf(step("SPEAR:RUBY"), step("SPEAR:RUBY", true), step("SPEAR:RUBY_VAULT"), step("SPEAR:RUBY_SPIN", finisher = true)),
         "DAGGER" to listOf(step("DAGGER"), step("DAGGER", true), step("DAGGER:UPPER"), step("DAGGER:WHIRL", finisher = true)),
         "DAGGER:STAB" to listOf(step("DAGGER:STAB"), step("DAGGER:STAB", true), step("DAGGER:CROSS"), step("DAGGER:UPPER", finisher = true)),
         "DAGGER:WHIRL" to listOf(step("DAGGER:WHIRL"), step("DAGGER:CROSS"), step("DAGGER:UPPER", true), step("DAGGER:WHIRL", true, finisher = true)),
@@ -899,6 +1063,12 @@ object WeaponAnimations {
             "SPEAR" to listOf(cue(0.1f, SoundEvents.SPEAR_ATTACK.value(), 1.2f, 0.55f)),
             "SPEAR:SWEEP" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.9f, 0.7f)),
             "SPEAR:SCYTHE" to listOf(cue(0.12f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.7f, 0.8f)),
+            "SPEAR:RUBY" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.8f)),
+            "SPEAR:RUBY_VAULT" to listOf(cue(0.15f, SoundEvents.MACE_SMASH_AIR, 1.0f, 0.5f), cue(0.34f, SoundEvents.MACE_SMASH_GROUND, 0.9f, 0.5f)),
+            "SPEAR:RUBY_SPIN" to listOf(
+                cue(0.4f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.6f),
+                cue(0.75f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.5f),
+            ),
             "SPEAR:SLAM" to listOf(cue(0.15f, SoundEvents.MACE_SMASH_AIR, 1.0f, 0.5f), cue(0.38f, SoundEvents.MACE_SMASH_GROUND, 1.1f, 0.5f)),
             "SPEAR:TWIRL" to listOf(
                 cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2f, 0.6f),
@@ -956,9 +1126,24 @@ object WeaponAnimations {
 
     private val FINISHER_CUE: Cue by lazy { cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.8f, 0.5f) }
 
+    private val HAND_SHIFT = mapOf(
+        "SPEAR:RUBY" to 12f,
+        "SPEAR:RUBY_VAULT" to 12f,
+        "SPEAR:RUBY_SPIN" to 12f,
+    )
+
+    private val HAND_SPRINT_EXTRA = mapOf(
+        "SPEAR:RUBY" to 6f,
+        "SPEAR:RUBY_VAULT" to 6f,
+        "SPEAR:RUBY_SPIN" to 6f,
+    )
+
     private val TRAIL_SPANS = mapOf(
         "SPEAR" to (-6f to 32f),
         "SPEAR:SCYTHE" to (-6f to 34f),
+        "SPEAR:RUBY" to (-6f to 42f),
+        "SPEAR:RUBY_VAULT" to (-6f to 42f),
+        "SPEAR:RUBY_SPIN" to (-6f to 42f),
         "WAND:STAFF" to (-6f to 32f),
         "WAND:STAFF_SWEEP" to (-6f to 32f),
         "WAND:STAFF_RAISE" to (-6f to 32f),
@@ -973,6 +1158,9 @@ object WeaponAnimations {
         "SPEAR" to "Spear: Thrust",
         "SPEAR:SWEEP" to "Spear: Sweep",
         "SPEAR:SCYTHE" to "Spear: Scythe reap",
+        "SPEAR:RUBY" to "Scythe: Crescent reap (Ruby Rose)",
+        "SPEAR:RUBY_VAULT" to "Scythe: Plant and vault",
+        "SPEAR:RUBY_SPIN" to "Scythe: Recoil spin",
         "SPEAR:SLAM" to "Spear: Overhead slam",
         "SPEAR:TWIRL" to "Spear: Twirl",
         "DAGGER" to "Dagger: Slash",
@@ -1008,7 +1196,6 @@ object WeaponAnimations {
 
     private val CLASS_NAME = Regex("(warrior|knight|assassin|ninja|mage|dark ?wizard|archer|hunter|shaman|skyseer)", RegexOption.IGNORE_CASE)
 
-
     private fun smooth(x: Float): Float {
         val c = x.coerceIn(0f, 1f)
         return c * c * (3f - 2f * c)
@@ -1039,6 +1226,12 @@ object WeaponAnimations {
         private val idleCur = FloatArray(CHANNELS)
         private var idleTable: Stance? = null
         private var idleAmt = 0f
+        private var stillAmt = 0f
+        private var sprintAmt = 0f
+        private var stillTicks = 0
+        private var sprintingNow = false
+        private var walkAmt = 0f
+        private var walkingNow = false
         private var idleLast = 0L
         private var readyUntil = 0L
         private var idleStack: ItemStack? = null
@@ -1051,13 +1244,54 @@ object WeaponAnimations {
             for (i in 0 until CHANNELS) base[i] += (idleCur[i] - base[i]) * amt
         }
 
+        fun applyGait(base: FloatArray, pos: Float, speed: Float, side: Float) {
+            val move = walkAmt + sprintAmt
+            if (move <= 0.001f) return
+            val sp = speed.coerceIn(0f, 1f)
+            val phase = pos * GAIT_PHASE
+            val swing = cos(phase)
+            val bounce = sin(phase * 2f)
+            val g = idleTable?.gait ?: DEFAULT_GAIT
+            val mainAmp = (g.mainWalk * walkAmt + g.mainSprint * sprintAmt) * sp
+            val offAmp = (g.offWalk * walkAmt + g.offSprint * sprintAmt) * sp
+            val armBob = bounce * g.armBob * move * sp
+            base[PITCH] += armBob - side * swing * mainAmp
+            base[OFF_PITCH] += armBob + side * swing * offAmp
+            base[ACROSS] += swing * g.across * sprintAmt * sp
+            base[OFF_ACROSS] -= swing * g.across * sprintAmt * sp
+            base[LEAN] += g.lean * sprintAmt + bounce * g.leanBounce * sprintAmt * sp
+            base[HEAD_A] += bounce * (g.tipSprint * sprintAmt + g.tipWalk * walkAmt) * sp
+            base[HEAD_Y] += swing * g.yaw * (sprintAmt + walkAmt) * sp
+            base[TWIST] += swing * g.twist * move * sp
+        }
+
+        fun sway(): Float {
+            if (stillAmt <= 0.001f) return 0f
+            val phase = (System.nanoTime() % SWAY_NANOS).toDouble() / SWAY_NANOS
+            return (sin(phase * 2.0 * Math.PI) * SWAY_AMP * stillAmt).toFloat()
+        }
+
+        fun sprintBob(): Float {
+            if (sprintAmt <= 0.001f) return 0f
+            val phase = (System.nanoTime() % SPRINT_BOB_NANOS).toDouble() / SPRINT_BOB_NANOS
+            return (sin(phase * 2.0 * Math.PI) * SPRINT_BOB_AMP * sprintAmt).toFloat()
+        }
+
+        fun idleKey(): String? = idleStackKey
+
+        fun sprintAmount(): Float = sprintAmt
+
         fun idleGripOffset(): Float? = idleTable?.takeIf { idleAmt > 0.5f && it.ready[GRIP] > 0f }?.gripOffset
 
         fun idleActive(): Boolean = idleAmt > 0.01f
 
+        fun heldAmount(): Float = idleAmt
+
+        fun rawAt(p: Pose, t: Float, base: FloatArray, out: FloatArray) = sampleRaw(p, t, base, out)
+
         fun breath(): Float {
             val phase = (System.nanoTime() % BREATH_NANOS).toDouble() / BREATH_NANOS
-            return (sin(phase * 2.0 * Math.PI) * BREATH_AMP * idleAmt).toFloat()
+            return (sin(phase * 2.0 * Math.PI) * BREATH_AMP * idleAmt * (1f + IDLE_BREATH_BOOST * stillAmt) * (1f - sprintAmt)).toFloat()
         }
 
         fun idleStep() {
@@ -1066,11 +1300,25 @@ object WeaponAnimations {
             idleLast = now
             val a = 1f - exp(-dt / IDLE_TAU)
             val table = idleTable
+            val config = OverwatchConfig.current
+            val ready = now < readyUntil
+            val r = if (ready) 1f else 0f
+            val stillGoal = table != null && !ready && config.weaponTrueIdleEnabled &&
+                stillTicks * TICK_NANOS >= (config.weaponTrueIdleDelaySeconds * 1_000_000_000.0).toLong()
+            val sprintGoal = table != null && !ready && config.weaponSprintEnabled && sprintingNow
+            val walkGoal = table != null && !ready && config.weaponWalkEnabled && walkingNow && !sprintGoal
+            stillAmt += ((if (stillGoal) 1f else 0f) - stillAmt) * a
+            sprintAmt += ((if (sprintGoal) 1f else 0f) - sprintAmt) * a
+            walkAmt += ((if (walkGoal) 1f else 0f) - walkAmt) * a
             if (table != null) {
-                val r = if (now < readyUntil) 1f else 0f
                 val snap = idleAmt < 0.01f
                 for (i in 0 until CHANNELS) {
-                    val goal = table.carry[i] + (table.ready[i] - table.carry[i]) * r
+                    var goal = table.carry[i]
+                    goal += (table.idle[i] - goal) * stillAmt
+                    val walkPose = table.walk?.get(i) ?: (table.carry[i] + (table.sprint[i] - table.carry[i]) * WALK_SHARE)
+                    goal += (walkPose - goal) * walkAmt
+                    goal += (table.sprint[i] - goal) * sprintAmt
+                    goal += (table.ready[i] - goal) * r
                     idleCur[i] = if (snap) goal else idleCur[i] + (goal - idleCur[i]) * a
                 }
             }
@@ -1079,6 +1327,11 @@ object WeaponAnimations {
 
         private fun refreshIdle(player: LocalPlayer) {
             idleRight = player.mainArm == HumanoidArm.RIGHT
+            val speedSq = player.deltaMovement.horizontalDistanceSqr()
+            val still = speedSq < STILL_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isUsingItem && !player.swinging
+            stillTicks = if (still) stillTicks + 1 else 0
+            sprintingNow = player.isSprinting && speedSq > SPRINT_SPEED_SQ
+            walkingNow = speedSq > WALK_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isCrouching
             if (!enabled() || !OverwatchConfig.current.weaponIdleEnabled || player.isUsingItem) {
                 idleTable = null
                 return
@@ -1159,7 +1412,6 @@ object WeaponAnimations {
             cueFired = BooleanArray(cues.size)
             cueFinisher = combo.finisher
             trailStrength = if (combo.finisher) 1.25f else 1f
-            WeaponTrail.setWeapon(stack)
             val previous = pose
             val previousT = progress()
             carry = if (previous != null && previousT >= 0f) {
@@ -1291,7 +1543,7 @@ object WeaponAnimations {
 
         private fun sampleRaw(p: Pose, t: Float, base: FloatArray, out: FloatArray) {
             for (i in 0 until CHANNELS) {
-                out[i] = if (i == HEAD_Y && p.spin) base[i] + p.curves[i].at(t, 0f) else p.curves[i].at(t, base[i])
+                out[i] = if ((i == HEAD_Y || i == TWIST) && p.spin) base[i] + p.curves[i].at(t, 0f) else p.curves[i].at(t, base[i])
             }
         }
 
@@ -1304,7 +1556,7 @@ object WeaponAnimations {
             }
             val scale = k * amp * relaxWeight()
             for (i in 0 until CHANNELS) {
-                val sc = if (i == HEAD_Y && p.spin) 1f else scale
+                val sc = if ((i == HEAD_Y || i == TWIST) && p.spin) 1f else scale
                 out[i] = base[i] + (raw[i] - base[i]) * sc
             }
         }
@@ -1312,11 +1564,24 @@ object WeaponAnimations {
 
     fun init() {
         ClientTickEvents.END_CLIENT_TICK.register(SwingClock::tick)
-        WeaponTrail.init()
     }
 
     @JvmStatic
     fun suppressVanilla(): Boolean = SwingClock.suppress
+
+    @JvmStatic
+    fun trailRight(): Boolean = SwingClock.right
+
+    @JvmStatic
+    fun trailStrength(): Float = SwingClock.trailStrength
+
+    @JvmStatic
+    fun trailActive(): Boolean {
+        val pose = SwingClock.pose ?: return false
+        val family = pose.key.substringBefore(':')
+        if (family == "WAND" || family == "RELIK") return false
+        return trailSpan(pose.key) != null
+    }
 
     @JvmStatic
     fun onSwing(player: LocalPlayer) {
@@ -1363,7 +1628,7 @@ object WeaponAnimations {
 
     fun autoStyleKey(stack: ItemStack): String? = autoKind(stack)?.name
 
-    fun startsSpellWithLeft(stack: ItemStack): Boolean = autoStyleKey(stack)?.startsWith("BOW") == true
+    fun isRanged(stack: ItemStack): Boolean = autoStyleKey(stack)?.startsWith("BOW") == true
 
     private fun enabled(): Boolean =
         OverwatchConfig.current.weaponAnimationsEnabled && OverwatchGate.isInGame()
@@ -1397,11 +1662,8 @@ object WeaponAnimations {
         .rotationX(Math.toRadians(-90.0).toFloat())
         .mul(Quaternionf().rotationY(Math.PI.toFloat()))
     private val ITEM_FRAME_INV = Quaternionf(ITEM_FRAME).invert()
+    private val BOW_FRAME = Quaternionf().rotationX(-Math.PI.toFloat() / 2f)
     private val twistQuat = Quaternionf()
-    private val trailNear = Vector3f()
-    private val trailFar = Vector3f()
-    private val nearWorld = DoubleArray(3)
-    private val farWorld = DoubleArray(3)
     private val clipQuat = Quaternionf()
     private val clipPoint = Vector3f()
 
@@ -1410,7 +1672,11 @@ object WeaponAnimations {
     private var headTwist = 0f
     private var headYaw = 0f
     private var headSide = 1f
+    private var handShift = 0f
+    private val shiftVec = Vector3f()
+    private var lastReach = 0f
     private var headActive = false
+    private var headBow = false
     private var headFrame = -1L
     private var debugLine = ""
     private var debugKey = ""
@@ -1418,6 +1684,27 @@ object WeaponAnimations {
     private var debugRestA = 0f
     private var debugRestY = 0f
     private val debugDir = Vector3f()
+
+    @JvmStatic
+    fun combatElbow(right: Boolean): Float {
+        val main = (right == (headSide > 0f))
+        val reach = if (main) lastReach else lastReach * OFFHAND_REACH_SHARE
+        return (ELBOW_REST_FLEX + ELBOW_REACH_FLEX * reach).coerceIn(ELBOW_MIN_FLEX, ELBOW_MAX_FLEX)
+    }
+
+    private const val OFFHAND_REACH_SHARE = 0.7f
+    private const val ELBOW_REST_FLEX = 0.32f
+    private const val ELBOW_REACH_FLEX = 0.13f
+    private const val ELBOW_MIN_FLEX = 0.08f
+    private const val ELBOW_MAX_FLEX = 0.85f
+
+    @JvmStatic
+    fun claimsArms(state: HumanoidRenderState): Boolean {
+        if (state !is AvatarRenderState) return false
+        val player = Minecraft.getInstance().player ?: return false
+        if (state.id != player.id) return false
+        return (SwingClock.progress() >= 0f && SwingClock.pose != null) || SwingClock.idleActive()
+    }
 
     @JvmStatic
     fun applyThirdPerson(model: HumanoidModel<*>, state: HumanoidRenderState): Boolean {
@@ -1459,7 +1746,11 @@ object WeaponAnimations {
         base[HEAD_Y] = atan2(s * restDir.x, -restDir.z)
 
         SwingClock.blendIdle(base)
+        SwingClock.applyGait(base, state.walkAnimationPos, state.walkAnimationSpeed, s)
         val breath = SwingClock.breath()
+        val sway = SwingClock.sway()
+        base[ACROSS] += sway
+        base[HEAD_Y] += sway * 0.6f
         base[PITCH] += breath
         base[OFF_PITCH] += breath * 0.8f
         base[HEAD_A] += breath * 0.5f
@@ -1482,29 +1773,72 @@ object WeaponAnimations {
         applyBody(model, right, yaw, out[LEAN], out[STEP])
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
+        val guardKey = if (swinging && pose != null) pose.key else SwingClock.idleKey()
+        if (guardKey != null && guardKey in HAND_SHIFT) {
+            val guardSpan = trailSpan(guardKey)
+            if (guardSpan != null) keepShaftClear(main, s, yaw, out, guardSpan, HAND_SHIFT.getValue(guardKey))
+        }
         val offShoulder = -mainShoulder
         val gripWeight = out[GRIP].coerceIn(0f, 1f)
         val gripOffset = SwingClock.idleGripOffset() ?: pose?.gripOffset ?: 7f
         val offX = off.xRot
         val offY = off.yRot
         val offZ = off.zRot
-        for (relax in GRIP_RELAX) {
+        val gripFits = { slide: Float, relax: Float ->
             off.xRot = offX
             off.yRot = offY
             off.zRot = offZ
-            applyGrip(main, off, s, yaw, out[HEAD_A], out[HEAD_Y], gripWeight * relax, gripOffset)
-            if (!armInsideBody(off, offShoulder, yaw)) break
+            applyGrip(main, off, s, yaw, out[HEAD_A], out[HEAD_Y], gripWeight * relax, (gripOffset + slide).coerceAtLeast(GRIP_MIN_OFFSET))
+            !armInsideBody(off, offShoulder, yaw)
         }
+        var slideGoal = 0f
+        var relaxGoal = 1f
+        if (!gripFits(0f, 1f)) {
+            var found = false
+            for (i in 1..GRIP_SLIDE_STEPS) {
+                val d = i * GRIP_SLIDE_STEP
+                if (gripFits(d, 1f)) {
+                    slideGoal = d
+                    found = true
+                    break
+                }
+                if (gripFits(-d, 1f)) {
+                    slideGoal = -d
+                    found = true
+                    break
+                }
+            }
+            if (!found) {
+                relaxGoal = if (!gripFits(0f, 0f)) 0f else {
+                    var lo = 0f
+                    var hi = 1f
+                    repeat(GRIP_BISECT) {
+                        val mid = (lo + hi) * 0.5f
+                        if (gripFits(0f, mid)) lo = mid else hi = mid
+                    }
+                    lo
+                }
+            }
+        }
+        val now = System.nanoTime()
+        val dt = if (gripRelaxNanos == 0L) 1f else ((now - gripRelaxNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        gripRelaxNanos = now
+        val blend = 1f - exp(-dt / GRIP_RELAX_TAU)
+        gripRelax += (relaxGoal - gripRelax) * blend
+        gripSlide += (slideGoal - gripSlide) * blend
+        gripFits(gripSlide, gripRelax)
         keepOutOfBody(off, offShoulder, yaw)
-
-        if (swinging && pose != null) sampleTrailThirdPerson(state, main, s, yaw, out[HEAD_A], out[HEAD_Y], pose.key)
 
         headA = out[HEAD_A]
         headY = out[HEAD_Y]
         headTwist = out[TWIST]
         headYaw = yaw
         headSide = s
+        lastReach = out[REACH]
         headActive = true
+        val shiftKey = if (swinging && pose != null) pose.key else SwingClock.idleKey()
+        headBow = shiftKey != "BOW:FIREARM" && Minecraft.getInstance().player?.let { ActiveWeapon.isRanged(it) } == true
+        handShift = (HAND_SHIFT[shiftKey] ?: 0f) + (HAND_SPRINT_EXTRA[shiftKey] ?: 0f) * SwingClock.sprintAmount()
         headFrame = System.nanoTime()
         if (OverwatchConfig.current.weaponAnimationPreview) {
             debugKey = pose?.key ?: "IDLE"
@@ -1515,33 +1849,41 @@ object WeaponAnimations {
         return true
     }
 
-    private fun sampleTrailThirdPerson(state: HumanoidRenderState, main: ModelPart, side: Float, yaw: Float, headA: Float, headY: Float, key: String) {
-        if (!OverwatchConfig.current.weaponAnimationTrail) return
-        if (Minecraft.getInstance().options.cameraType.isFirstPerson) return
-        val span = trailSpan(key) ?: return
+    private fun keepShaftClear(main: ModelPart, side: Float, yaw: Float, out: FloatArray, span: Pair<Float, Float>, shift: Float) {
         armQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
         gripPoint.set(0f, GRIP_Y, GRIP_Z).rotate(armQuat).add(main.x, main.y, main.z)
-        val cosA = cos(headA)
-        gripShaft.set(side * sin(headY) * cosA, sin(headA), -cos(headY) * cosA).rotateY(yaw)
-        val angle = Math.toRadians((180f - state.bodyRot).toDouble()).toFloat()
-        val scale = PLAYER_SCALE * state.scale
-        trailNear.set(gripPoint).fma(span.first, gripShaft)
-        trailFar.set(gripPoint).fma(span.second, gripShaft)
-        worldPoint(state, trailNear, angle, scale, nearWorld)
-        worldPoint(state, trailFar, angle, scale, farWorld)
-        WeaponTrail.addWorld(nearWorld[0], nearWorld[1], nearWorld[2], farWorld[0], farWorld[1], farWorld[2], SwingClock.trailStrength)
+        val outward = if (cos(out[HEAD_Y]) >= 0f) -1f else 1f
+        val from = span.first + shift
+        val to = span.second + shift
+        repeat(SHAFT_GUARD_STEPS) {
+            val cosA = cos(out[HEAD_A])
+            gripShaft.set(side * sin(out[HEAD_Y]) * cosA, sin(out[HEAD_A]), -cos(out[HEAD_Y]) * cosA).rotateY(yaw)
+            if (!shaftHitsBody(gripPoint, gripShaft, yaw, from, to)) return
+            out[HEAD_Y] += outward * SHAFT_GUARD_STEP
+        }
     }
 
-    private fun worldPoint(state: HumanoidRenderState, p: Vector3f, angle: Float, scale: Float, out: DoubleArray) {
-        val lx = -p.x / MODEL_UNIT * scale
-        val ly = (MODEL_LIFT - p.y / MODEL_UNIT) * scale
-        val lz = p.z / MODEL_UNIT * scale
-        val c = cos(angle)
-        val sn = sin(angle)
-        out[0] = state.x + lx * c + lz * sn
-        out[1] = state.y + ly
-        out[2] = state.z - lx * sn + lz * c
+    private fun shaftHitsBody(origin: Vector3f, dir: Vector3f, yaw: Float, from: Float, to: Float): Boolean {
+        var t = from
+        while (t <= to) {
+            clipPoint.set(origin).fma(t, dir).rotateY(-yaw)
+            val margin = if (t > to - SHAFT_BLADE_LENGTH) SHAFT_BLADE_MARGIN else SHAFT_MARGIN
+            val x = abs(clipPoint.x)
+            val y = clipPoint.y
+            val z = abs(clipPoint.z)
+            if (x < BODY_HALF_WIDTH + margin && y > 0f && y < BODY_BOTTOM - 2f && z < 2f + margin) return true
+            if (x < 4f + margin && y > -8f - margin && y < margin && z < 4f + margin) return true
+            t += SHAFT_SAMPLE
+        }
+        return false
     }
+
+    private const val SHAFT_GUARD_STEPS = 30
+    private const val SHAFT_GUARD_STEP = 0.04f
+    private const val SHAFT_SAMPLE = 3f
+    private const val SHAFT_MARGIN = 1.5f
+    private const val SHAFT_BLADE_MARGIN = 4f
+    private const val SHAFT_BLADE_LENGTH = 20f
 
     private fun leanPart(part: ModelPart, yaw: Float, lean: Float) {
         clipPoint.set(part.x, part.y - HIP_Y, part.z).rotateY(-yaw).rotateX(lean).rotateY(yaw)
@@ -1633,10 +1975,18 @@ object WeaponAnimations {
         val cosA = cos(headA)
         target.set(headSide * sin(headY) * cosA, sin(headA), -cos(headY) * cosA).rotateY(headYaw)
         armQuat.rotationZYX(part.zRot, part.yRot, part.xRot)
+        val bend = LimbBend.freshBend(part)
+        if (bend != 0f) armQuat.rotateX(bend)
         local.set(target).rotate(armQuat.invert())
         wristQuat.rotationTo(HEAD_REST, local)
         twistQuat.rotationAxis(headTwist * headSide, HEAD_REST)
-        itemQuat.set(ITEM_FRAME_INV).mul(wristQuat).mul(twistQuat).mul(ITEM_FRAME)
+        itemQuat.set(ITEM_FRAME_INV).mul(wristQuat).mul(twistQuat)
+        if (headBow) itemQuat.mul(BOW_FRAME)
+        itemQuat.mul(ITEM_FRAME)
+        if (handShift != 0f) {
+            shiftVec.set(local).rotate(ITEM_FRAME_INV).mul(handShift / MODEL_UNIT)
+            stack.translate(shiftVec.x, shiftVec.y, shiftVec.z)
+        }
         stack.mulPose(itemQuat)
         if (OverwatchConfig.current.weaponAnimationPreview) {
             armQuat.rotationZYX(part.zRot, part.yRot, part.xRot)
@@ -1656,28 +2006,14 @@ object WeaponAnimations {
         val pose = SwingClock.pose
         if (t < 0f || pose == null || (arm == HumanoidArm.RIGHT) != SwingClock.right) return false
 
-        val k = 1f
         val out = outBuffer
         val fpBase = firstPersonBase
         REST_BASE.copyInto(fpBase)
         SwingClock.blendIdle(fpBase)
-        SwingClock.sample(pose, t, fpBase, k, out)
-        poseFirstPerson(stack, sign, out, 0f)
-        sampleTrailFirstPerson(stack, pose.key)
+        SwingClock.sample(pose, t, fpBase, 1f, out)
+        SwingClock.rawAt(pose, 0f, fpBase, fpStart)
+        poseFirstPersonSwing(stack, sign, out, fpStart, t)
         return true
-    }
-
-    private val fpNear = Vector3f()
-    private val fpFar = Vector3f()
-    private val fpAxis = Vector3f(0f, 0.8f, -0.5f).normalize()
-
-    private fun sampleTrailFirstPerson(stack: PoseStack, key: String) {
-        if (!OverwatchConfig.current.weaponAnimationTrail) return
-        if (trailSpan(key) == null) return
-        val pose = stack.last().pose()
-        fpNear.set(fpAxis).mul(-0.05f).mulPosition(pose)
-        fpFar.set(fpAxis).mul(0.95f).mulPosition(pose)
-        WeaponTrail.addView(fpNear.x, fpNear.y, fpNear.z, fpFar.x, fpFar.y, fpFar.z, SwingClock.trailStrength)
     }
 
     @JvmStatic
@@ -1685,26 +2021,43 @@ object WeaponAnimations {
         SwingClock.idleStep()
         if (!SwingClock.idleActive() || (arm == HumanoidArm.RIGHT) != SwingClock.idleRight) return
         if (SwingClock.pose != null && SwingClock.progress() >= 0f && (arm == HumanoidArm.RIGHT) == SwingClock.right) return
-        val base = firstPersonBase
-        REST_BASE.copyInto(base)
-        SwingClock.blendIdle(base)
-        val breath = SwingClock.breath()
-        poseFirstPerson(stack, sign, base, breath)
+        val held = SwingClock.heldAmount()
+        val breath = SwingClock.breath() + SwingClock.sprintBob()
+        val sway = SwingClock.sway()
+        val scale = 1f - (1f - FP_SCALE) * held
+        stack.translate(sway * FP_SWAY_MOVE, breath, 0f)
+        stack.scale(scale, scale, scale)
+        fpMix.rotationX(-breath * FP_BREATH_TILT).rotateZ(sway * FP_SWAY_TILT * sign)
+        stack.mulPose(fpMix)
     }
 
-    private const val FP_MOVE = 1.1f / 16f
-    private const val FP_ROT = 0.9f
-    private const val FP_LIMIT_X = 0.4f
-    private const val FP_LIMIT_Y = 0.5f
-    private const val FP_LIMIT_Z = 0.7f
-    private val fpGrip = Vector3f()
-    private val fpRestGrip = Vector3f()
+    private const val FP_UNIT = 1f / 16f
+    private const val FP_EYE_Y = -1.9f
+    private const val FP_HAND_GAIN = 1f
+    private const val FP_LIMIT_OUT = 0.18f
+    private const val FP_LIMIT_IN = 0.7f
+    private const val FP_LIMIT_UP = 0.55f
+    private const val FP_LIMIT_DOWN = 0.06f
+    private const val FP_LIMIT_BACK = 0.1f
+    private const val FP_LIMIT_FORWARD = 0.5f
+    private const val FP_MIN_FORWARD = 0.4f
+    private const val FP_CONE = 1.2f
+    private const val FP_ROLL = 1.2f
+    private const val FP_SCALE = 0.82f
+    private const val FP_SHRINK = 0.1f
+    private const val FP_RAMP_IN = 0.08f
+    private const val FP_RAMP_OUT = 0.16f
+    private const val FP_SWAY_MOVE = 0.6f
+    private const val FP_SWAY_TILT = 0.5f
+    private const val FP_BREATH_TILT = 0.5f
     private val fpArm = Quaternionf()
     private val fpQuat = Quaternionf()
-    private val fpRest = Quaternionf()
     private val fpMix = Quaternionf()
-    private val fpIdentity = Quaternionf()
-    private val fpRestFor = FloatArray(CHANNELS)
+    private val fpStart = FloatArray(CHANNELS)
+    private val fpPosNow = Vector3f()
+    private val fpPosStart = Vector3f()
+    private val fpDirNow = Vector3f()
+    private val fpDirStart = Vector3f()
 
     private fun fpGripPos(ch: FloatArray, s: Float, out: Vector3f) {
         val yaw = -s * ch[TURN]
@@ -1714,23 +2067,52 @@ object WeaponAnimations {
         out.z += ch[REACH]
     }
 
-    private fun fpOrient(a: Float, y: Float, turn: Float, twist: Float, s: Float, out: Quaternionf) {
-        out.rotationY(s * (y + turn)).rotateX(-a).rotateZ(-s * twist)
+    private fun fpRig(ch: FloatArray, s: Float, pos: Vector3f, dir: Vector3f) {
+        fpGripPos(ch, s, pos)
+        val cosA = cos(ch[HEAD_A])
+        dir.set(s * sin(ch[HEAD_Y]) * cosA, sin(ch[HEAD_A]), -cos(ch[HEAD_Y]) * cosA).rotateY(-s * ch[TURN])
+        val lean = ch[LEAN]
+        if (lean != 0f) {
+            pos.y -= HIP_Y
+            pos.rotateX(lean)
+            pos.y += HIP_Y
+            dir.rotateX(lean)
+        }
+        pos.set(-pos.x * FP_UNIT, -(pos.y - FP_EYE_Y) * FP_UNIT, pos.z * FP_UNIT)
+        dir.set(-dir.x, -dir.y, dir.z)
+        if (dir.z > -FP_MIN_FORWARD) dir.z = -FP_MIN_FORWARD
+        dir.normalize()
     }
 
-    private fun poseFirstPerson(stack: PoseStack, sign: Int, ch: FloatArray, breath: Float) {
+    private fun softLimit(v: Float, positive: Float, negative: Float): Float =
+        if (v >= 0f) positive * kotlin.math.tanh(v / positive) else -negative * kotlin.math.tanh(-v / negative)
+
+    private fun poseFirstPersonSwing(stack: PoseStack, sign: Int, ch: FloatArray, start: FloatArray, t: Float) {
         val s = sign.toFloat()
-        fpGripPos(ch, s, fpGrip)
-        REST_BASE.copyInto(fpRestFor)
-        fpGripPos(fpRestFor, s, fpRestGrip)
-        val dx = (-(fpGrip.x - fpRestGrip.x) * FP_MOVE).coerceIn(-FP_LIMIT_X, FP_LIMIT_X)
-        val dy = (-(fpGrip.y - fpRestGrip.y) * FP_MOVE + breath).coerceIn(-FP_LIMIT_Y, FP_LIMIT_Y)
-        val dz = ((fpGrip.z - fpRestGrip.z) * FP_MOVE * 1.5f).coerceIn(-FP_LIMIT_Z, FP_LIMIT_Z)
-        fpOrient(ch[HEAD_A] + breath * 0.5f, ch[HEAD_Y], ch[TURN], ch[TWIST], s, fpQuat)
-        fpOrient(REST_BASE[HEAD_A], 0f, 0f, 0f, s, fpRest)
-        fpQuat.mul(fpRest.invert())
-        fpMix.set(fpIdentity).slerp(fpQuat, FP_ROT)
+        fpRig(ch, s, fpPosNow, fpDirNow)
+        fpRig(start, s, fpPosStart, fpDirStart)
+        val dx = softLimit((fpPosNow.x - fpPosStart.x) * s * FP_HAND_GAIN, FP_LIMIT_OUT, FP_LIMIT_IN) * s
+        val dy = softLimit((fpPosNow.y - fpPosStart.y) * FP_HAND_GAIN, FP_LIMIT_UP, FP_LIMIT_DOWN)
+        val dz = softLimit((fpPosNow.z - fpPosStart.z) * FP_HAND_GAIN, FP_LIMIT_BACK, FP_LIMIT_FORWARD)
+
+        fpQuat.rotationTo(fpDirStart, fpDirNow)
+        val half = kotlin.math.acos(fpQuat.w.coerceIn(-1f, 1f))
+        val sinHalf = sin(half)
+        if (sinHalf > 1.0e-4f) {
+            val compressed = FP_CONE * kotlin.math.tanh(2f * half / FP_CONE)
+            fpQuat.rotationAxis(compressed, fpQuat.x / sinHalf, fpQuat.y / sinHalf, fpQuat.z / sinHalf)
+        } else {
+            fpQuat.identity()
+        }
+        val roll = FP_ROLL * kotlin.math.tanh(-s * (ch[TWIST] - start[TWIST]) / FP_ROLL)
+        fpMix.rotationAxis(roll, fpDirNow.x, fpDirNow.y, fpDirNow.z)
+        fpMix.mul(fpQuat)
+
+        val ramp = smooth(minOf(t / FP_RAMP_IN, (1f - t) / FP_RAMP_OUT, 1f).coerceAtLeast(0f))
+        val held = SwingClock.heldAmount()
+        val scale = (1f - (1f - FP_SCALE) * held) * (1f - FP_SHRINK * ramp)
         stack.translate(dx, dy, dz)
+        stack.scale(scale, scale, scale)
         stack.mulPose(fpMix)
     }
 }

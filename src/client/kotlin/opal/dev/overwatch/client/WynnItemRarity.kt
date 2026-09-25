@@ -26,22 +26,7 @@ object WynnItemRarity {
 
     fun loreLines(stack: ItemStack): List<String> {
         if (stack.isEmpty) return emptyList()
-        return stack.get(DataComponents.LORE)?.lines()?.map { clean(it.string) } ?: emptyList()
-    }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            val cp = text.codePointAt(i)
-            if (cp < 0xE000) sb.appendCodePoint(cp)
-            i += Character.charCount(cp)
-        }
-        return sb.toString().trim()
+        return stack.get(DataComponents.LORE)?.lines()?.map { TextClean.clean(it.string) } ?: emptyList()
     }
 
     private fun firstStyledColor(text: FormattedText): Int? {

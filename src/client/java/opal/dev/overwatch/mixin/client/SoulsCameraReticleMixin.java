@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(Hud.class)
 public abstract class SoulsCameraReticleMixin {
-
     @Redirect(
         method = "extractCrosshair",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z", ordinal = 0)

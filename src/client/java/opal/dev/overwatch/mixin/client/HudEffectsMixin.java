@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Hud.class)
 public abstract class HudEffectsMixin {
-
     @Inject(method = "extractEffects", at = @At("HEAD"), cancellable = true)
     private void overwatch$hideVanillaEffects(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (OverwatchGate.INSTANCE.isInGame() && OverwatchConfig.Companion.getCurrent().getHideVanillaPotionHud()) {

@@ -4,7 +4,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import kotlin.math.abs
 
 object HudLayoutManager {
-
     data class HudElementSpec(
         val id: String,
         val displayName: String,
@@ -14,6 +13,7 @@ object HudLayoutManager {
         val fallbackW: Int = 80,
         val fallbackH: Int = 16,
         val barStretch: Boolean = false,
+        val hidden: Boolean = false,
     )
 
     private val specs = LinkedHashMap<String, HudElementSpec>()
@@ -23,7 +23,7 @@ object HudLayoutManager {
         specs[spec.id] = spec
     }
 
-    fun specs(): List<HudElementSpec> = specs.values.toList()
+    fun specs(): List<HudElementSpec> = specs.values.filter { !it.hidden }
 
     private fun layoutFor(id: String): OverwatchConfig.HudElementLayout {
         val config = OverwatchConfig.current
@@ -82,6 +82,10 @@ object HudLayoutManager {
     fun setBoxSize(id: String, width: Int, height: Int) {
         layoutFor(id).barWidth = width.coerceAtLeast(0)
         layoutFor(id).boxH = height.coerceAtLeast(0)
+        stableSizes.remove(id)
+    }
+
+    fun forgetSize(id: String) {
         stableSizes.remove(id)
     }
 
@@ -167,6 +171,51 @@ object HudLayoutManager {
         val (sy, gy) = snapAxis(ty, h, yEdges, yCenters)
         moveTo(id, sx, sy, guiW, guiH)
         return SnapMove(sx, sy, listOfNotNull(gx), listOfNotNull(gy))
+    }
+
+    class SnapEdge(val value: Int, val guide: Int?)
+
+    fun snapEdge(id: String, horizontal: Boolean, raw: Int, guiW: Int, guiH: Int): SnapEdge {
+        val edges = ArrayList<Int>()
+        val centers = ArrayList<Int>()
+        if (horizontal) {
+            edges.add(0)
+            edges.add(guiW)
+            centers.add(guiW / 2)
+        } else {
+            edges.add(0)
+            edges.add(guiH)
+            centers.add(guiH / 2)
+        }
+        for (spec in specs()) {
+            if (spec.id == id) continue
+            val b = bounds(spec.id, guiW, guiH)
+            if (horizontal) {
+                edges.add(b[0])
+                edges.add(b[2])
+                centers.add((b[0] + b[2]) / 2)
+            } else {
+                edges.add(b[1])
+                edges.add(b[3])
+                centers.add((b[1] + b[3]) / 2)
+            }
+        }
+        var best = raw
+        var line: Int? = null
+        var bestDelta = Int.MAX_VALUE
+        fun consider(target: Int, cap: Int) {
+            val delta = abs(target - raw)
+            if (delta <= cap && delta < bestDelta) {
+                bestDelta = delta
+                best = target
+                line = target
+            }
+        }
+        for (center in centers) consider(center, CENTER_SNAP_RADIUS)
+        for (edge in edges) consider(edge, EDGE_SNAP_RADIUS)
+        val nearest = Math.round(raw / SNAP_GRID.toFloat()) * SNAP_GRID
+        consider(nearest, GRID_SNAP_RADIUS)
+        return SnapEdge(best, line)
     }
 
     fun moveTo(id: String, nx: Int, ny: Int, guiW: Int, guiH: Int) {

@@ -4,7 +4,6 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 
 object WynnPouches {
-
     fun isEmeraldPouch(stack: ItemStack): Boolean = lettersOf(stack).contains("Emerald Pouch", ignoreCase = true)
 
     fun isIngredientPouch(stack: ItemStack): Boolean {

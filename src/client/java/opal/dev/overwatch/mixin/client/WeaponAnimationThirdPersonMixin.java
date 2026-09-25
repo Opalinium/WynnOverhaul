@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(HumanoidModel.class)
 public abstract class WeaponAnimationThirdPersonMixin {
-
     @Inject(method = "setupAttackAnimation", at = @At("HEAD"), cancellable = true)
     private void overwatch$weaponAttackAnimation(HumanoidRenderState state, CallbackInfo ci) {
         if (WeaponAnimations.applyThirdPerson((HumanoidModel<?>) (Object) this, state)) {

@@ -8,7 +8,6 @@ import net.minecraft.network.chat.Component
 import opal.dev.overwatch.Overwatch
 
 class WynnSpellComboHudElement : HudElement {
-
     private var loggedError = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
@@ -50,6 +49,8 @@ class WynnSpellComboHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         OwTheme.hudPanel(graphics, ox, oy, boxW, boxH)
+        HudStyle.fadeRule(graphics, ox, oy + boxH - 2, boxW, OwTheme.ACCENT_DIM, leftSolid = true)
+        HudStyle.diamond(graphics, ox + boxW / 2, oy + boxH - 2, 2, OwTheme.ACCENT)
         var tx = ox + (boxW - contentW) / 2
         for (i in parts.indices) {
             graphics.text(font, parts[i], tx, oy + 4, 0xFFFFFFFF.toInt(), true)

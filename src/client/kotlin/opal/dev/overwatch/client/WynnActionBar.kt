@@ -3,7 +3,6 @@ package opal.dev.overwatch.client
 import net.minecraft.network.chat.Component
 
 object WynnActionBar {
-
     fun isComposite(message: Component): Boolean {
         val raw = message.string
         if (!hasPrivateUse(raw)) return false

@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack
 import opal.dev.overwatch.Overwatch
 
 object CharacterInfo {
-
     fun register() {
         ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
             if (!OverwatchGate.inGame) return@register

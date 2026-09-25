@@ -5,7 +5,6 @@ import com.google.gson.reflect.TypeToken
 import opal.dev.overwatch.Overwatch
 
 object WynncraftQuests {
-
     data class Quest(
         val name: String,
         val combatLevel: Int,

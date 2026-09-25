@@ -1,7 +1,6 @@
 package opal.dev.overwatch.client
 
 object WynnSpellSegments {
-
     fun hasCast(raw: String): Boolean {
         val match = CAST_PATTERN.find(raw) ?: return false
         val segmentText = match.value

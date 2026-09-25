@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SoundManager.class)
 public abstract class SoundManagerMixin {
-
     @Inject(method = "play", at = @At("HEAD"), cancellable = true)
     private void overwatch$muteDuringContentBookScan(SoundInstance soundInstance, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
         if (ContentBookQuery.INSTANCE.isActive()) {

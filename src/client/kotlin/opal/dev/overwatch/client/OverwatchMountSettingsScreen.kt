@@ -12,7 +12,6 @@ import net.minecraft.world.inventory.Slot
 import opal.dev.overwatch.Overwatch
 
 class OverwatchMountSettingsScreen(private val menu: AbstractContainerMenu) : Screen(Component.literal("Mount Settings")) {
-
     private var mouseX = 0
     private var mouseY = 0
     private var journalButton: OwButton? = null

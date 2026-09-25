@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class ItemDebugCopyMixin {
-
     @Shadow
     protected Slot hoveredSlot;
 

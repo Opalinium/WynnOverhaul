@@ -26,7 +26,6 @@ data class WeaponAnimationEntry(
 )
 
 object WeaponAnimationRegistry {
-
     const val AUTO = "AUTO"
 
     private lateinit var registerKey: KeyMapping
