@@ -10,7 +10,9 @@ import opal.dev.overwatch.Overwatch
 class WynnQolClient : ClientModInitializer {
     override fun onInitializeClient() {
         OverwatchConfig.ensureLoaded()
+
         WynnRegions.ensureLoaded()
+
         Overwatch.LOGGER.info("Overwatch client initialized (nw-style HUD)")
         ClientTickEvents.END_CLIENT_TICK.register(::onTick)
         ChatHud.init()
@@ -33,6 +35,9 @@ class WynnQolClient : ClientModInitializer {
         WynnLevelUpToastOverride.register()
         WynnLocationToasts.register()
         MountTooltipFeature.register()
+        PowderSpecialsTooltip.register()
+        ObjectiveClaims.register()
+        WynnActionBar.registerDebug()
         PriceCheck.register()
         registerHudLayouts()
         HudElementRegistry.addLast(
@@ -51,6 +56,7 @@ class WynnQolClient : ClientModInitializer {
             Identifier.fromNamespaceAndPath("overwatch", "toast"),
             OverwatchToastHudElement(),
         )
+
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("overwatch", "hp"),
             HpHudElement(),

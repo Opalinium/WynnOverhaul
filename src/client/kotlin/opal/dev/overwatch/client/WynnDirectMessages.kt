@@ -25,12 +25,14 @@ object WynnDirectMessages {
     private const val SMART_WINDOW_MS = 3 * 60 * 1000L
     private const val GUILD_CAPTURE_MS = 1500L
     private const val PER_GROUP = 5
+    private const val SENT_WINDOW_MS = 30_000L
     private val NAME_PATTERN = Regex("^[A-Za-z0-9_]{3,16}$")
     private val TOKEN_PATTERN = Regex("[A-Za-z0-9_]{3,16}")
     private val SEND_COMMANDS = setOf("msg", "w", "tell", "whisper", "m", "pm", "message")
     private val REPLY_COMMANDS = setOf("r", "reply")
 
     private val conversations = LinkedHashMap<String, Conversation>()
+    private val sentTo = HashMap<String, Long>()
 
     @Volatile
     private var guildTokens: Set<String> = emptySet()
@@ -53,6 +55,8 @@ object WynnDirectMessages {
             guildTokens = emptySet()
             guildRequested = false
             lastIncomingPartner = null
+            PlayerLookup.clear()
+            sentTo.clear()
         }
     }
 
@@ -67,11 +71,12 @@ object WynnDirectMessages {
         val body = rest.substring(colon + 1).trim()
         if (left.isEmpty() || right.isEmpty() || left.length > 40 || right.length > 40) return null
         val me = Minecraft.getInstance().player?.name?.string.orEmpty()
-        return when {
+        val pm = when {
             isMe(left, me) -> Pm(right, true, body)
             isMe(right, me) -> Pm(left, false, body)
             else -> Pm(left, false, body)
         }
+        return if (NAME_PATTERN.matches(pm.partner) && !isMe(pm.partner, me)) pm else null
     }
 
     private fun isMe(name: String, me: String): Boolean =
@@ -104,21 +109,43 @@ object WynnDirectMessages {
         val raw = message.string
         val pm = parse(raw)
         if (pm != null) {
-            val now = System.currentTimeMillis()
-            val convo = conversation(pm.partner)
-            convo.lastAt = now
-            convo.lines.addLast(Line(pm.body, pm.outgoing, now))
-            while (convo.lines.size > MAX_LINES) convo.lines.removeFirst()
-            if (!pm.outgoing) {
-                convo.lastIncomingAt = now
-                lastIncomingPartner = pm.partner
-                if (!isViewing(pm.partner)) convo.unread++
-            }
+            val nickname = looksLikeNickname(message, pm)
+            PlayerLookup.verify(pm.partner, isKnownPlayer(pm.partner)) { real -> if (real || nickname) record(pm) }
             return
         }
         if (System.currentTimeMillis() < guildCaptureUntil) {
             val tokens = TOKEN_PATTERN.findAll(raw).map { it.value }.toSet()
             guildTokens = guildTokens + tokens
+        }
+    }
+
+    private fun isKnownPlayer(name: String): Boolean {
+        val lower = name.lowercase()
+        return conversations.containsKey(lower) ||
+            onlineNames().any { it.lowercase() == lower } ||
+            PartyFriendModel.friends.any { it.lowercase() == lower } ||
+            PartyFriendModel.partyMembers.any { it.lowercase() == lower }
+    }
+
+    private fun looksLikeNickname(message: Component, pm: Pm): Boolean {
+        val target = pm.partner.lowercase()
+        if (pm.outgoing && System.currentTimeMillis() - (sentTo[target] ?: 0L) < SENT_WINDOW_MS) return true
+        return message.toFlatList().any { part ->
+            val style = part.style
+            (style.clickEvent != null || style.hoverEvent != null) && part.string.lowercase().contains(target)
+        }
+    }
+
+    private fun record(pm: Pm) {
+        val now = System.currentTimeMillis()
+        val convo = conversation(pm.partner)
+        convo.lastAt = now
+        convo.lines.addLast(Line(pm.body, pm.outgoing, now))
+        while (convo.lines.size > MAX_LINES) convo.lines.removeFirst()
+        if (!pm.outgoing) {
+            convo.lastIncomingAt = now
+            lastIncomingPartner = pm.partner
+            if (!isViewing(pm.partner)) convo.unread++
         }
     }
 
@@ -139,6 +166,7 @@ object WynnDirectMessages {
         } ?: return
         val convo = conversation(target)
         convo.lastAt = System.currentTimeMillis()
+        sentTo[target.lowercase()] = convo.lastAt
     }
 
     private fun isViewing(partner: String): Boolean =
@@ -146,7 +174,9 @@ object WynnDirectMessages {
             WynnChatChannels.directTarget?.equals(partner, ignoreCase = true) == true
 
     fun noteOutgoing(name: String) {
-        conversation(name).lastAt = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        conversation(name).lastAt = now
+        sentTo[name.lowercase()] = now
     }
 
     fun markRead(name: String) {

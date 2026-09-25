@@ -66,15 +66,18 @@ object WynnLevelUpToastOverride {
             return false
         }
         val text = TextClean.clean(message.string)
+
         PERSONAL_COMBAT.matchEntire(text)?.let { m ->
             personalToast(m.groupValues[1].trim().trimEnd('!'))
             return false
         }
+
         PERSONAL_PROFESSION.matchEntire(text)?.let { m ->
             val profession = m.groupValues[2].replace(Regex("^[^A-Za-z]+"), "").trim()
             OverwatchToastQueue.show(OverwatchToastQueue.make(OverwatchToastQueue.Kind.LEVEL_UP, "Level Up!", "You reached $profession level ${m.groupValues[1]}!", TOAST_COLOR))
             return false
         }
+
         PERSONAL_GENERIC.matchEntire(text)?.let { m ->
             val name = m.groupValues[1].trim()
             val level = m.groupValues[2].trim().trimEnd('!')

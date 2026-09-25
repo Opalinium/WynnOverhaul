@@ -215,7 +215,6 @@ class OverwatchSettingsPanels(private val host: Host) {
         host.installPanelRows(scope.rows, left, top, w, host.panelContentBottom() - top)
     }
 
-
     private fun buildTrackerTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             val trackerCheckbox = OwCheckbox(left, 0, w, Component.literal("Entity Tracker enabled"), config.trackerEnabled) {
@@ -234,7 +233,6 @@ class OverwatchSettingsPanels(private val host: Host) {
             refreshTrackerStatus()
 
             rows += OwLabel(left, 0, w, 10, "Use the Rules / Display / Discovered tabs above for more.", OwTheme.TEXT_DIM) to OwTheme.ROW_H
-
         }
     }
 
@@ -244,7 +242,6 @@ class OverwatchSettingsPanels(private val host: Host) {
         trackerStatusLabel?.message =
             Component.literal("Tracker $state  ·  $count entit${if (count == 1) "y" else "ies"} match your rules right now")
     }
-
 
     private fun buildRulesTab(left: Int, w: Int, top: Int) {
         trackerRulesStatusLabel = OwLabel(left, top, w, 10, "")
@@ -467,7 +464,6 @@ class OverwatchSettingsPanels(private val host: Host) {
         }
     }
 
-
     private fun buildDisplayTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             checkbox(
@@ -485,7 +481,6 @@ class OverwatchSettingsPanels(private val host: Host) {
 
             header("Tracked List HUD")
             checkbox("Show distance in HUD list", "", config.trackerHudShowDistance) { config.trackerHudShowDistance = it }
-
         }
     }
 
@@ -496,7 +491,6 @@ class OverwatchSettingsPanels(private val host: Host) {
     }
 
     private fun soundLabel(): String = NotificationSounds.label(config.trackerPingSoundId)
-
 
     private fun buildDiscoveredTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -561,7 +555,6 @@ class OverwatchSettingsPanels(private val host: Host) {
             }
             nodeGuidanceRows.forEach { it.first.setTooltip(nodeGuidanceTooltip) }
             rows += nodeGuidanceRows
-
         }
     }
 
@@ -585,7 +578,6 @@ class OverwatchSettingsPanels(private val host: Host) {
             slider("Camera follow smoothing", 0.0, 1.0, config.soulsCameraSmoothing, "Lets the camera trail slightly behind your movement. 0 is rigid.") { config.soulsCameraSmoothing = it }
             slider("Character turn speed", 0.15, 1.0, config.soulsCameraTurnSpeed, "How quickly your character swings to face the way you run. 1 is instant.") { config.soulsCameraTurnSpeed = it }
             slider("Aim hold time (ms)", 0.0, 2000.0, config.soulsCameraFaceHoldMs, "How long your character keeps facing the crosshair after an attack or spell click before turning back to run. Raise it if spell combos get interrupted.") { config.soulsCameraFaceHoldMs = it }
-
         }
     }
 
@@ -677,10 +669,8 @@ class OverwatchSettingsPanels(private val host: Host) {
             ) { config.weaponAnimationPreview = it }
             val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress") { config.weaponAnimationPreviewT = it }
             rows += previewSlider to OwTheme.ROW_H
-
         }
     }
-
 
     private fun buildQolTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -696,6 +686,18 @@ class OverwatchSettingsPanels(private val host: Host) {
                 "Scrolling the hotbar past slot 9 or slot 1 stops there instead of looping around to the other end.",
                 config.qolPreventHotbarOverscroll,
             ) { config.qolPreventHotbarOverscroll = it }
+            checkbox(
+                "Remember camera mode",
+                "Restores your last camera mode (first person, third person back or front) when you join a world or server.",
+                config.rememberCameraMode,
+            ) { config.rememberCameraMode = it }
+
+            header("Town")
+            checkbox(
+                "Town NPC markers",
+                "Small faded icons over blacksmiths, merchants, item identifiers, upgraders and similar NPCs nearby. The name shows when you look at one.",
+                config.townNpcMarkersEnabled,
+            ) { config.townNpcMarkersEnabled = it }
 
             header("Nametags")
             checkbox(
@@ -710,6 +712,11 @@ class OverwatchSettingsPanels(private val host: Host) {
                 "Shows the tooltip of your currently equipped item beside the hovered armor piece, accessory or weapon in the Overwatch inventory.",
                 config.equipComparisonEnabled,
             ) { config.equipComparisonEnabled = it }
+            checkbox(
+                "Powder special effects",
+                "Adds the weapon and armour special effect of a powder to its tooltip (unlocked with two Tier 4+ powders of the same element).",
+                config.powderSpecialsTooltipEnabled,
+            ) { config.powderSpecialsTooltipEnabled = it }
 
             header("Prices")
             checkbox(
@@ -747,7 +754,7 @@ class OverwatchSettingsPanels(private val host: Host) {
             checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory.", config.customInventoryEnabled) {
                 config.customInventoryEnabled = it
             }
-            checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks). On Wynncraft it only starts from your own inventory slots, so menu buttons can't be triggered by a drag.", config.shiftDragQuickMove) {
+            checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks).", config.shiftDragQuickMove) {
                 config.shiftDragQuickMove = it
             }
 
@@ -758,14 +765,13 @@ class OverwatchSettingsPanels(private val host: Host) {
         }
     }
 
-
     private fun buildToastsTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             val kind = activeToastKind
             val settings = config.toast(kind)
 
             val (enabledLabel, enabledTooltip) = when (kind) {
-                OverwatchToastQueue.Kind.QUEST -> "Quest completion toast" to "Blocks the \"[Quest Completed]\" chat message and shows a HUD toast instead."
+                OverwatchToastQueue.Kind.QUEST -> "Quest completion toast" to "Blocks the \"[Quest Completed]\" style chat messages (quests, mini-quests, caves, dungeons, raids, world events, boss altars) and shows a HUD toast with the rewards instead."
                 OverwatchToastQueue.Kind.LEVEL_UP -> "Level up toast" to "Blocks level-up chat messages and shows a HUD toast instead."
                 OverwatchToastQueue.Kind.DISCOVERY -> "Area discovery toast" to "Blocks the \"Area Discovered\" chat message and its description, and shows a HUD toast instead."
                 OverwatchToastQueue.Kind.LOCATION -> "Location change toast" to "Shows a HUD toast with the region name when you enter a new area."
@@ -804,7 +810,6 @@ class OverwatchSettingsPanels(private val host: Host) {
             button("Position toasts...", "Toasts share one position. Opens the HUD designer to move or resize it.") {
                 Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
             }
-
         }
     }
 
@@ -863,12 +868,10 @@ class OverwatchSettingsPanels(private val host: Host) {
             }
             slider("Ping pitch", 0.5, 2.0, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
             slider("Ping volume", 0.0, 1.0, config.trackerPingVolume, "Volume of the new-match ping sound.") { config.trackerPingVolume = it }
-
         }
     }
 
     private fun rarityLabel(): String = WynnRarity.entries.firstOrNull { it.name == config.mythicAlertMinRarity }?.displayName ?: "Mythic"
-
 
     private fun buildHudTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -939,10 +942,8 @@ class OverwatchSettingsPanels(private val host: Host) {
                 "Draws dark panels behind HUD text. Off is the New World style: floating shadowed text with no panels (bars keep their tracks).",
                 config.hudPanelsEnabled,
             ) { config.hudPanelsEnabled = it }
-
         }
     }
-
 
     private fun buildLootrunTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -995,10 +996,8 @@ class OverwatchSettingsPanels(private val host: Host) {
                 }
                 rows += deleteButton to OwTheme.ROW_H
             }
-
         }
     }
-
 
     private fun buildDiscordTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -1038,10 +1037,8 @@ class OverwatchSettingsPanels(private val host: Host) {
                 "Nothing is sent anywhere but your own local Discord client.",
             )
             for (line in info) rows += OwLabel(left, 0, w, 10, line, OwTheme.TEXT_DIM) to 11
-
         }
     }
-
 
     private fun buildOverridesTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -1091,7 +1088,13 @@ class OverwatchSettingsPanels(private val host: Host) {
                 ),
             )
             rows += debugCheckbox to OwTheme.ROW_H
-
+            val actionBarLogCheckbox = OwCheckbox(left, 0, w, Component.literal("Log action bar glyphs"), config.debugActionBarLog) {
+                config.debugActionBarLog = it
+            }
+            actionBarLogCheckbox.setTooltip(
+                Tooltip.create(Component.literal("Writes every changed action bar line to the game log as text with <U+XXXX> codepoints for the glyphs (tag: [ActionBar])."))
+            )
+            rows += actionBarLogCheckbox to OwTheme.ROW_H
         }
     }
 

@@ -46,6 +46,7 @@ class OverwatchInventoryScreen(
         val scrollBottom: Int,
         val journalSlots: List<JournalSlot> = emptyList(),
         val charTiles: List<PlacedTile> = emptyList(),
+
         val pouchSlot: Int = -1,
         val pouchX: Int = 0,
         val pouchY: Int = 0,
@@ -73,6 +74,7 @@ class OverwatchInventoryScreen(
     private var charScrollY: Int = 0
     private var journalScrollY: Int = 0
     private var journalSearchField: OwTextField? = null
+    private var journalSearchRefocus = -1
     private var journalSortButton: OwButton? = null
     private val journalCategoryButtons = ArrayList<Pair<OwButton, Int>>()
     private var journalTrackButton: OwButton? = null
@@ -82,6 +84,7 @@ class OverwatchInventoryScreen(
     private var selectedJournal: ActivityInfo? = null
     private var hoveredChar: Int = -1
     private var hoveredJournal: JournalSlot? = null
+
     private val charWidgets = ArrayList<OwButton>()
     private var charSnapshot: CharacterMenuModel.Snapshot? = null
     private val combatInfoPager = CombatInfoPager()
@@ -93,6 +96,10 @@ class OverwatchInventoryScreen(
     private val charPinnedWidgetRows = ArrayList<Pair<OwButton, Int>>()
     private val charButtonSlots = ArrayList<Pair<OwButton, Int>>()
     private var charTickCounter = 0
+    private var charLoadTicks = 0
+    private var charWasLoading = false
+    private var lastStatClickNanos = 0L
+
     private var pendingTabFire: Pair<InvTab, () -> Boolean>? = null
     private var pendingTabFireTimeout: Int = 0
 
@@ -108,6 +115,7 @@ class OverwatchInventoryScreen(
             pendingFire.second()
             return
         }
+
         if (pendingFire.first == InvTab.JOURNAL && journalMenu != null) {
             pendingTabFire = null
             return
@@ -117,6 +125,7 @@ class OverwatchInventoryScreen(
             return
         }
         if (!resyncPoll()) return
+
         pendingFire.second()
     }
 
@@ -179,6 +188,7 @@ class OverwatchInventoryScreen(
             addRenderableWidget(button)
             tx += TAB_W + 2
         }
+        addClaimButtons(ox, pt)
         if (invTab == InvTab.INVENTORY) {
             val fieldX = ox + MARGIN
             val fieldY = pt + SEARCH_Y_REL
@@ -197,8 +207,19 @@ class OverwatchInventoryScreen(
             val refreshW = 56
             journalSearchField = OwTextField(font, gx, rowY(0), gw - sortW - refreshW - 8, SEARCH_H).also {
                 it.setValue(journal.query)
-                it.setResponder { v -> journal.query = v; journalScrollY = 0; rebuildWidgets() }
+                it.setResponder { v ->
+                    journal.query = v
+                    journalScrollY = 0
+                    journalSearchRefocus = journalSearchField?.cursorPosition ?: v.length
+                    rebuildWidgets()
+                }
                 addRenderableWidget(it)
+                if (journalSearchRefocus >= 0) {
+                    setFocused(it)
+                    it.setCursorPosition(journalSearchRefocus.coerceIn(0, it.value.length))
+                    it.setHighlightPos(it.cursorPosition)
+                    journalSearchRefocus = -1
+                }
             }
             journalSortButton = OwButton(gx + gw - sortW - refreshW - 4, rowY(0), sortW, SEARCH_H, Component.literal(journal.sort.label)) {
                 journal.cycleSort()
@@ -275,19 +296,24 @@ class OverwatchInventoryScreen(
                 )
 
                 if (snap.openers.isNotEmpty()) {
-                    val btnW = gw / snap.openers.size
-                    val by = pt + CONTENT_TOP_REL + CHAR_MENU_ROW_Y
+                    val cols = (snap.openers.size + OPENER_ROWS - 1) / OPENER_ROWS
+                    val btnW = gw / cols
                     for ((j, pair) in snap.openers.withIndex()) {
                         val (label, slot) = pair
-                        val bx = gx + j * btnW
-                        val w = if (j == snap.openers.size - 1) gx + gw - bx else btnW - MENU_BTN_GAP
+                        val row = j / cols
+                        val col = j % cols
+                        val rowY = CHAR_MENU_ROW_Y + row * (OPENER_BTN_H + OPENER_ROW_GAP)
+                        val by = pt + CONTENT_TOP_REL + rowY
+                        val bx = gx + col * btnW
+                        val lastCol = col == cols - 1 || j == snap.openers.size - 1
+                        val w = if (lastCol) gx + gw - bx else btnW - MENU_BTN_GAP
                         val iconScale = if (label == "Ability Tree") 0.7f else 1f
                         charWidgets.add(
                             OwButton(bx, by, w, OPENER_BTN_H, Component.literal(label), accent = true, icon = charSlotStack(slot), iconScale = iconScale) {
                                 sendCharInput(slot, 0, ContainerInput.PICKUP)
                             }.also {
                                 addRenderableWidget(it)
-                                charPinnedWidgetRows.add(it to CHAR_MENU_ROW_Y)
+                                charPinnedWidgetRows.add(it to rowY)
                                 charButtonSlots.add(it to slot)
                             },
                         )
@@ -298,10 +324,10 @@ class OverwatchInventoryScreen(
                     val cellY = CHARACTER_GRID_Y + HEADER_H + i * SKILL_ROW_H
                     val by = charScreenY(cellY, pt)
                     charWidgets.add(OwButton(rightX + rightW - 44, by, 20, 16, Component.literal("-")) {
-                        sendCharInput(skill.slot, 1, ContainerInput.PICKUP)
+                        sendCharInput(skill.slot, 1, if (shiftHeld()) ContainerInput.QUICK_MOVE else ContainerInput.PICKUP)
                     }.also { addRenderableWidget(it); charWidgetRows.add(it to cellY) })
                     charWidgets.add(OwButton(rightX + rightW - 22, by, 20, 16, Component.literal("+")) {
-                        sendCharInput(skill.slot, 0, ContainerInput.PICKUP)
+                        sendCharInput(skill.slot, 0, if (shiftHeld()) ContainerInput.QUICK_MOVE else ContainerInput.PICKUP)
                     }.also { addRenderableWidget(it); charWidgetRows.add(it to cellY) })
                 }
                 val wy = CHARACTER_GRID_Y + HEADER_H + maxOf(5, snap.skills.size) * SKILL_ROW_H + CHAR_SECTION_GAP
@@ -324,6 +350,7 @@ class OverwatchInventoryScreen(
         if (invTab == InvTab.SETTINGS) {
             panels.buildTabs(ox + MARGIN, panelWidth() - MARGIN * 2, pt + CONTENT_TOP_REL)
         }
+
         armCrossTabTrigger()
     }
 
@@ -331,15 +358,25 @@ class OverwatchInventoryScreen(
         super.tick()
         searchText = searchField?.value ?: searchText
         if (invTab == InvTab.SETTINGS) panels.tick()
+
         if (invTab == InvTab.CHARACTER && characterMenu != null) {
             charTickCounter++
-            if (charTickCounter % 4 == 0) {
+            val loadingBefore = charLoading()
+            if (loadingBefore) {
+                charLoadTicks++
+                if (charLoadTicks >= CHAR_LOAD_TIMEOUT_TICKS) combatInfoPager.forceDone()
+            }
+            if (!loadingBefore && charTickCounter % 4 == 0) {
                 val old = charSnapshot
                 var snap = CharacterMenuModel.snapshot(characterMenu!!)
                 if (snap != null && old != null) {
                     snap = snap.copy(skills = snap.skills.map { s ->
                         if (s.points < 0) old.skills.firstOrNull { it.slot == s.slot }?.copy(isConfirm = true) ?: s else s
                     })
+                    if (System.nanoTime() - lastStatClickNanos < STAT_GRACE_NANOS) {
+                        val missing = old.skills.filter { o -> snap!!.skills.none { it.slot == o.slot } }
+                        if (missing.isNotEmpty()) snap = snap.copy(skills = (snap.skills + missing).sortedBy { it.slot })
+                    }
                 }
                 if (snap != null && snap != old) {
                     charSnapshot = snap
@@ -348,6 +385,9 @@ class OverwatchInventoryScreen(
                 }
             }
             combatInfoPager.tick(characterMenu!!) { slot -> sendCharInput(slot, 0, ContainerInput.PICKUP) }
+            val loadingAfter = charLoading()
+            if (charWasLoading && !loadingAfter) rebuildWidgets()
+            charWasLoading = loadingAfter
         }
     }
 
@@ -366,6 +406,7 @@ class OverwatchInventoryScreen(
             }
             else -> computeInventoryLayout().also {
                 val pt = panelTopFor(it.panelH)
+
                 for (button in tabButtons) button.y = pt + TAB_Y_REL
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
                 journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL }
@@ -411,9 +452,9 @@ class OverwatchInventoryScreen(
             drawCharButtonTooltip(graphics)
         }
         if (invTab == InvTab.JOURNAL) drawJournalHoverAndTooltip(graphics)
+
         if (invTab == InvTab.INVENTORY) drawCarried(graphics, mouseX, mouseY, menu.carried)
     }
-
 
     private fun emptyLayout(): Layout = Layout(emptyList(), emptyList(), emptyList(), -1, 0, 0, 0, 0, 0)
 
@@ -441,6 +482,7 @@ class OverwatchInventoryScreen(
         var pouchSlotOut = -1
         var pouchXOut = 0
         var pouchYOut = 0
+
         charHoverZones.clear()
 
         if (invTab == InvTab.INVENTORY) {
@@ -456,6 +498,7 @@ class OverwatchInventoryScreen(
             y += TILE_STEP + SECTION_GAP
 
             val pouchSlot = findIngredientPouch()
+
             val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
             val filtered = storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }
             labels.add(PlacedLabel("Inventory", x, y, color = OwTheme.ACCENT))
@@ -513,6 +556,7 @@ class OverwatchInventoryScreen(
             }
             y = header.listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H + SECTION_GAP
         }
+
         val charTilesOut = ArrayList<PlacedTile>()
         if (invTab == InvTab.CHARACTER) {
             charHoverZones.clear()
@@ -589,25 +633,30 @@ class OverwatchInventoryScreen(
         val maxScroll = (contentH - (scrollBottom - scrollTop)).coerceAtLeast(0)
         if (scrollY > maxScroll) scrollY = maxScroll
         if (scrollY < 0) scrollY = 0
+
         run {
             val dockX = panelLeft() - GAP - dockW()
             val dollX = dockX + TILE + GAP
             val dollTop = ((height - PREVIEW_H) / 2).coerceAtLeast(MARGIN)
             val toContent = { screenY: Int -> screenY - scrollTop }
             previewBox = intArrayOf(dollX, toContent(dollTop), PREVIEW_W, PREVIEW_H)
+
             val armorX = dollX - GAP - TILE
             val armorTop = dollTop + (PREVIEW_H - ARMOR_SLOTS.size * TILE_STEP) / 2
             for ((i, slot) in ARMOR_SLOTS.withIndex()) {
                 tiles.add(PlacedTile(slot, armorX, toContent(armorTop + i * TILE_STEP), docked = true))
             }
+
             val rightX = dollX + PREVIEW_W + GAP
             var rightY = dollTop
             tiles.add(PlacedTile(OFFHAND_SLOT, rightX, toContent(rightY), docked = true))
             rightY += TILE_STEP + 4
+
             for (slot in extraSlots()) {
                 tiles.add(PlacedTile(slot, rightX, toContent(rightY), docked = true))
                 rightY += TILE_STEP
             }
+
             val jx = maxOf(dockX, armorX - TILE_STEP)
             val jy = armorTop + ARMOR_SLOTS.size * TILE_STEP + 12
             labels.add(PlacedLabel("Accessories", jx, toContent(jy + 2), docked = true))
@@ -619,6 +668,7 @@ class OverwatchInventoryScreen(
                     ),
                 )
             }
+
             val lvl = WynnLevelTracker.level
             if (lvl != null) {
                 val lvlText = "Lv $lvl"
@@ -629,6 +679,7 @@ class OverwatchInventoryScreen(
                     ),
                 )
             }
+
             if (invTab == InvTab.INVENTORY) {
                 val snap = charSnapshot
                     ?: characterMenu?.let { CharacterMenuModel.snapshot(it) }
@@ -664,6 +715,7 @@ class OverwatchInventoryScreen(
                 y += TILE_STEP
             }
         }
+
         if (col != 0) {
             val remaining = cols - col
             repeat(remaining) {
@@ -742,6 +794,7 @@ class OverwatchInventoryScreen(
     }
 
     private fun panelWidth(): Int =
+
         if (invTab == InvTab.CHARACTER || invTab == InvTab.JOURNAL) {
             (width * 0.55).toInt().coerceIn(560, 640).coerceAtMost((width - 20).coerceAtLeast(200))
         } else if (invTab == InvTab.SETTINGS) {
@@ -768,7 +821,9 @@ class OverwatchInventoryScreen(
         }
         if (x < layout.gridX || x >= layout.gridX + layout.gridW) return -1
         if (y < layout.scrollTop || y >= layout.scrollBottom) return -1
+
         val contentY = y + scrollY - layout.scrollTop
+
         val row = layout.rows.firstOrNull { contentY in it.y until it.y + ROW_H && x in it.x until it.x + it.w }
         if (row != null) return row.menuSlot
         if (layout.pouchSlot >= 0 && x in layout.pouchX until layout.pouchX + TILE && contentY in layout.pouchY until layout.pouchY + TILE) {
@@ -777,9 +832,9 @@ class OverwatchInventoryScreen(
         return layout.tiles.firstOrNull { !it.docked && x in it.x until it.x + TILE && contentY in it.y until it.y + TILE }?.menuSlot ?: -1
     }
 
-
     private fun drawOuterPanel(graphics: GuiGraphicsExtractor, panelTop: Int, panelH: Int) {
         val ox = panelLeft()
+
         graphics.fill(ox - 4, panelTop, ox + panelWidth() + 4, panelTop + panelH, GLASS_BG)
         graphics.fill(ox - 4, panelTop, ox + panelWidth() + 4, panelTop + 1, OwTheme.HAIRLINE)
         graphics.fill(ox - 4, panelTop + panelH - 1, ox + panelWidth() + 4, panelTop + panelH, OwTheme.HAIRLINE)
@@ -824,6 +879,7 @@ class OverwatchInventoryScreen(
             if (tile.docked) continue
             val ty = tile.y - scrollY + layout.scrollTop
             if (ty + TILE <= layout.scrollTop || ty >= layout.scrollBottom) continue
+
             if (tile.menuSlot in HOTBAR_SLOTS) {
                 drawTile(graphics, PlacedTile(tile.menuSlot, tile.x, ty), tile.menuSlot == hoveredSlot)
             } else {
@@ -872,7 +928,6 @@ class OverwatchInventoryScreen(
         graphics.text(font, right, x0 + font.width(left) + font.width(mid), fy, OwTheme.GOOD)
     }
 
-
     private fun selectTab(tab: InvTab) {
         if (tab == invTab) {
             if (tab == InvTab.JOURNAL && journalMenu == null) enterJournal()
@@ -885,7 +940,9 @@ class OverwatchInventoryScreen(
         when (tab) {
             InvTab.JOURNAL -> if (!enterJournal()) return
             InvTab.CHARACTER -> if (!enterCharacter()) return
+
             InvTab.INVENTORY -> if (leaveContainers()) reopenVanillaInventory()
+
             else -> if (tab != InvTab.SETTINGS) leaveContainers()
         }
         painting = false
@@ -907,12 +964,15 @@ class OverwatchInventoryScreen(
             return false
         }
         if (journalMenu != null && player.containerMenu === journalMenu) return true
+
         val slot = ContentBookInterceptor.findBookSlot(player)
+
         OverwatchInventory.pendingTransitionTab = InvTab.JOURNAL
         val closed = leaveContainers()
         journal.update(ContentBookCache.snapshot ?: emptyList())
         journal.actionMessage = null
         if (slot != null) return fireJournalTrigger(slot)
+
         if (closed) {
             journal.actionMessage = "Opening..."
             reopenVanillaInventory()
@@ -926,6 +986,7 @@ class OverwatchInventoryScreen(
         val player = Minecraft.getInstance().player ?: return false
         if (player.containerMenu === menu) return true
         if (journalMenu != null || characterMenu != null) return false
+
         val shown = Minecraft.getInstance().gui.screen()
         if (ContentBookInterceptor.pendingJournalHost?.let { shown !== it } == true) {
             ContentBookInterceptor.pendingJournalHost = null
@@ -934,6 +995,7 @@ class OverwatchInventoryScreen(
             CharacterInfo.pendingCharacterHost = null
         }
         if (ContentBookInterceptor.pendingJournalHost != null || CharacterInfo.pendingCharacterHost != null) return false
+
         try {
             player.closeContainer()
         } catch (t: Throwable) {
@@ -974,10 +1036,13 @@ class OverwatchInventoryScreen(
             return false
         }
         if (characterMenu != null && player.containerMenu === characterMenu) return true
+
         val slot = CharacterInfo.findInfoSlot()
+
         OverwatchInventory.pendingTransitionTab = InvTab.CHARACTER
         val closed = leaveContainers()
         if (slot != null) return fireCharacterTrigger(slot)
+
         if (closed) {
             reopenVanillaInventory()
         } else {
@@ -1030,6 +1095,7 @@ class OverwatchInventoryScreen(
         } catch (t: Throwable) {
             Overwatch.LOGGER.warn("leaveContainers: closeContainer threw", t)
         }
+
         if (player != null && player.containerMenu !== player.inventoryMenu) {
             player.containerMenu = player.inventoryMenu
         }
@@ -1055,6 +1121,8 @@ class OverwatchInventoryScreen(
         characterMenu = menu
         combatInfoPager.reset()
         identityCache = null
+        charLoadTicks = 0
+        charWasLoading = true
         if (invTab == InvTab.CHARACTER) rebuildWidgets()
     }
 
@@ -1156,6 +1224,7 @@ class OverwatchInventoryScreen(
     private fun drawTile(graphics: GuiGraphicsExtractor, tile: PlacedTile, hovered: Boolean) {
         if (tile.menuSlot < 0) return
         val stack = if (tile.docked) dockedStack(tile.menuSlot) else slotStack(tile.menuSlot)
+
         val rarityRgb = if (stack.isEmpty) null else WynnItemRarity.of(stack)?.colorRgb
         graphics.fill(tile.x, tile.y, tile.x + TILE, tile.y + TILE, rarityRgb?.let { TILE_TINT_ALPHA or it } ?: TILE_BG_EMPTY)
         if (!stack.isEmpty) {
@@ -1183,7 +1252,6 @@ class OverwatchInventoryScreen(
         graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
         EquipCompareTooltip.draw(graphics, font, stack, mouseX, mouseY)
     }
-
 
     private fun findJournalSlot(layout: Layout, x: Int, y: Int): JournalSlot? {
         if (x < layout.gridX || x >= layout.gridX + layout.gridW) return null
@@ -1406,7 +1474,6 @@ class OverwatchInventoryScreen(
         return JournalHeader(chips, detailLines, detailTop, actionsTop, statusTop, listTop)
     }
 
-
     private fun charScreenY(contentY: Int, panelTop: Int): Int = panelTop + CONTENT_TOP_REL + contentY - charScrollY
 
     private fun findCharTile(layout: Layout, x: Int, y: Int): Int {
@@ -1455,6 +1522,7 @@ class OverwatchInventoryScreen(
             graphics.text(font, "Opening Character Info...", layout.gridX, layout.scrollTop + CHARACTER_GRID_Y, OwTheme.TEXT_DIM)
             return
         }
+
         val gx = layout.gridX
         val gw = layout.gridW
         val leftW = (gw * 0.44).toInt()
@@ -1473,6 +1541,7 @@ class OverwatchInventoryScreen(
         val snap = charSnapshot
         if (snap != null) {
             val gridTop = CHARACTER_GRID_Y
+
             for ((i, skill) in snap.skills.withIndex()) {
                 val sy = gridTop + HEADER_H + i * SKILL_ROW_H - charScrollY + layout.scrollTop
                 if (sy + SKILL_ROW_H <= contentTop || sy >= layout.scrollBottom) continue
@@ -1571,7 +1640,11 @@ class OverwatchInventoryScreen(
         return false
     }
 
-    private fun sendCharInput(slot: Int, button: Int, kind: ContainerInput) {        val client = Minecraft.getInstance()
+    private fun charLoading(): Boolean = characterMenu != null && !combatInfoPager.done
+
+    private fun sendCharInput(slot: Int, button: Int, kind: ContainerInput) {
+        lastStatClickNanos = System.nanoTime()
+        val client = Minecraft.getInstance()
         val player = client.player ?: return
         val menu = characterMenu ?: return
         if (player.containerMenu !== menu) {
@@ -1643,6 +1716,10 @@ class OverwatchInventoryScreen(
         private val seenPages = HashSet<Int>()
         private val merged = LinkedHashSet<String>()
         private var ticksUntilNext = 0
+
+        fun forceDone() {
+            done = true
+        }
 
         fun reset() {
             slot = -1
@@ -1751,6 +1828,7 @@ class OverwatchInventoryScreen(
                         if (t.startsWith("Gathering Skills:") || t.startsWith("Crafting Skills:")) continue
                         if (lines.size < 60) lines.add("  $t" to slot)
                     }
+
                     if (lines.size == before + 1) lines.removeAt(before)
                 }
             }
@@ -1776,7 +1854,6 @@ class OverwatchInventoryScreen(
         graphics.item(carried, mouseX - 8, mouseY - 8)
         graphics.itemDecorations(font, carried, mouseX - 8, mouseY - 8)
     }
-
 
     override fun mouseClicked(event: MouseButtonEvent, doubled: Boolean): Boolean {
         if (super.mouseClicked(event, doubled)) return true
@@ -1852,6 +1929,7 @@ class OverwatchInventoryScreen(
                             sendInput(slot, 0, ContainerInput.PICKUP_ALL)
                             beginPaint(slot, right = false)
                         }
+
                         !menu.carried.isEmpty && !isPrecisePlacement(slot) -> autoPlace(0)
                         else -> {
                             sendInput(slot, 0, ContainerInput.PICKUP)
@@ -1918,6 +1996,7 @@ class OverwatchInventoryScreen(
         if (stack.isEmpty) return -1
         var merge = -1
         var empty = -1
+
         for (slot in MAIN_SLOTS) {
             val s = menu.slots.getOrNull(slot)?.item ?: continue
             if (!s.isEmpty && !isExcluded(s) && s.isStackable && ItemStack.isSameItemSameComponents(s, stack) && s.count < s.maxStackSize) {
@@ -1999,9 +2078,25 @@ class OverwatchInventoryScreen(
             this.charScrollY = (this.charScrollY - scrollY * SCROLL_STEP).toInt().coerceIn(0, maxScroll)
             return true
         }
+
         val maxScroll = (layout.contentH - (layout.scrollBottom - layout.scrollTop)).coerceAtLeast(0)
         this.scrollY = (this.scrollY - scrollY * SCROLL_STEP).toInt().coerceIn(0, maxScroll)
         return true
+    }
+
+    private fun addClaimButtons(ox: Int, pt: Int) {
+        val labels = ArrayList<Pair<String, () -> Unit>>()
+        if (ObjectiveClaims.weeklyClaimable) labels.add("Claim weekly" to { ObjectiveClaims.claimWeekly(); rebuildWidgets() })
+        if (ObjectiveClaims.dailyClaimable) labels.add("Claim daily" to { selectTab(InvTab.CHARACTER) })
+        if (labels.isEmpty()) return
+        val by = (pt - CLAIM_BTN_H - 2).coerceAtLeast(2)
+        var bx = ox + panelWidth() - MARGIN
+        for ((label, action) in labels.asReversed()) {
+            val w = font.width(label) + 14
+            bx -= w
+            addRenderableWidget(OwButton(bx, by, w, CLAIM_BTN_H, Component.literal(label), accent = true) { action() })
+            bx -= 4
+        }
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
@@ -2021,6 +2116,11 @@ class OverwatchInventoryScreen(
         if (invTab != InvTab.SETTINGS && invTab != InvTab.JOURNAL && event.key() in KEY_1..KEY_9 && activeHover >= 0) {
             if (invTab == InvTab.CHARACTER) sendCharInput(activeHover, event.key() - KEY_1, ContainerInput.SWAP)
             else sendInput(activeHover, event.key() - KEY_1, ContainerInput.SWAP)
+            return true
+        }
+        if (invTab != InvTab.SETTINGS && invTab != InvTab.JOURNAL && client.options.keySwapOffhand.matches(event) && activeHover >= 0) {
+            if (invTab == InvTab.CHARACTER) sendCharInput(activeHover, OFFHAND_BUTTON, ContainerInput.SWAP)
+            else sendInput(activeHover, OFFHAND_BUTTON, ContainerInput.SWAP)
             return true
         }
         if (invTab != InvTab.SETTINGS && invTab != InvTab.JOURNAL && client.options.keyDrop.matches(event) && activeHover >= 0) {
@@ -2094,7 +2194,6 @@ class OverwatchInventoryScreen(
 
     override fun isPauseScreen(): Boolean = false
 
-
     override val screen: Screen get() = this
     override val panelFont: Font get() = font
     override fun rebuildPanels() = rebuildWidgets()
@@ -2113,7 +2212,12 @@ class OverwatchInventoryScreen(
         const val GAP = 8
         const val TAB_W = 64
         const val TAB_H = 16
+        const val CLAIM_BTN_H = 14
+        const val OFFHAND_BUTTON = 40
+        const val CHAR_LOAD_TIMEOUT_TICKS = 120
+        const val STAT_GRACE_NANOS = 2_500_000_000L
         const val SEARCH_H = 16
+
         const val TAB_Y_REL = 7
         const val SEARCH_Y_REL = TAB_Y_REL + TAB_H + 6
         const val CONTENT_TOP_REL = SEARCH_Y_REL + SEARCH_H + GAP
@@ -2122,6 +2226,7 @@ class OverwatchInventoryScreen(
         const val PREVIEW_W = 88
         const val PREVIEW_H = 140
         const val PREVIEW_ENTITY_SIZE = 52
+
         const val ROW_H = 20
         const val JOURNAL_ROW1_H = 16
         const val JOURNAL_SECTION_GAP = 6
@@ -2130,8 +2235,9 @@ class OverwatchInventoryScreen(
         const val JOURNAL_MAX_DETAIL_LINES = 16
         const val JOURNAL_ACTION_BTN_H = 18
         const val JOURNAL_LIST_ROWS = 11
-        const val CHARACTER_GRID_Y = 72
+
         const val STATS_ROW_H = 11
+
         const val SKILL_ROW_H = 22
         const val BAR_H = 3
         const val OPENER_BTN_H = 20
@@ -2139,14 +2245,20 @@ class OverwatchInventoryScreen(
         const val CHAR_SECTION_GAP = 6
         const val FLOW_PAD = 12
         const val CHAR_MENU_ROW_Y = 0
-        const val CHAR_STRIP_TEXT_Y = CHAR_MENU_ROW_Y + OPENER_BTN_H + 8
+        const val OPENER_ROWS = 2
+        const val OPENER_ROW_GAP = 2
+        const val CHAR_STRIP_TEXT_Y = CHAR_MENU_ROW_Y + OPENER_ROWS * OPENER_BTN_H + (OPENER_ROWS - 1) * OPENER_ROW_GAP + 8
         const val CHAR_STRIP_TEXT_H = 40
         const val CHAR_STRIP_H = CHAR_STRIP_TEXT_Y + CHAR_STRIP_TEXT_H
+        const val CHARACTER_GRID_Y = CHAR_STRIP_H + 4
         const val MENU_BTN_GAP = 2
+
         const val CHAR_CARD_GAP = 8
+
         const val INGREDIENT_POUCH_SLOT = 13
         const val SHIFT_DRAG_STEP = 4
         const val POUCH_LINES = 12
+
         const val PLAYER_INV_SIZE = 36
 
         val PLAYER_STAT_KEYS = listOf("Total Lv:", "Combat Lv:", "Class:", "Quests:", "XP:")
@@ -2154,23 +2266,30 @@ class OverwatchInventoryScreen(
         const val TILE_STEP = 24
         const val HEADER_H = 16
         const val SECTION_GAP = 6
+
         const val GLASS_BG = 0xA812100D.toInt()
         const val SCROLL_STEP = 24
         const val DOUBLE_CLICK_MS = 250L
         const val OUTSIDE_SLOT = -999
         const val OFFHAND_SLOT = 45
+
         const val VANILLA_MENU_SIZE = 46
+
         val ARMOR_SLOTS = listOf(5, 6, 7, 8)
+
         val ACCESSORY_EQUIP_SLOTS = listOf(9, 10, 11, 12)
+
         val MAIN_SLOTS = (9..35).toList()
         val HOTBAR_SLOTS = (36..44).toList()
         const val TILE_BG = 0xF014100B.toInt()
+
         const val TILE_BG_EMPTY = 0x8014100B.toInt()
         const val TILE_TINT_ALPHA = 0x50000000.toInt()
         const val HOVER_BORDER = 0xFFFFFFFF.toInt()
         const val KEY_ESCAPE = 256
         const val KEY_1 = 49
         const val KEY_9 = 57
+
         const val MOD_CONTROL = 2
     }
 }

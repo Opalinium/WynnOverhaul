@@ -37,6 +37,7 @@ class LootrunHudElement : HudElement {
         }
 
         val font = Minecraft.getInstance().font
+
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, maxOf(lines.maxOf { font.width(it.first) }, font.width("LOOTRUN") + font.width(timer) + 24) + PAD * 2, lines.size * LINE_H + PAD * 2 + HEADER_H)
         val (x, y) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
 

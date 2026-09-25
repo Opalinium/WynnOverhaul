@@ -28,6 +28,7 @@ class AbilityCooldownHudElement : HudElement {
         if (cooldowns.isEmpty()) return
 
         val font = Minecraft.getInstance().font
+
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, cooldowns.maxOf { font.width(it.name) + font.width(timerText(it)) + 14 } + BAR_PAD * 2, ROW_HEIGHT * cooldowns.size)
 
         val scale = HudLayoutManager.scale(ID)

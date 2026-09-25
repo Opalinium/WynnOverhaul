@@ -30,6 +30,10 @@ class TrackerEspHudElement : HudElement {
             val pose = graphics.pose()
 
             for (wp in waypoints.asReversed()) {
+                if (wp.subtle) {
+                    if (wp.onScreen) drawSubtle(graphics, pose, font, halfW, halfH, wp)
+                    continue
+                }
                 val rawX = wp.ndcX * halfW
                 val rawY = -wp.ndcY * halfH
                 val distText = "${wp.distance.roundToInt()}m"
@@ -63,6 +67,26 @@ class TrackerEspHudElement : HudElement {
                 Overwatch.LOGGER.error("Entity tracker ESP HUD failed", t)
             }
         }
+    }
+
+    private fun drawSubtle(g: GuiGraphicsExtractor, pose: Matrix3x2fStack, font: Font, halfW: Float, halfH: Float, wp: TrackerEsp.Waypoint) {
+        if (wp.distance > SUBTLE_RANGE) return
+        val rawX = wp.ndcX * halfW
+        val rawY = -wp.ndcY * halfH
+        val looked = hypot(rawX, rawY) <= halfH * LOOK_RADIUS
+        pose.pushMatrix()
+        pose.translate(halfW + rawX, halfH + rawY)
+        pose.scale(SUBTLE_SCALE)
+        if (!wp.icon.isEmpty) {
+            g.item(wp.icon, -8, -18)
+        } else {
+            drawDiamond(g, wp.argb)
+        }
+        if (looked && wp.label.isNotBlank()) {
+            val tw = font.width(wp.label)
+            g.text(font, wp.label, -tw / 2, 0, SUBTLE_TEXT)
+        }
+        pose.popMatrix()
     }
 
     private fun drawMarker(
@@ -185,5 +209,8 @@ class TrackerEspHudElement : HudElement {
         const val ARROW_R = 7
         const val EDGE_MARGIN = 14f
         const val TEXT_COLOR = -1
+        const val SUBTLE_SCALE = 0.6f
+        const val SUBTLE_RANGE = 40f
+        const val SUBTLE_TEXT = 0xB0FFFFFF.toInt()
     }
 }

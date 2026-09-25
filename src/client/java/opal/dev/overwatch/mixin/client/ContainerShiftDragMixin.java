@@ -6,13 +6,11 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.world.Container;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import opal.dev.overwatch.client.OverwatchConfig;
-import opal.dev.overwatch.client.OverwatchGate;
 import opal.dev.overwatch.client.WynnPouches;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,11 +18,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class ContainerShiftDragMixin {
+    @org.spongepowered.asm.mixin.Unique
+    private static final long RETRY_NANOS = 400_000_000L;
+
     @Shadow
     protected abstract void slotClicked(Slot slot, int slotId, int button, ContainerInput input);
 
@@ -34,9 +35,11 @@ public abstract class ContainerShiftDragMixin {
     @org.spongepowered.asm.mixin.Unique
     private boolean overwatch$shiftDrag;
     @org.spongepowered.asm.mixin.Unique
-    private final Set<Slot> overwatch$visited = new HashSet<>();
+    private final Map<Slot, Long> overwatch$issued = new HashMap<>();
     @org.spongepowered.asm.mixin.Unique
     private Container overwatch$origin;
+    @org.spongepowered.asm.mixin.Unique
+    private Slot overwatch$lastSlot;
     @org.spongepowered.asm.mixin.Unique
     private double overwatch$lastX;
     @org.spongepowered.asm.mixin.Unique
@@ -51,8 +54,9 @@ public abstract class ContainerShiftDragMixin {
     @org.spongepowered.asm.mixin.Unique
     private void overwatch$reset() {
         overwatch$shiftDrag = false;
-        overwatch$visited.clear();
+        overwatch$issued.clear();
         overwatch$origin = null;
+        overwatch$lastSlot = null;
     }
 
     @Inject(method = "mouseClicked", at = @At("RETURN"))
@@ -65,15 +69,12 @@ public abstract class ContainerShiftDragMixin {
             return;
         }
         Slot slot = getHoveredSlot(event.x(), event.y());
-        if (slot == null) {
-            return;
-        }
-        if (OverwatchGate.INSTANCE.isOnWynncraft() && !(slot.container instanceof Inventory)) {
-            return;
-        }
         overwatch$shiftDrag = true;
-        overwatch$visited.add(slot);
-        overwatch$origin = slot.container;
+        overwatch$lastSlot = slot;
+        if (slot != null) {
+            overwatch$origin = slot.container;
+            overwatch$issued.put(slot, System.nanoTime());
+        }
         overwatch$lastX = event.x();
         overwatch$lastY = event.y();
     }
@@ -90,25 +91,37 @@ public abstract class ContainerShiftDragMixin {
         }
         double distX = event.x() - overwatch$lastX;
         double distY = event.y() - overwatch$lastY;
-        int steps = Math.max(1, (int) (Math.max(Math.abs(distX), Math.abs(distY)) / 4.0));
-        boolean wynn = OverwatchGate.INSTANCE.isOnWynncraft();
+        int steps = Math.max(1, (int) (Math.max(Math.abs(distX), Math.abs(distY)) / 2.0));
+        long now = System.nanoTime();
         for (int i = 1; i <= steps; i++) {
             double px = overwatch$lastX + distX * i / steps;
             double py = overwatch$lastY + distY * i / steps;
             Slot slot = getHoveredSlot(px, py);
-            if (slot == null || !overwatch$visited.add(slot)) {
+            if (slot == overwatch$lastSlot) {
                 continue;
             }
-            if (wynn && slot.container != overwatch$origin) {
+            overwatch$lastSlot = slot;
+            if (slot == null) {
+                continue;
+            }
+            if (overwatch$origin == null) {
+                overwatch$origin = slot.container;
+            }
+            if (slot.container != overwatch$origin) {
                 continue;
             }
             if (!slot.hasItem() || !slot.isActive() || !slot.mayPickup(player)) {
+                continue;
+            }
+            Long issuedAt = overwatch$issued.get(slot);
+            if (issuedAt != null && now - issuedAt < RETRY_NANOS) {
                 continue;
             }
             ItemStack stack = slot.getItem();
             if (WynnPouches.INSTANCE.isIngredientPouch(stack) || WynnPouches.INSTANCE.isSellConfirm(stack) || WynnPouches.INSTANCE.isConfirmMorph(stack)) {
                 continue;
             }
+            overwatch$issued.put(slot, now);
             slotClicked(slot, slot.index, 0, ContainerInput.QUICK_MOVE);
         }
         overwatch$lastX = event.x();

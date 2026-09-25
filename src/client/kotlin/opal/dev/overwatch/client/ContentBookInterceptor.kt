@@ -34,6 +34,7 @@ class ContentBookInterceptor : ClientModInitializer {
             pendingMenu = null
             if (!OverwatchGate.inGame) return
             val player = client.player ?: return
+
             if (player.containerMenu !== menu) return
             val host = pendingJournalHost ?: OverwatchInventoryScreen(player.inventoryMenu, OverwatchInventoryScreen.InvTab.JOURNAL)
             pendingJournalHost = null
@@ -45,6 +46,7 @@ class ContentBookInterceptor : ClientModInitializer {
             val player = client.player ?: return "No player"
             if (ContentBookQuery.isActive) return "Still working on the book -- try again in a moment"
             if (player.containerMenu !== player.inventoryMenu) return "Close the current container first"
+
             val hand = contentBookHand(player)
             if (hand != null) {
                 client.gameMode?.useItem(player, hand)
@@ -75,6 +77,7 @@ class ContentBookInterceptor : ClientModInitializer {
             items.indices.firstOrNull { isContentBook(items[it]) }?.let {
                 return if (it < HOTBAR_SIZE) USE_ROW_SLOT_START + it else it
             }
+
             val open = player.containerMenu
             if (open !== player.inventoryMenu) {
                 scanMirror(open, ::isContentBook)?.let { return it }

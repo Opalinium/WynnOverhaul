@@ -15,6 +15,9 @@ data class OverwatchConfig(
     var combatSpellGuardMs: Double = 1500.0,
     var wynnAttackSpeed: Boolean = true,
     var qolPreventHotbarOverscroll: Boolean = false,
+    var rememberCameraMode: Boolean = false,
+    var weeklyObjectivePending: Boolean = false,
+    var lastCameraMode: String = "FIRST_PERSON",
     var weaponAnimationsEnabled: Boolean = false,
     var weaponIdleEnabled: Boolean = true,
     var weaponTrueIdleEnabled: Boolean = true,
@@ -55,6 +58,7 @@ data class OverwatchConfig(
     var soulsCameraFaceHoldMs: Double = 700.0,
     var soulsCameraReticle: Boolean = true,
     var debugItemCopyEnabled: Boolean = false,
+    var debugActionBarLog: Boolean = false,
     var mythicAlertEnabled: Boolean = false,
     var mythicAlertMinRarity: String = "MYTHIC",
     var mythicAlertSound: Boolean = true,
@@ -76,7 +80,9 @@ data class OverwatchConfig(
     var customPotionHudEnabled: Boolean = false,
     var abilityCooldownHudEnabled: Boolean = true,
     var questLogHudEnabled: Boolean = true,
+
     var hudPanelsEnabled: Boolean = false,
+
     var hudBarStyle: String = "CLASSIC",
     var hotbarStyle: String = "CLASSIC",
     var shiftDragQuickMove: Boolean = true,
@@ -99,6 +105,7 @@ data class OverwatchConfig(
     var customPartyNametagsEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var equipComparisonEnabled: Boolean = true,
+    var powderSpecialsTooltipEnabled: Boolean = true,
     var priceCheckEnabled: Boolean = true,
     var priceCheckNpcEnabled: Boolean = true,
     var wynnventoryApiKey: String = "",
@@ -111,6 +118,7 @@ data class OverwatchConfig(
     var trackerEnabled: Boolean = false,
     var trackerWaypointsEnabled: Boolean = true,
     var trackerWaypointScale: Double = 1.0,
+    var townNpcMarkersEnabled: Boolean = true,
     var trackerRange: Double = 64.0,
     var trackerDiscoveredChestsEnabled: Boolean = true,
     var trackerDiscoveredChestRange: Double = 400.0,
@@ -127,8 +135,11 @@ data class OverwatchConfig(
     var trackerRules: MutableList<TrackerRule> = mutableListOf(),
     var hudLayouts: MutableMap<String, HudElementLayout> = mutableMapOf(),
     var customInventoryEnabled: Boolean = true,
+
     var customHudEnabled: Boolean = false,
+
     var chatChannel: String = "all",
+
     var mountRegistry: MutableMap<String, StoredMount>? = null,
 ) {
     data class ToastSettings(
@@ -174,7 +185,9 @@ data class OverwatchConfig(
         var offsetY: Int = 4,
         var scale: Double = 1.0,
         var locked: Boolean = false,
+
         var barWidth: Int = 0,
+
         var boxH: Int = 0,
     )
 

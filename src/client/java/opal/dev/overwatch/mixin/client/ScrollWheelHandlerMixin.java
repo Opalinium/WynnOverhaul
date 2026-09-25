@@ -25,6 +25,7 @@ public class ScrollWheelHandlerMixin {
         if (!OverwatchGate.INSTANCE.isInGame()) {
             return;
         }
+
         if (WynnDialogueTracker.INSTANCE.isChoiceActive()) {
             int scrollDelta = (int) Math.signum(scrollAmount);
             if (scrollDelta != 0) {

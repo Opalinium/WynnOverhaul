@@ -47,6 +47,7 @@ object WynnMountPickupTracker {
             words.any { it.equals("ENERGY", ignoreCase = true) } -> "Mount Boost"
             else -> "Mount Pickup"
         }
+
         val distinct = words.asReversed().distinctBy { it.uppercase() }.reversed()
         return Pickup(title, distinct, System.currentTimeMillis())
     }
@@ -99,6 +100,7 @@ object WynnMountPickupTracker {
             }
         }
         if (start < 0) return null
+
         val close = maxOf(end, runEnd).coerceAtMost(raw.length)
         if (close <= start + WRAP_LEN) return null
         return raw.substring(start + WRAP_LEN, close)

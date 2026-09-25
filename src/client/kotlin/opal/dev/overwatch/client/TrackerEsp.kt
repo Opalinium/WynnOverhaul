@@ -25,6 +25,7 @@ object TrackerEsp {
         val label: String,
         val argb: Int,
         val icon: ItemStack,
+        val subtle: Boolean = false,
     )
 
     @Volatile
@@ -48,6 +49,7 @@ object TrackerEsp {
         val liveMatches = if (trackerActive) EntityTracker.current else emptyList()
         val discoveredMatches = if (trackerActive) EntityTracker.discovered else emptyList()
         val questMatches = QuestBeaconTracker.current
+        val npcMatches = if (config.townNpcMarkersEnabled) TownNpcTracker.current else emptyList()
         val lootrunMatches = if (config.lootrunEnabled && LootrunModel.state != LootrunModel.State.NOT_RUNNING) {
             val playerPos = client.player?.position()
             val pathMatches = if (playerPos != null) LootrunRecorder.renderMatches(playerPos) else emptyList()
@@ -55,7 +57,7 @@ object TrackerEsp {
         } else {
             emptyList()
         }
-        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty()) {
+        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty() && npcMatches.isEmpty()) {
             if (waypoints.isNotEmpty()) waypoints = emptyList()
             return
         }
@@ -71,7 +73,7 @@ object TrackerEsp {
 
             val now = System.nanoTime()
             liveLosKeys.clear()
-            val out = ArrayList<Waypoint>(liveMatches.size + discoveredMatches.size + questMatches.size + lootrunMatches.size)
+            val out = ArrayList<Waypoint>(liveMatches.size + discoveredMatches.size + questMatches.size + lootrunMatches.size + npcMatches.size)
 
             for (match in liveMatches) {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
@@ -88,6 +90,9 @@ object TrackerEsp {
             }
             for (match in lootrunMatches) {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out)
+            }
+            for (match in npcMatches) {
+                projectWaypoint(match, level, player, camPos, vp, view, clip, now, out, subtle = true)
             }
 
             waypoints = out
@@ -110,6 +115,7 @@ object TrackerEsp {
         clip: Vector4f,
         now: Long,
         out: MutableList<Waypoint>,
+        subtle: Boolean = false,
     ) {
         if (match.anchor?.isAlive == false) return
         val center = match.center()
@@ -154,7 +160,7 @@ object TrackerEsp {
         val onScreen = !behind && !flip && ndcX >= -1f && ndcX < 1f && ndcY >= -1f && ndcY < 1f
         val distance = player?.position()?.distanceTo(center)?.toFloat() ?: 0f
 
-        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb, match.icon))
+        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb, match.icon, subtle))
     }
 
     private fun losKey(match: EntityTracker.Match): Long {

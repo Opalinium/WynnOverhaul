@@ -39,6 +39,7 @@ object WynnStatusEffectTracker {
             val secondsText = match.groups["seconds"]?.value ?: continue
             if (minutesText.contains('*') || secondsText.contains('*')) continue
             val hours = match.groups["hours"]?.value?.toIntOrNull() ?: 0
+
             val remaining = hours * 3600 + minutesText.toInt() * 60 + secondsText.toInt() + 1
 
             seenNames.add(name)

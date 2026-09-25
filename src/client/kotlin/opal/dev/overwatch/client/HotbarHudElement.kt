@@ -40,6 +40,7 @@ class HotbarHudElement : HudElement {
             val stack = inventory.getItem(slot)
             if (!stack.isEmpty && !isHidden(stack)) lastKept = maxOf(lastKept, slot)
         }
+
         val mainW = (lastKept + 1) * SLOT_W + 2
         val visibleSlots = lastKept + 1
         val style = OverwatchConfig.current.hotbarStyle
@@ -88,6 +89,7 @@ class HotbarHudElement : HudElement {
             val stack = inventory.getItem(slot)
             val x = mainX + SLOT_INSET + slot * SLOT_W
             val y = mainY + SLOT_INSET
+
             if (isHidden(stack)) continue
             graphics.item(player, stack, x, y, seed++)
             graphics.itemDecorations(font, stack, x, y)

@@ -12,6 +12,7 @@ object HudLayoutManager {
         val defaultOffsetY: Int = 4,
         val fallbackW: Int = 80,
         val fallbackH: Int = 16,
+
         val barStretch: Boolean = false,
         val hidden: Boolean = false,
     )

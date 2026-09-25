@@ -101,6 +101,7 @@ class WynnCompassHudElement : HudElement {
         val labelY = y + MARKER_LANE_H
         val lineY = y + MARKER_LANE_H + LABEL_H
         graphics.fill(x, lineY, x + w, lineY + 1, OwTheme.HAIRLINE)
+
         var deg = -180
         while (deg < 180) {
             val rel = norm180(deg - heading)
@@ -110,6 +111,7 @@ class WynnCompassHudElement : HudElement {
             }
             deg += TICK_STEP
         }
+
         for ((windDeg, wind) in WINDS) {
             val rel = norm180(windDeg - heading)
             if (rel >= -HALF_RANGE && rel <= HALF_RANGE) {
@@ -122,7 +124,9 @@ class WynnCompassHudElement : HudElement {
                 graphics.text(font, wind, tx - font.width(wind) / 2, labelY + 1, color, true)
             }
         }
+
         HudStyle.diamond(graphics, cx, lineY, 3, OwTheme.ACCENT)
+
         for (marker in markers) {
             val bearing = Math.toDegrees(
                 atan2(marker.pos.x - playerPos.x, -(marker.pos.z - playerPos.z)),
@@ -160,6 +164,7 @@ class WynnCompassHudElement : HudElement {
         const val MARKER_GAP = 2
         const val TICK_H = 3
         const val TICK_STEP = 15
+
         const val HALF_RANGE = 75.0
         const val MARKER_LOOTRUN = 0xFFC9A227.toInt()
         val WINDS = listOf(

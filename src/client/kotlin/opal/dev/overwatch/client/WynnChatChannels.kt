@@ -171,6 +171,7 @@ object WynnChatChannels {
     private val CLEAN_CODES = Regex("(?i)§[0-9A-FK-OR]")
 
     private val OVERRIDE_PATTERNS: List<Pair<Regex, String?>> = listOf(
+
         Regex("""(?s). Type the item name or type 'cancel' to.+cancel:.""") to "all",
         Regex("""(?s). Type the price in emeralds or formatted .+ \(e\.g '10eb', '10stx 5eb'\) or type .+ 'cancel' to cancel:.""") to "all",
         Regex("""Party Finder: Type in chat the description you want to use for your party \(max 140 characters or cancel\):""") to "all",

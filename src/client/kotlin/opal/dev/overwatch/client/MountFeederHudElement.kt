@@ -28,6 +28,7 @@ class MountFeederHudElement : HudElement {
         if (!config.mountFeederHudEnabled) return
         val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return
         if (!screen.title.string.contains(MOUNT_FEEDER_TITLE_MARKER)) return
+
         val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`overwatch$getHoveredSlot`()
         val readings = LinkedHashMap<String, MountReading>()
         hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { MountTooltipParser.parse(it) }?.let {
@@ -42,6 +43,7 @@ class MountFeederHudElement : HudElement {
         readings.values.forEach { MountRegistry.note(it) }
 
         val font = Minecraft.getInstance().font
+
         val textW = HudLayoutManager.boxSize(ID).first - PAD * 2
         val wrapped = ArrayList<Pair<String, Int>>()
 
@@ -82,6 +84,7 @@ class MountFeederHudElement : HudElement {
                     }
                 }
             }
+
             val limits = IntArray(8) { reading.stats.getValue(MountMaterials.STATS[it]).limit }
             val avgExact = limits.sum() / 8.0
             val avgUp = kotlin.math.ceil(avgExact).toInt()

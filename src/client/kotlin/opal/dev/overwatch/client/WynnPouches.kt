@@ -10,6 +10,7 @@ object WynnPouches {
         if (stack.isEmpty) return false
         val name = lettersOf(stack)
         if (name.contains("Ingredient Pouch", ignoreCase = true)) return true
+
         if (name.contains("Click to confirm", ignoreCase = true)) return true
         return isSellConfirm(stack)
     }

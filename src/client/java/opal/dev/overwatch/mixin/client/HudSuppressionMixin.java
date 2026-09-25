@@ -35,10 +35,17 @@ public abstract class HudSuppressionMixin {
             return;
         }
         String raw = overlayMessageString.getString();
-        if (WynnActionBar.INSTANCE.isComposite(overlayMessageString)
-            || WynnGuildBarTracker.INSTANCE.ownsOverlayLine(raw)
-            || WynnRegionBarTracker.INSTANCE.ownsOverlayLine(raw)) {
+        if (WynnGuildBarTracker.INSTANCE.ownsOverlayLine(raw) || WynnRegionBarTracker.INSTANCE.ownsOverlayLine(raw)) {
             ci.cancel();
+            return;
+        }
+        if (WynnActionBar.INSTANCE.isComposite(overlayMessageString)) {
+            Component leftover = WynnActionBar.INSTANCE.leftover(overlayMessageString);
+            if (leftover == null) {
+                ci.cancel();
+            } else {
+                overlayMessageString = leftover;
+            }
         }
     }
 
