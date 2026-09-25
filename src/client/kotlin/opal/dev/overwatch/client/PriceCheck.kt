@@ -208,6 +208,16 @@ object PriceCheck {
         return sb.toString().replace(whitespace, " ").trim()
     }
 
+    fun sortValue(stack: ItemStack): Double {
+        if (stack.isEmpty) return 0.0
+        val config = OverwatchConfig.current
+        val key = config.wynnventoryApiKey.trim()
+        val query = queryOf(stack)
+        val market = if (key.isNotEmpty() && query != null) lookup(query, key)?.stats?.reference() else null
+        val each = market ?: listingOf(stack)?.price?.toDouble() ?: 0.0
+        return each * stack.count
+    }
+
     fun listingOf(stack: ItemStack): Listing? {
         if (stack.isEmpty) return null
         val lore = WynnItemRarity.loreLines(stack)

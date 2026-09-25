@@ -77,6 +77,7 @@ class OverwatchClient : ClientModInitializer {
         }
         if (client.level != null) SpellComboGuard.tick(client)
         TownNpcTracker.tick(client)
+        XaeroHook.tick(client)
 
         while (toggleKey.consumeClick()) {
             config.enabled = !config.enabled

@@ -595,6 +595,7 @@ class OverwatchSettingsPanels(private val host: Host) {
             checkbox("Apply to other players", "Also restyles every other player you can see, not just you.", config.locomotionOtherPlayers) { config.locomotionOtherPlayers = it }
             checkbox("Randomize other players' styles", "Each other player gets one of the styles based on their identity, so a crowd does not move in lockstep. Turn off to give everyone your selected style.", config.locomotionRandomizeOthers) { config.locomotionRandomizeOthers = it }
             checkbox("Joint bending", "Bends arms at the elbow and legs at the knee instead of swinging them as stiff blocks. Skin, sleeves, pants and armor bend together.", config.locomotionBend) { config.locomotionBend = it }
+            checkbox("Uneven terrain", "Legs reach up to steps, slabs and ledges and down to lower ground, and the hips drop to match. Needs Joint bending.", config.locomotionTerrain) { config.locomotionTerrain = it }
             checkbox("Walk and sprint", "Stride length, body bob, sway and forward lean while moving.", config.locomotionWalk) { config.locomotionWalk = it }
             checkbox("Jump, fall and landing", "Arms and legs react to leaping and falling, with a knee-bending impact when you land from a height.", config.locomotionJump) { config.locomotionJump = it }
             checkbox("Crouch", "Adds a deeper hunch, tucked arms and bent knees to sneaking.", config.locomotionCrouch) { config.locomotionCrouch = it }
@@ -698,6 +699,12 @@ class OverwatchSettingsPanels(private val host: Host) {
                 "Small faded icons over blacksmiths, merchants, item identifiers, upgraders and similar NPCs nearby. The name shows when you look at one.",
                 config.townNpcMarkersEnabled,
             ) { config.townNpcMarkersEnabled = it }
+
+            checkbox(
+                "Xaero's Minimap markers",
+                "Adds temporary Xaero's Minimap / World Map waypoints for the quest you are tracking and any discovery tracked from the Journal. Does nothing if Xaero's Minimap isn't installed.",
+                config.xaeroHookEnabled,
+            ) { config.xaeroHookEnabled = it }
 
             header("Nametags")
             checkbox(
