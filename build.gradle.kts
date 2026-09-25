@@ -28,7 +28,7 @@ loom {
     splitEnvironmentSourceSets()
 
     mods {
-        register("overwatch") {
+        register("wynnoverhaul") {
             sourceSet("main")
             sourceSet("client")
         }

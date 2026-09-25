@@ -9,7 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-SRC = Path(__file__).resolve().parent.parent / "src/client/kotlin/opal/dev/overwatch/client/WeaponAnimations.kt"
+SRC = Path(__file__).resolve().parent.parent / "src/client/kotlin/opal/dev/wynnoverhaul/client/WeaponAnimations.kt"
 
 PITCH, ACROSS, ABDUCT, OFF_PITCH, OFF_ACROSS, OFF_ABDUCT, TURN, REACH, HEAD_A, HEAD_Y, TWIST, GRIP, LEAN, STEP = range(14)
 TURN_BOOST = 1.4

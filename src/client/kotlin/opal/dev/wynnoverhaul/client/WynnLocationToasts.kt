@@ -1,0 +1,95 @@
+package opal.dev.wynnoverhaul.client
+
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import net.minecraft.network.chat.Component
+
+object WynnLocationToasts {
+    private var lastToastedRegion: String? = null
+    private var lastToastedAt = 0L
+    private var lastDiscoveryName: String? = null
+    private var lastDiscoveryAt = 0L
+    private var blockUntil = 0L
+    private var blockCount = 0
+
+    fun register() {
+        ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay -> if (overlay) true else onMessage(message) }
+    }
+
+    fun reset() {
+        lastToastedRegion = null
+        lastToastedAt = 0L
+        lastDiscoveryName = null
+        lastDiscoveryAt = 0L
+        blockUntil = 0L
+        blockCount = 0
+    }
+
+    fun onRegionChanged(previous: String?, name: String) {
+        if (previous == null) return
+        if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.locationToastEnabled) return
+        val now = System.currentTimeMillis()
+        if (name.equals(lastDiscoveryName, ignoreCase = true) && now - lastDiscoveryAt < DISCOVERY_DEDUP_MILLIS) return
+        if (name.equals(lastToastedRegion, ignoreCase = true) && now - lastToastedAt < REPEAT_COOLDOWN_MILLIS) return
+        lastToastedRegion = name
+        lastToastedAt = now
+        WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.LOCATION, ENTERING_TITLE, name, LOCATION_COLOR))
+    }
+
+    private fun onMessage(message: Component): Boolean {
+        if (!WynnOverhaulGate.inGame) return true
+        if (!WynnOverhaulConfig.current.discoveryToastEnabled) return true
+        val now = System.currentTimeMillis()
+        val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+
+        val header = lines.firstNotNullOfOrNull { DISCOVERY.matchEntire(it) }
+        val secretIndex = if (header == null) lines.indexOfFirst { SECRET.matches(it) } else -1
+        if (header != null || secretIndex >= 0) {
+            val title: String
+            val name: String
+            val xp: String
+            var progress = ""
+            if (header != null) {
+                title = "${header.groupValues[1]} Discovered"
+                name = header.groupValues[2].trim()
+                xp = header.groupValues[3]
+            } else {
+                val match = SECRET.matchEntire(lines[secretIndex])!!
+                title = "${match.groupValues[1]} Discovery"
+                name = match.groupValues[2].trim()
+                xp = match.groupValues[3]
+                progress = lines.getOrNull(secretIndex + 1)?.let { PROGRESS.matchEntire(it) }?.let { "${it.groupValues[1]} ${it.groupValues[2]}/${it.groupValues[3]}" }.orEmpty()
+            }
+            val detail = listOfNotNull(if (xp.isEmpty()) null else "+$xp XP", progress.ifEmpty { null }).joinToString("  ·  ")
+            lastDiscoveryName = name
+            lastDiscoveryAt = now
+            WynnOverhaulToastQueue.dropPending { it.title == ENTERING_TITLE && it.subtitle.equals(name, ignoreCase = true) }
+            WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.DISCOVERY, title, name, DISCOVERY_COLOR, detail))
+            blockUntil = now + CONTINUATION_MILLIS
+            blockCount = 0
+            return false
+        }
+
+        if (now < blockUntil && blockCount < MAX_CONTINUATION_MESSAGES && !isOtherKnownBlock(lines)) {
+            blockCount++
+            blockUntil = now + CONTINUATION_MILLIS
+            return false
+        }
+        return true
+    }
+
+    private fun isOtherKnownBlock(lines: List<String>): Boolean =
+        lines.any { it == QUEST_HEADER || it == LEVEL_UP_HEADER }
+
+    private const val ENTERING_TITLE = "Entering"
+    private const val QUEST_HEADER = "[Quest Completed]"
+    private const val LEVEL_UP_HEADER = "Level Up!"
+    private const val DISCOVERY_COLOR = 0xFFFFAA00.toInt()
+    private const val LOCATION_COLOR = 0xFFE6D3A0.toInt()
+    private const val CONTINUATION_MILLIS = 150L
+    private const val MAX_CONTINUATION_MESSAGES = 8
+    private const val DISCOVERY_DEDUP_MILLIS = 6_000L
+    private const val REPEAT_COOLDOWN_MILLIS = 20_000L
+    private val SECRET = Regex("""^([A-Za-z]+) Discovery:\s*(.+?)\s*(?:\(\+?([\d,]+)\s*XP\))?$""")
+    private val PROGRESS = Regex("""^(.+?)\s*\[(\d+)/(\d+)]$""")
+    private val DISCOVERY = Regex("""^([A-Za-z]+) Discovered:\s*(.+?)\s*(?:\(\+?([\d,]+)\s*XP\))?$""")
+}
