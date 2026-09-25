@@ -12,6 +12,7 @@
     "sources": "https://github.com/Opalinium/WynnOverhaul",
     "issues": "https://github.com/Opalinium/WynnOverhaul/issues"
   },
+  "icon": "assets/wynnoverhaul/icon.png",
   "license": "LicenseRef-WynnOverhaul-Source-Available-NC",
   "environment": "client",
   "entrypoints": {
