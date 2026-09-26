@@ -1225,7 +1225,8 @@ class WynnOverhaulInventoryScreen(
             showJournalMessage("Reopen the journal to track")
             return
         }
-        if (ContentBookQuery.isEnumerating) {
+        val resumeScan = ContentBookQuery.isEnumerating
+        if (resumeScan) {
             ContentBookQuery.cancel()
             journalBusy = false
         }
@@ -1242,10 +1243,14 @@ class WynnOverhaulInventoryScreen(
                 journalBusy = false
                 journal.applyTrackToggleLocal(activity)
                 refreshJournalView()
+                if (resumeScan && isJournalLive(menu)) refreshJournal()
             },
             onFailed = {
                 journalBusy = false
-                if (isJournalLive(menu)) showJournalMessage("Couldn't find ${activity.name} in the book")
+                if (isJournalLive(menu)) {
+                    showJournalMessage("Couldn't find ${activity.name} in the book")
+                    if (resumeScan) refreshJournal()
+                }
             },
         )
     }
