@@ -219,7 +219,8 @@ object ContentBookQuery {
 
     private fun finish() {
         active = false
-        results.keys.retainAll(seenThisRun)
+        val seenTypes = seenThisRun.mapTo(HashSet()) { it.first }
+        results.keys.retainAll { it in seenThisRun || it.first !in seenTypes }
         val list = results.values.toList()
         menu = null
         val cb = onComplete
