@@ -35,6 +35,7 @@ object CharacterInfo {
     private var foreignActive = false
 
     fun tick(client: Minecraft) {
+        if (pendingCharacterHost != null && System.nanoTime() - hostSetAtNanos > HOST_TIMEOUT_NANOS) pendingCharacterHost = null
         if (foreignActive && client.gui.screen() == null) foreignActive = false
         val menu = pendingMenu ?: return
         if (!WynnOverhaulGate.inGame) {
@@ -72,6 +73,12 @@ object CharacterInfo {
     }
 
     var pendingCharacterHost: WynnOverhaulInventoryScreen? = null
+        set(value) {
+            field = value
+            hostSetAtNanos = System.nanoTime()
+        }
+
+    private var hostSetAtNanos = 0L
 
     var bypassOnce: Boolean = false
 
@@ -172,6 +179,7 @@ object CharacterInfo {
     private var pendingTicks = 0
 
     private const val PENDING_TIMEOUT_TICKS = 100
+    private const val HOST_TIMEOUT_NANOS = 15_000_000_000L
 
     private val SKILL_POINTS_LINE = Regex("""Unassigned Skill Points:\s*(\d+)""")
     private val ABILITY_POINTS_LINE = Regex("""Unused Ability Points:\s*(\d+)""")

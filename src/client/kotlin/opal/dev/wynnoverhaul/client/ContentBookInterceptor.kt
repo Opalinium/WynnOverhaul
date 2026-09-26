@@ -26,8 +26,15 @@ class ContentBookInterceptor : ClientModInitializer {
         const val CONTENT_BOOK_TITLE_MARKER = "\uDAFF\uDFEE"
 
         var pendingJournalHost: WynnOverhaulInventoryScreen? = null
+            set(value) {
+                field = value
+                hostSetAtNanos = System.nanoTime()
+            }
+
+        private var hostSetAtNanos = 0L
 
         fun tick(client: Minecraft) {
+            if (pendingJournalHost != null && System.nanoTime() - hostSetAtNanos > HOST_TIMEOUT_NANOS) pendingJournalHost = null
             val menu = pendingMenu ?: return
             pendingMenu = null
             if (!WynnOverhaulGate.inGame) return
@@ -97,6 +104,7 @@ class ContentBookInterceptor : ClientModInitializer {
 
         private var pendingMenu: AbstractContainerMenu? = null
 
+        private const val HOST_TIMEOUT_NANOS = 15_000_000_000L
         private const val HOTBAR_SIZE = 9
         private const val USE_ROW_SLOT_START = 36
         private const val RIGHT_CLICK_BUTTON = 1
