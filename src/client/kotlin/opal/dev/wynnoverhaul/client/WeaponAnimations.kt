@@ -1,7 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
 import com.mojang.blaze3d.vertex.PoseStack
-import com.mojang.math.Axis
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.HumanoidModel
@@ -30,7 +29,6 @@ import kotlin.math.sqrt
 import java.util.concurrent.ThreadLocalRandom
 
 object WeaponAnimations {
-    private const val RAD_TO_DEG = 57.29578f
     private const val MIN_SECONDS = 0.18f
     private const val GAP_FRACTION = 0.95f
     private const val HIT_SECONDS = 0.14f
@@ -48,9 +46,7 @@ object WeaponAnimations {
     private const val IDLE_TAU = 0.16f
     private const val COMBO_RESET_SECONDS = 1.6f
     private const val COMBO_PITCH_STEP = 0.035f
-    private const val PLAYER_SCALE = 0.9375f
     private const val MODEL_UNIT = 16f
-    private const val MODEL_LIFT = 1.501f
     private const val READY_NANOS = 3_500_000_000L
     private const val BREATH_NANOS = 3_400_000_000L
     private const val BREATH_AMP = 0.025f
@@ -1685,8 +1681,6 @@ object WeaponAnimations {
         val assigned = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack)
         return assigned?.takeIf { it in POSES }
     }
-
-    private fun resolvePose(stack: ItemStack): Pose? = resolveKey(stack)?.let { POSES[it] }
 
     private val HEAD_REST = Vector3f(0f, 0f, -1f)
     private val baseBuffer = FloatArray(CHANNELS)

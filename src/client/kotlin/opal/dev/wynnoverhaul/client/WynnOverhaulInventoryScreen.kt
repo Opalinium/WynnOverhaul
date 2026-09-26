@@ -45,8 +45,6 @@ class WynnOverhaulInventoryScreen(
         val scrollTop: Int,
         val scrollBottom: Int,
         val journalSlots: List<JournalSlot> = emptyList(),
-        val charTiles: List<PlacedTile> = emptyList(),
-
         val pouchSlot: Int = -1,
         val pouchX: Int = 0,
         val pouchY: Int = 0,
@@ -492,8 +490,6 @@ class WynnOverhaulInventoryScreen(
         if (invTab == InvTab.INVENTORY) drawCarried(graphics, mouseX, mouseY, menu.carried)
     }
 
-    private fun emptyLayout(): Layout = Layout(emptyList(), emptyList(), emptyList(), -1, 0, 0, 0, 0, 0)
-
     private fun computeSettingsLayout(): Layout {
         val contentH = 380
         val panelH = panelHFor(contentH)
@@ -503,7 +499,7 @@ class WynnOverhaulInventoryScreen(
         val w = panelWidth() - MARGIN * 2
         val scrollTop = panelTop + CONTENT_TOP_REL
         val scrollBottom = (panelTop + panelH - 4 - FOOTER_H - GAP).coerceAtLeast(scrollTop + 40)
-        return Layout(emptyList(), emptyList(), emptyList(), contentH, panelH, ox, w, scrollTop, scrollBottom, emptyList(), emptyList())
+        return Layout(emptyList(), emptyList(), emptyList(), contentH, panelH, ox, w, scrollTop, scrollBottom, emptyList())
     }
 
     private fun computeInventoryLayout(): Layout {
@@ -594,7 +590,6 @@ class WynnOverhaulInventoryScreen(
             y = header.listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H + SECTION_GAP
         }
 
-        val charTilesOut = ArrayList<PlacedTile>()
         if (invTab == InvTab.CHARACTER) {
             charHoverZones.clear()
             y = CHARACTER_GRID_Y
@@ -738,30 +733,7 @@ class WynnOverhaulInventoryScreen(
                 }
             }
         }
-        return Layout(tiles, labels, rows, contentH, panelH, x, w, scrollTop, scrollBottom, journalSlotsOut, charTilesOut, pouchSlotOut, pouchXOut, pouchYOut)
-    }
-
-    private fun layTiles(into: MutableList<PlacedTile>, slots: List<Int>, gridX: Int, cols: Int, startY: Int): Int {
-        var y = startY
-        var col = 0
-        for (slot in slots) {
-            into.add(PlacedTile(slot, gridX + col * TILE_STEP, y))
-            col++
-            if (col >= cols) {
-                col = 0
-                y += TILE_STEP
-            }
-        }
-
-        if (col != 0) {
-            val remaining = cols - col
-            repeat(remaining) {
-                into.add(PlacedTile(-1, gridX + col * TILE_STEP, y))
-                col++
-            }
-            y += TILE_STEP
-        }
-        return y + SECTION_GAP
+        return Layout(tiles, labels, rows, contentH, panelH, x, w, scrollTop, scrollBottom, journalSlotsOut, pouchSlotOut, pouchXOut, pouchYOut)
     }
 
     private fun layTilesFiltered(into: MutableList<PlacedTile>, slots: List<Int>, gridX: Int, cols: Int, startY: Int): Int {
@@ -1611,19 +1583,6 @@ class WynnOverhaulInventoryScreen(
             }
         }
         graphics.disableScissor()
-    }
-
-    private fun drawCharTile(graphics: GuiGraphicsExtractor, slot: Int, x: Int, y: Int, hovered: Boolean) {
-        val stack = charSlotStack(slot)
-        val rarityRgb = if (stack.isEmpty) null else WynnItemRarity.of(stack)?.colorRgb
-        graphics.fill(x, y, x + TILE, y + TILE, rarityRgb?.let { TILE_TINT_ALPHA or it } ?: TILE_BG_EMPTY)
-        if (!stack.isEmpty) {
-            graphics.item(stack, x + 2, y + 2)
-            graphics.itemDecorations(font, stack, x + 2, y + 2)
-        }
-        val border = if (stack.isEmpty) OwTheme.TILE_BORDER else (rarityRgb?.let { 0xFF000000.toInt() or it } ?: OwTheme.TILE_BORDER)
-        graphics.outline(x, y, TILE, TILE, border)
-        if (hovered) graphics.outline(x - 1, y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
     }
 
     private fun drawCharHoverAndTooltip(graphics: GuiGraphicsExtractor, layout: Layout) {

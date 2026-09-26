@@ -1,16 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
 object WynnSpellSegments {
-    fun hasCast(raw: String): Boolean {
-        val match = CAST_PATTERN.find(raw) ?: return false
-        val segmentText = match.value
-        return segmentText[0] == SPACER && segmentText[segmentText.length - 2] == SPACER
-    }
-
-    fun hasActiveInputs(raw: String): Boolean {
-        val glyphs = parseInputs(raw) ?: return false
-        return glyphs.any { isActiveGlyph(it) }
-    }
 
     fun parseInputs(raw: String): List<String>? {
         val match = INPUTS_PATTERN.find(raw) ?: return null
@@ -28,8 +18,6 @@ object WynnSpellSegments {
         if (RIGHT_CLICK_PATTERN.matches(glyph)) return ComboInput.RIGHT
         return ComboInput.EMPTY
     }
-
-    private fun isActiveGlyph(value: String): Boolean = classifyInput(value) != ComboInput.EMPTY
 
     data class SpellCost(val amount: Int, val mana: Boolean)
     data class SpellCast(val name: String, val costs: List<SpellCost>)

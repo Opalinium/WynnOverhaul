@@ -13,8 +13,6 @@ object WynnOverhaulGate {
 
     fun isInGame(): Boolean = inGame
 
-    fun isOnWynncraft(): Boolean = onWynncraft
-
     fun noteActionBar() {
         lastActionBarMillis = System.currentTimeMillis()
     }

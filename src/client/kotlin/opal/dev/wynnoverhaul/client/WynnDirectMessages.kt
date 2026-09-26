@@ -185,8 +185,6 @@ object WynnDirectMessages {
 
     fun recent(): List<Conversation> = conversations.values.sortedByDescending { it.lastAt }
 
-    fun unreadTotal(): Int = conversations.values.sumOf { it.unread }
-
     fun smartTarget(): String? {
         val now = System.currentTimeMillis()
         return conversations.values

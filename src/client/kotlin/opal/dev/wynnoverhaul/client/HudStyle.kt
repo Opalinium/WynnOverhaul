@@ -9,7 +9,6 @@ object HudStyle {
     const val GLASS = 0xBC110E0A.toInt()
     const val GLASS_DEEP = 0xD80B0906.toInt()
     const val EDGE = 0xFF5A4A28.toInt()
-    const val EDGE_SOFT = 0x90C9A227.toInt()
     const val SHEEN = 0x16FFFFFF
     const val TRACK = 0xE60B0806.toInt()
     const val TRACK_EDGE = 0xFF2E2313.toInt()

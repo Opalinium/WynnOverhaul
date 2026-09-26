@@ -144,11 +144,6 @@ object LocomotionAnimations {
 
     fun labelOf(key: String): String = STYLES[key]?.label ?: key
 
-    fun nextStyle(key: String): String {
-        val keys = styleKeys
-        return keys[(keys.indexOf(key) + 1).mod(keys.size)]
-    }
-
     private const val AIR_DELAY = 0.1f
     private const val LAND_MIN_FALL = 0.12f
     private const val LAND_FALL_SPAN = 0.55f

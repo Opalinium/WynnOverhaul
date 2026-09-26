@@ -53,10 +53,6 @@ object ContentBookCache {
         persist()
     }
 
-    fun commitIfFirstEver(activities: List<ActivityInfo>) {
-        if (snapshot == null && activities.isNotEmpty()) commit(activities)
-    }
-
     fun find(type: ActivityType, name: String): Boolean =
         snapshot?.any { it.name == name && (it.type == type || (type.isQuest && it.type.isQuest)) } == true
 

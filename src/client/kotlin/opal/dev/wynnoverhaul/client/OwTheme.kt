@@ -9,11 +9,9 @@ object OwTheme {
     const val PANEL = 0xF01C140D.toInt()
     const val PANEL_ALT = 0xF0241A10.toInt()
     const val PANEL_RAISED = 0xF02E2013.toInt()
-    const val BORDER = 0xFF4A3117.toInt()
     const val BORDER_BRIGHT = 0xFFC9A227.toInt()
     const val ACCENT = 0xFFD4AF37.toInt()
     const val ACCENT_DIM = 0xFF7A5F1E.toInt()
-    const val ACCENT_FAINT = 0xFF33270F.toInt()
     const val TEXT = 0xFFEDE0C8.toInt()
     const val TEXT_DIM = 0xFFA6947A.toInt()
     const val TEXT_FAINT = 0xFF6B5D48.toInt()
@@ -35,9 +33,6 @@ object OwTheme {
     const val SCROLLBAR_W = 6
     const val SCROLL_RATE = 30
 
-    val BUTTON_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/button")
-    val BUTTON_HOVER_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/button_highlighted")
-    val BUTTON_DISABLED_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/button_disabled")
     val CHECKBOX_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox")
     val CHECKBOX_HOVER_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox_highlighted")
     val CHECKBOX_SELECTED_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox_selected")
@@ -55,30 +50,12 @@ object OwTheme {
         HudStyle.plate(graphics, x, y, w, h, ACCENT, alpha / 255f)
     }
 
-    fun drawPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, fill: Int = PANEL) {
-        graphics.fill(x, y, x + w, y + h, fill)
-        graphics.outline(x - 2, y - 2, w + 4, h + 4, BORDER)
-        graphics.outline(x, y, w, h, BORDER_BRIGHT)
-        drawRivet(graphics, x + 1, y + 1)
-        drawRivet(graphics, x + w - 3, y + 1)
-        drawRivet(graphics, x + 1, y + h - 3)
-        drawRivet(graphics, x + w - 3, y + h - 3)
-    }
-
     fun drawPage(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
         graphics.fill(x, y, x + w, y + h, PAGE_WASH)
         graphics.fill(x, y, x + w, y + 1, HAIRLINE)
         graphics.fill(x, y + h - 1, x + w, y + h, HAIRLINE)
         graphics.fill(x, y, x + 1, y + h, HAIRLINE)
         graphics.fill(x + w - 1, y, x + w, y + h, HAIRLINE)
-    }
-
-    fun drawSectionHeader(graphics: GuiGraphicsExtractor, font: net.minecraft.client.gui.Font, x: Int, y: Int, w: Int, title: String, right: String = "") {
-        graphics.text(font, title.uppercase(), x, y, ACCENT)
-        if (right.isNotEmpty()) {
-            graphics.text(font, right, x + w - font.width(right), y, TEXT_DIM)
-        }
-        graphics.fill(x, y + 12, x + w, y + 13, HAIRLINE)
     }
 
     fun drawTile(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, borderArgb: Int, isNew: Boolean = false) {
@@ -95,7 +72,4 @@ object OwTheme {
         }
     }
 
-    private fun drawRivet(graphics: GuiGraphicsExtractor, x: Int, y: Int) {
-        graphics.fill(x, y, x + 2, y + 2, BORDER_BRIGHT)
-    }
 }

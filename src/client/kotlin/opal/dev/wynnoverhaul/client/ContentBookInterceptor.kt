@@ -8,9 +8,7 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
-import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.item.ItemStack
-import opal.dev.wynnoverhaul.WynnOverhaul
 
 class ContentBookInterceptor : ClientModInitializer {
     override fun onInitializeClient() {
@@ -56,19 +54,6 @@ class ContentBookInterceptor : ClientModInitializer {
             }
             pendingJournalHost = host
             return null
-        }
-
-        private fun triggerOpen(client: Minecraft, player: Player): Boolean {
-            val hand = contentBookHand(player)
-            if (hand != null) {
-                client.gameMode?.useItem(player, hand)
-                return true
-            }
-            val items = player.inventory.nonEquipmentItems
-            val slot = items.indices.firstOrNull { isContentBook(items[it]) } ?: return false
-            val menuSlot = if (slot < HOTBAR_SIZE) USE_ROW_SLOT_START + slot else slot
-            client.gameMode?.handleContainerInput(player.inventoryMenu.containerId, menuSlot, RIGHT_CLICK_BUTTON, ContainerInput.PICKUP, player)
-            return true
         }
 
         fun findBookSlot(player: Player): Int? {

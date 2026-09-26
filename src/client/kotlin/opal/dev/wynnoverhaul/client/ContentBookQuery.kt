@@ -47,7 +47,6 @@ object ContentBookQuery {
 
     val isActive: Boolean get() = active
     val isEnumerating: Boolean get() = active && mode == Mode.ENUMERATE
-    fun currentResults(): List<ActivityInfo> = results.values.toList()
 
     fun start(menu: AbstractContainerMenu, seed: List<ActivityInfo> = emptyList(), onProgress: (List<ActivityInfo>) -> Unit, onComplete: (List<ActivityInfo>) -> Unit, onFailed: () -> Unit) {
         reset(menu, Mode.ENUMERATE, onFailed)

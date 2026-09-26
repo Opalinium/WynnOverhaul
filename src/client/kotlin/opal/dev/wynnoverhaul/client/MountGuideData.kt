@@ -54,10 +54,6 @@ object MountGuideData {
         MountStatInfo("Training", "Increases the number of levels gained per stat powerup."),
     )
 
-    const val NEW_MOUNT_POTENTIAL = 240
-    const val NEW_MOUNT_STAT_LEVEL = 1
-    const val NEW_MOUNT_STAT_LIMIT = 10
-    const val NEW_MOUNT_STAT_MAX = 30
     const val BREEDING_AVERAGE_LIMIT = 20
 
     val FEEDING_TIME = listOf(

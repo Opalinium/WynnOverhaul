@@ -12,8 +12,6 @@ object WynnLevelTracker {
     var iconText: String? = null
         private set
 
-    val HEXAGON_CHAR = 0xE00A.toChar()
-
     fun register() {
         ClientReceiveMessageEvents.GAME.register { message, _ -> onActionBar(message) }
     }

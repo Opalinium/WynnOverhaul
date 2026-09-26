@@ -4,7 +4,6 @@ import java.util.UUID
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket
 import net.minecraft.world.BossEvent
-import opal.dev.wynnoverhaul.WynnOverhaul
 
 object WynnGuildBarTracker : ClientboundBossEventPacket.Handler {
     data class GuildState(val name: String, val level: Int, val xpPercent: Int)
