@@ -5,6 +5,7 @@ import net.minecraft.core.component.DataComponents
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
+import opal.dev.wynnoverhaul.WynnOverhaul
 
 object ContentBookQuery {
     private const val CHANGE_VIEW_SLOT = 66
@@ -91,16 +92,16 @@ object ContentBookQuery {
 
     fun tick(client: Minecraft) {
         if (!active) return
-        val m = menu ?: return fail()
+        val m = menu ?: return fail("no menu")
         val player = client.player
         if (player == null || player.containerMenu !== m) {
-            fail()
+            fail("container changed")
             return
         }
 
         ticksSinceAction++
         if (ticksSinceAction > TIMEOUT_TICKS) {
-            fail()
+            fail("timeout after filters=$filterCount pages=$pageCount")
             return
         }
 
@@ -152,11 +153,11 @@ object ContentBookQuery {
 
         val signature = filterSignature(m)
         if (signature != null && !seenFilterSignatures.add(signature)) {
-            fail()
+            fail("view cycle repeated after $filterCount filters, target=$targetType/$targetName")
             return
         }
         if (filterCount >= MAX_FILTERS) {
-            fail()
+            fail("filter limit")
             return
         }
         filterCount++
@@ -228,7 +229,8 @@ object ContentBookQuery {
         cb?.invoke(list)
     }
 
-    private fun fail() {
+    private fun fail(reason: String) {
+        WynnOverhaul.LOGGER.warn("WynnOverhaul content book query failed: {} (mode={})", reason, mode)
         active = false
         menu = null
         val cb = onFailed
