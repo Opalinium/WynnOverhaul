@@ -23,6 +23,7 @@ object WynnOverhaulGate {
         val inGameNow = onWynn && fresh && !inCharacterSelect(client)
         if (inGame && !inGameNow) {
             CharacterMenuModel.clearSnapshot()
+            WynnItemRarity.clearCaches()
             WynnOverhaulInventoryScreen.clearDockedCache()
             WynnLevelTracker.clear()
             WynnVitalsTracker.clear()

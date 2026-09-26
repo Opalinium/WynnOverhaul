@@ -502,6 +502,38 @@ class WynnOverhaulInventoryScreen(
         return Layout(emptyList(), emptyList(), emptyList(), contentH, panelH, ox, w, scrollTop, scrollBottom, emptyList())
     }
 
+    private class InventoryLayoutData(
+        val signature: Int,
+        val builtAtNanos: Long,
+        val filtered: List<Int>,
+        val pouchSlot: Int,
+        val pouchEntries: List<Pair<Int, String>>,
+    )
+
+    private var inventoryCache: InventoryLayoutData? = null
+
+    private fun inventoryLayoutData(query: String): InventoryLayoutData {
+        val sortName = WynnOverhaulConfig.current.inventorySort
+        var signature = query.hashCode()
+        signature = 31 * signature + sortName.hashCode()
+        signature = 31 * signature + System.identityHashCode(menu)
+        for (slot in MAIN_SLOTS) signature = 31 * signature + stackSignature(slotStack(slot))
+        for (slot in HOTBAR_SLOTS) signature = 31 * signature + stackSignature(slotStack(slot))
+        val now = System.nanoTime()
+        val cached = inventoryCache
+        if (cached != null && cached.signature == signature && now - cached.builtAtNanos < INVENTORY_CACHE_NANOS) return cached
+
+        val pouchSlot = findIngredientPouch()
+        val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
+        val filtered = InventorySort.parse(sortName)
+            .apply(storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }, ::slotStack)
+        val entries = if (pouchSlot >= 0) WynnPouches.ingredientEntries(slotStack(pouchSlot)) else emptyList()
+        return InventoryLayoutData(signature, now, filtered, pouchSlot, entries).also { inventoryCache = it }
+    }
+
+    private fun stackSignature(stack: ItemStack): Int =
+        if (stack.isEmpty) 0 else 31 * System.identityHashCode(stack) + stack.count
+
     private fun computeInventoryLayout(): Layout {
         val x = panelLeft() + MARGIN
         val w = (panelLeft() + panelWidth() - MARGIN - x).coerceAtLeast(120)
@@ -529,11 +561,9 @@ class WynnOverhaulInventoryScreen(
             }
             y += TILE_STEP + SECTION_GAP
 
-            val pouchSlot = findIngredientPouch()
-
-            val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
-            val filtered = InventorySort.parse(WynnOverhaulConfig.current.inventorySort)
-                .apply(storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }, ::slotStack)
+            val inv = inventoryLayoutData(query)
+            val pouchSlot = inv.pouchSlot
+            val filtered = inv.filtered
             labels.add(PlacedLabel("Inventory", x, y, color = OwTheme.ACCENT))
             y += CAPTION_H
             val gridTop = y
@@ -551,7 +581,7 @@ class WynnOverhaulInventoryScreen(
                 pouchX = px
                 pouchY = py
                 py += TILE_STEP + 4
-                val entries = WynnPouches.ingredientEntries(stack)
+                val entries = inv.pouchEntries
                 if (entries.isEmpty()) {
                     labels.add(PlacedLabel("(pouch is empty)", px + 2, py + 1))
                     py += STATS_ROW_H
@@ -2283,6 +2313,7 @@ class WynnOverhaulInventoryScreen(
         const val CHAR_CARD_GAP = 8
 
         const val INGREDIENT_POUCH_SLOT = 13
+        private const val INVENTORY_CACHE_NANOS = 1_000_000_000L
         const val SHIFT_DRAG_STEP = 4
         const val POUCH_LINES = 12
 

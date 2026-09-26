@@ -11,19 +11,32 @@ enum class InventorySort(val label: String) {
 
     fun next(): InventorySort = entries[(ordinal + 1) % entries.size]
 
+    private class Keyed(val slot: Int, val name: String, val primary: Double)
+
     fun apply(slots: List<Int>, stackOf: (Int) -> ItemStack): List<Int> {
         if (this == DEFAULT) return slots
-        val keyed = slots.map { slot -> Triple(slot, stackOf(slot), 0) }
-        val occupied = keyed.filter { !it.second.isEmpty }
-        val empty = keyed.filter { it.second.isEmpty }.map { it.first }
-        val ordered = when (this) {
-            NAME -> occupied.sortedWith(compareBy({ plainName(it.second).lowercase() }, { it.first }))
-            TYPE -> occupied.sortedWith(compareBy({ WynnItemCategory.of(it.second).ordinal }, { plainName(it.second).lowercase() }, { it.first }))
-            RARITY -> occupied.sortedWith(compareBy({ -(WynnItemRarity.of(it.second)?.ordinal ?: -1) }, { plainName(it.second).lowercase() }, { it.first }))
-            VALUE -> occupied.sortedWith(compareBy({ -PriceCheck.sortValue(it.second) }, { plainName(it.second).lowercase() }, { it.first }))
-            DEFAULT -> occupied
+        val occupied = ArrayList<Keyed>(slots.size)
+        val empty = ArrayList<Int>()
+        for (slot in slots) {
+            val stack = stackOf(slot)
+            if (stack.isEmpty) {
+                empty.add(slot)
+                continue
+            }
+            val primary = when (this) {
+                NAME -> 0.0
+                TYPE -> WynnItemCategory.of(stack).ordinal.toDouble()
+                RARITY -> -(WynnItemRarity.of(stack)?.ordinal ?: -1).toDouble()
+                VALUE -> -PriceCheck.sortValue(stack)
+                DEFAULT -> 0.0
+            }
+            occupied.add(Keyed(slot, plainName(stack).lowercase(), primary))
         }
-        return ordered.map { it.first } + empty
+        occupied.sortWith(compareBy<Keyed>({ it.primary }, { it.name }, { it.slot }))
+        val out = ArrayList<Int>(slots.size)
+        for (k in occupied) out.add(k.slot)
+        out.addAll(empty)
+        return out
     }
 
     private fun plainName(stack: ItemStack): String = TextClean.clean(stack.hoverName.string)
