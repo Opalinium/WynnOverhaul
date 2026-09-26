@@ -14,13 +14,16 @@ object WynnLevelUpToastOverride {
 
     private class Pending(val startedAt: Long, val lines: MutableList<String>, val headerOnly: Boolean) {
         var followUps = 0
+        var lastAt = startedAt
+
+        fun expired(now: Long): Boolean = now - lastAt >= FOLLOW_UP_WINDOW_MILLIS || now - startedAt >= FOLLOW_UP_MAX_MILLIS
     }
 
     private var pending: Pending? = null
 
     private fun flushPending(force: Boolean) {
         val p = pending ?: return
-        if (!force && System.currentTimeMillis() - p.startedAt < FOLLOW_UP_WINDOW_MILLIS) return
+        if (!force && !p.expired(System.currentTimeMillis())) return
         pending = null
         val pet = p.lines.any { PET_HINT.containsMatchIn(it) } || (p.headerOnly && p.followUps > 0)
         WynnOverhaul.LOGGER.info("Level-up message lines (pet={}): {}", pet, p.lines)
@@ -45,19 +48,20 @@ object WynnLevelUpToastOverride {
         val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
         val open = pending
         if (open != null) {
-            if (System.currentTimeMillis() - open.startedAt >= FOLLOW_UP_WINDOW_MILLIS) {
+            if (open.expired(System.currentTimeMillis())) {
                 flushPending(true)
-            } else if (lines.isEmpty() || lines.all { PROGRESS_LINE.matches(it) || UNLOCK_LINE.matches(it) }) {
+            } else if (lines.isEmpty() || lines.all { isFollowUp(it) }) {
                 if (lines.isNotEmpty()) {
                     open.lines.addAll(lines)
                     open.followUps++
+                    open.lastAt = System.currentTimeMillis()
                 }
                 return false
             }
         }
         if (RICH_HEADER in lines) {
             flushPending(true)
-            val complete = lines.any { PROGRESS_LINE.matches(it) || UNLOCK_LINE.matches(it) || REWARD_LINE.matches(it) }
+            val complete = lines.any { isFollowUp(it) || REWARD_LINE.matches(it) }
             if (complete && lines.none { PET_HINT.containsMatchIn(it) }) {
                 richLevelUpToast(lines)
                 return false
@@ -110,6 +114,9 @@ object WynnLevelUpToastOverride {
         WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.LEVEL_UP, "Level Up!", "You reached $level!", TOAST_COLOR))
     }
 
+    private fun isFollowUp(line: String): Boolean =
+        PROGRESS_LINE.matches(line) || UNLOCK_LINE.matches(line) || BONUS_LINE.matches(line)
+
     private fun richLevelUpToast(lines: List<String>) {
         lastPersonalAt = System.currentTimeMillis()
         val rewards = lines.mapNotNull { REWARD_LINE.matchEntire(it) }
@@ -117,7 +124,9 @@ object WynnLevelUpToastOverride {
         val unlocks = lines.mapNotNull { UNLOCK_LINE.matchEntire(it)?.groupValues?.get(1)?.trim() }
             .map { "+ $it" }
         val progress = lines.firstNotNullOfOrNull { PROGRESS_LINE.matchEntire(it)?.value }.orEmpty()
-        val subtitle = (rewards + unlocks).joinToString(" · ").ifEmpty {
+        val bonuses = lines.mapNotNull { BONUS_LINE.matchEntire(it) }
+            .map { "+${it.groupValues[1]} ${it.groupValues[2].trim()}" }
+        val subtitle = (rewards + bonuses + unlocks).joinToString(" · ").ifEmpty {
             lines.getOrNull(lines.indexOf(RICH_HEADER) + 1)?.takeIf { it != RICH_HEADER } ?: "Level up!"
         }
         WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.LEVEL_UP, RICH_HEADER, subtitle, TOAST_COLOR, progress))
@@ -132,12 +141,14 @@ object WynnLevelUpToastOverride {
     private val PERSONAL_PROFESSION = Regex("""^You are now level (\d+) in (.+)$""")
     private val PERSONAL_GENERIC = Regex("""^(.+) is now ((?:combat )?level .+?)(?: in .+)?!?$""")
     private val BROADCAST_LEVEL_UP = Regex("""^(?:\[!]|!!) Congratulations to (.+) for reaching ((?:combat )?level .+?)!$""")
-    private const val FOLLOW_UP_WINDOW_MILLIS = 700L
+    private const val FOLLOW_UP_WINDOW_MILLIS = 900L
+    private const val FOLLOW_UP_MAX_MILLIS = 4000L
     private const val PET_TOAST_COLOR = 0xFF5FD6A6.toInt()
     private val PET_HINT = Regex("""(?i)\bpet\b""")
     private val PET_LEVELED = Regex("""^(?:Your )?(.+?) (?:has )?level(?:l)?ed up to level (\d+)!?$""")
     private const val RICH_HEADER = "Level Up!"
     private val REWARD_LINE = Regex("""^-\s*\+([\d,]+)\s+(Experience Points|Emeralds)$""")
     private val UNLOCK_LINE = Regex("""^\+\s*(\D.*)$""")
-    private val PROGRESS_LINE = Regex("""^\d+ more levels? until .+$""")
+    private val PROGRESS_LINE = Regex("""^(?:Only )?\d+ more levels? until .+$""")
+    private val BONUS_LINE = Regex("""^\+\s*(\d[\d,]*)\s+([A-Za-z][^\[]*?)\s*(?:\[.*])?$""")
 }
