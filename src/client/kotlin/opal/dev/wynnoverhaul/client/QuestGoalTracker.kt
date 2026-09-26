@@ -199,7 +199,7 @@ object QuestGoalTracker {
         var clause = segment.substringAfterLast('.').substringAfterLast(';').substringAfterLast(':').trim()
         if (clause.isEmpty()) return null
         clause = TRAILING_PREPOSITION.replace(clause, "").trim()
-        clause = clause.replace(BRACKETS, "").replace(Regex("\\s+"), " ").trim()
+        clause = clause.replace(BRACKETS, "").replace(WHITESPACE_RUN, " ").trim()
         if (clause.isEmpty()) return null
         if (clause.length > MAX_LABEL) {
             val cut = clause.substring(0, MAX_LABEL)
@@ -220,6 +220,7 @@ object QuestGoalTracker {
 
     private val COORD = Regex("""\[\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*]""")
     private val BRACKET = Regex("""\[([^\[\]]+)]""")
+    private val WHITESPACE_RUN = Regex("\\s+")
     private val BRACKETS = Regex("""[\[\]]""")
     private val PROGRESS_ITEM = Regex("""(\d+)\s*/\s*(\d+)\s+(.+)""")
     private val COUNTED_ITEM = Regex("""(\d+)\s*x?\s+(.+)""")

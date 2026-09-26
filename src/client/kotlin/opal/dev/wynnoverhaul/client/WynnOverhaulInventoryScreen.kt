@@ -1706,10 +1706,9 @@ class WynnOverhaulInventoryScreen(
         }
         val identity = rest.subList(0, markerIdx.values.minOrNull() ?: rest.size)
         val combat = sectionAfter("Combat")
-        val levelLine = Regex("""Lv\.\s*\d+""")
         val professions = sectionAfter("Professions")
             .map { (text, slot) -> text.trimStart(' ', '-', '–', '•') to slot }
-            .filter { (text, _) -> levelLine.containsMatchIn(text) }
+            .filter { (text, _) -> LEVEL_LINE.containsMatchIn(text) }
         return CharSections(name, identity, combat, professions)
     }
 
@@ -1843,7 +1842,7 @@ class WynnOverhaulInventoryScreen(
     }
 
     private fun stripCodes(text: String): String {
-        val noCodes = text.replace(Regex("\u00A7."), "")
+        val noCodes = text.replace(SECTION_CODE, "")
         val sb = StringBuilder(noCodes.length)
         var i = 0
         while (i < noCodes.length) {
@@ -1851,7 +1850,7 @@ class WynnOverhaulInventoryScreen(
             if (cp < 0xE000) sb.appendCodePoint(cp)
             i += Character.charCount(cp)
         }
-        return sb.toString().replace(Regex("\\s+"), " ").trim()
+        return sb.toString().replace(WHITESPACE_RUN, " ").trim()
     }
 
     private fun drawCarried(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, carried: ItemStack) {
@@ -1991,6 +1990,9 @@ class WynnOverhaulInventoryScreen(
         return x in left until left + panelWidth() && y in top until top + layout.panelH
     }
 
+    private val LEVEL_LINE = Regex("""Lv\.\s*\d+""")
+    private val WHITESPACE_RUN = Regex("\\s+")
+    private val SECTION_CODE = Regex("\u00A7.")
     private val POWDER_NAME = Regex("""(?:Earth|Thunder|Water|Fire|Air) Powder [IV]{1,3}$""")
 
     private fun isPrecisePlacement(slot: Int): Boolean {

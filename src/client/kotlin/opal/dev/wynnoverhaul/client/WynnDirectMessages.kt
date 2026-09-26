@@ -26,6 +26,7 @@ object WynnDirectMessages {
     private const val GUILD_CAPTURE_MS = 1500L
     private const val PER_GROUP = 5
     private const val SENT_WINDOW_MS = 30_000L
+    private val LEGACY_CODE = Regex("§.")
     private val NAME_PATTERN = Regex("^[A-Za-z0-9_]{3,16}$")
     private val TOKEN_PATTERN = Regex("[A-Za-z0-9_]{3,16}")
     private val SEND_COMMANDS = setOf("msg", "w", "tell", "whisper", "m", "pm", "message")
@@ -88,7 +89,7 @@ object WynnDirectMessages {
             if (c in '\uD800'..'\uDFFF' || c in ''..'') continue
             sb.append(c)
         }
-        return sb.toString().replace(Regex("§."), "").trim().trim('[', ']', '(', ')').trim()
+        return sb.toString().replace(LEGACY_CODE, "").trim().trim('[', ']', '(', ')').trim()
     }
 
     private fun conversation(name: String): Conversation {

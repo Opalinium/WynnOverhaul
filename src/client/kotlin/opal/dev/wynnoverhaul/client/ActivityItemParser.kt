@@ -206,7 +206,7 @@ object ActivityItemParser {
     }
 
     private fun rewardTypeOf(text: String): ActivityRewardType = when {
-        Regex("""\d+(?: .+)? XP$""").containsMatchIn(text) -> ActivityRewardType.XP
+        XP_REWARD.containsMatchIn(text) -> ActivityRewardType.XP
         text.endsWith("Emeralds") -> ActivityRewardType.EMERALDS
         text.startsWith("Access to ") -> ActivityRewardType.ACCESS
         else -> ActivityRewardType.ITEM
@@ -230,6 +230,7 @@ object ActivityItemParser {
         return result
     }
 
+    private val XP_REWARD = Regex("""\d+(?: .+)? XP$""")
     private val LEVEL_REQ_TEXT = Regex("""Combat Lv\.?\s*Min:?\s*(\d+)""")
     private val PROFESSION_REQ_TEXT = Regex("""(\w+)\s+Lv\.\s*Min:\s*(\d+)""")
     private val QUEST_REQ_TEXT = Regex("""Quest:\s*(.+)""")

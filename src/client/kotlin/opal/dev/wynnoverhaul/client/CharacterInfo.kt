@@ -126,7 +126,7 @@ object CharacterInfo {
 
     fun isInfo(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
-        val letters = stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
+        val letters = TextClean.letters(stack.hoverName.string)
         if (letters.contains("Character Info", ignoreCase = true)) return true
         return WynnItemRarity.loreLines(stack).any { "unassigned skill points" in it.lowercase() }
     }
@@ -154,7 +154,7 @@ object CharacterInfo {
         for (slot in 0 until own) {
             val stack = menu.slots[slot].item
             if (stack.isEmpty) continue
-            val letters = stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
+            val letters = TextClean.letters(stack.hoverName.string)
             if (letters.contains("Skill Crystal", ignoreCase = true)) return true
             OPENER_NAMES.firstOrNull { letters.contains(it, ignoreCase = true) }?.let { found.add(it) }
         }

@@ -19,4 +19,17 @@ object TextClean {
         }
         return sb.toString().trim()
     }
+
+    fun letters(text: String): String {
+        val sb = StringBuilder(text.length)
+        for (c in text) {
+            if (c.isLetter()) {
+                sb.append(c)
+            } else if (c.isWhitespace() && sb.isNotEmpty() && sb[sb.length - 1] != ' ') {
+                sb.append(' ')
+            }
+        }
+        if (sb.isNotEmpty() && sb[sb.length - 1] == ' ') sb.setLength(sb.length - 1)
+        return sb.toString()
+    }
 }

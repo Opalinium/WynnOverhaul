@@ -98,7 +98,7 @@ class ContentBookInterceptor : ClientModInitializer {
             if (stack.isEmpty) return false
             val name = stack.hoverName.string
             if (name.contains(CONTENT_BOOK_TITLE_MARKER)) return true
-            val letters = name.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
+            val letters = TextClean.letters(name)
             return letters.contains("Content Book", ignoreCase = true)
         }
 

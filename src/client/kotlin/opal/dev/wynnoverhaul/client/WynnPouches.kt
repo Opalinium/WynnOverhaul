@@ -61,7 +61,7 @@ object WynnPouches {
     }
 
     private fun lettersOf(stack: ItemStack): String =
-        stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
+        TextClean.letters(stack.hoverName.string)
 
     private val POUCH_TOTAL = Regex("""^\s*(\d[\d,.']*)\s*[^\d\s(]{0,3}\s*(?:\(\d|$)""")
     private val INGREDIENT_LINE = Regex("""(\d+)\s*[×x]\s*(.+)""")

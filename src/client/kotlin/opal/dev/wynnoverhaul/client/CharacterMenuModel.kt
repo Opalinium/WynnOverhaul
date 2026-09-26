@@ -68,6 +68,8 @@ object CharacterMenuModel {
         return Snapshot(skillCrystal, skills, openers).also { lastSnapshot = it }
     }
 
+    private val POINTS_TEXT = Regex("""(\d+)\s+points""")
+    private val PERCENT_TEXT = Regex("""(\d+(?:\.\d+)?%)""")
     private val SKILL_NAMES = listOf("Strength", "Dexterity", "Intelligence", "Defence", "Agility")
 
     private fun skillFor(letters: String): String? {
@@ -87,10 +89,10 @@ object CharacterMenuModel {
         for (line in lore) {
             val clean = line.trim()
 
-            Regex("""(\d+)\s+points""").find(clean)?.let {
+            POINTS_TEXT.find(clean)?.let {
                 if (points == null) points = it.groupValues[1].toIntOrNull()
             }
-            if (percent == null) Regex("""(\d+(?:\.\d+)?%)""").find(clean)?.let {
+            if (percent == null) PERCENT_TEXT.find(clean)?.let {
                 percent = it.groupValues[1]
             }
             if (points != null && percent != null) break
@@ -106,5 +108,5 @@ object CharacterMenuModel {
     }
 
     private fun lettersOf(stack: ItemStack): String =
-        stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
+        TextClean.letters(stack.hoverName.string)
 }

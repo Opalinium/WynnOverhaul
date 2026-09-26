@@ -77,7 +77,7 @@ object WynnLevelUpToastOverride {
         }
 
         PERSONAL_PROFESSION.matchEntire(text)?.let { m ->
-            val profession = m.groupValues[2].replace(Regex("^[^A-Za-z]+"), "").trim()
+            val profession = m.groupValues[2].replace(LEADING_SYMBOLS, "").trim()
             WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.LEVEL_UP, "Level Up!", "You reached $profession level ${m.groupValues[1]}!", TOAST_COLOR))
             return false
         }
@@ -132,6 +132,7 @@ object WynnLevelUpToastOverride {
         WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.LEVEL_UP, RICH_HEADER, subtitle, TOAST_COLOR, progress))
     }
 
+    private val LEADING_SYMBOLS = Regex("^[^A-Za-z]+")
     private const val TOAST_COLOR = 0xFFFFD700.toInt()
     private const val OTHER_TOAST_COLOR = 0xFF8FA3B8.toInt()
     private var lastPersonalLevel: String? = null
