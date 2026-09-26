@@ -9,6 +9,8 @@
   <img alt="Loader" src="https://img.shields.io/badge/Loader-Fabric-dbd0b4">
   <img alt="Environment" src="https://img.shields.io/badge/Environment-Client-blue">
   <img alt="License" src="https://img.shields.io/badge/License-Source--Available%20NC-lightgrey">
+  <a href="https://modrinth.com/mod/wynnoverhaul"><img alt="Modrinth" src="https://img.shields.io/badge/Modrinth-wynnoverhaul-1bd96a?logo=modrinth&logoColor=white"></a>
+  <a href="https://ko-fi.com/opalinium"><img alt="Ko-fi" src="https://img.shields.io/badge/Ko--fi-opalinium-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
 ---
@@ -124,7 +126,7 @@ WynnOverhaul connects to these services and nothing else:
 
 ## Support
 
-WynnOverhaul is free. If you'd like to support development, you can donate on [Ko-fi](https://ko-fi.com/opalinium). Donations are optional and don't unlock anything.
+WynnOverhaul is free and stays free. If you like it, you can back its development on [Ko-fi](https://ko-fi.com/opalinium). It's optional and doesn't unlock anything.
 
 ## License
 
