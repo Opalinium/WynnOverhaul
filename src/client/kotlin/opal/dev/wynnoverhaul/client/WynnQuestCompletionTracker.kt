@@ -1,5 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
@@ -7,6 +8,32 @@ import net.minecraft.network.chat.Component
 object WynnQuestCompletionTracker {
     fun register() {
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay -> if (overlay) true else onMessage(message) }
+        ClientTickEvents.END_CLIENT_TICK.register { flushDungeon(false) }
+    }
+
+    private class DungeonRun(val name: String, val suppress: Boolean, val startedAt: Long) {
+        val rewards = ArrayList<String>()
+        var lastAt = startedAt
+
+        fun expired(now: Long): Boolean = now - lastAt >= DUNGEON_WINDOW_MILLIS || now - startedAt >= DUNGEON_MAX_MILLIS
+    }
+
+    private var dungeon: DungeonRun? = null
+
+    private fun flushDungeon(force: Boolean) {
+        val run = dungeon ?: return
+        if (!force && !run.expired(System.currentTimeMillis())) return
+        dungeon = null
+        if (!run.suppress) return
+        val xp = run.rewards.firstOrNull { DUNGEON_XP.containsMatchIn(it) }?.let { DUNGEON_XP.find(it)!!.groupValues[1] }
+        val emeralds = run.rewards.firstOrNull { it.contains("emerald", ignoreCase = true) }
+        val items = run.rewards.count { !DUNGEON_XP.containsMatchIn(it) && !it.contains("emerald", ignoreCase = true) }
+        val detail = listOfNotNull(
+            xp?.let { "+$it XP" },
+            emeralds?.let { "+$it" },
+            items.takeIf { it > 0 }?.let { if (it == 1) "1 item" else "$it items" },
+        ).joinToString(", ")
+        WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.QUEST, "Dungeon Completed", run.name, TOAST_COLOR, detail))
     }
 
     private var pendingHeader = false
@@ -18,6 +45,25 @@ object WynnQuestCompletionTracker {
         if (!WynnOverhaulGate.inGame) return true
         val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
         if (lines.isEmpty()) return true
+
+        val open = dungeon
+        if (open != null) {
+            if (open.expired(System.currentTimeMillis())) {
+                flushDungeon(true)
+            } else if (lines.all { DUNGEON_REWARD.matches(it) }) {
+                for (line in lines) open.rewards.add(DUNGEON_REWARD.matchEntire(line)!!.groupValues[1].trim())
+                open.lastAt = System.currentTimeMillis()
+                return !open.suppress
+            }
+        }
+        for ((index, line) in lines.withIndex()) {
+            val done = DUNGEON_DONE.matchEntire(line) ?: continue
+            flushDungeon(true)
+            val run = DungeonRun(done.groupValues[1].trim(), WynnOverhaulConfig.current.questCompletionToastEnabled, System.currentTimeMillis())
+            for (reward in lines.drop(index + 1)) DUNGEON_REWARD.matchEntire(reward)?.let { run.rewards.add(it.groupValues[1].trim()) }
+            dungeon = run
+            return !run.suppress
+        }
 
         if (lines.any { it.equals(OBJECTIVE_FINISHED, ignoreCase = true) }) {
             ObjectiveClaims.setWeekly(true)
@@ -105,6 +151,11 @@ object WynnQuestCompletionTracker {
     private val PLUS_ONE = Regex("""^\+1 """)
     private val CLAIM_LINE = Regex("""^Click here to claim your rewards!?$""", RegexOption.IGNORE_CASE)
     private const val CLAIM_WINDOW_MILLIS = 5000L
+    private val DUNGEON_DONE = Regex("""^Great job! You['’]ve completed the (.+?) Dungeon!$""")
+    private val DUNGEON_REWARD = Regex("""^\[\+(.+)]$""")
+    private val DUNGEON_XP = Regex("""^(\d[\d,]*) XP$""", RegexOption.IGNORE_CASE)
+    private const val DUNGEON_WINDOW_MILLIS = 900L
+    private const val DUNGEON_MAX_MILLIS = 4000L
     private const val MAX_DETAIL = 60
     private const val OBJECTIVE_FINISHED = "Objective Finished"
     private val MEMBER_FINISHED = Regex("""^(\w{3,16}) has finished their weekly objective\.?$""")
