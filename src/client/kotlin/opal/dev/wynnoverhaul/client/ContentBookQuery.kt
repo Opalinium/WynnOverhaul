@@ -11,7 +11,7 @@ object ContentBookQuery {
     private const val CHANGE_VIEW_SLOT = 66
     private const val NEXT_PAGE_SLOT = 69
     private const val CONTAINER_SIZE = 54
-    private const val MAX_FILTERS = 14
+    private const val MAX_FILTERS = 20
     private const val MAX_PAGES_PER_FILTER = 20
     private const val STABLE_TICKS_REQUIRED = 1
     private const val CHANGE_WAIT_TICKS = 8
@@ -42,6 +42,8 @@ object ContentBookQuery {
     private var awaitingClick = false
     private var baselineHash = 0
     private var awaitingChange = false
+    private var needRewind = false
+    private var rewindClicks = 0
 
     val isActive: Boolean get() = active
     val isEnumerating: Boolean get() = active && mode == Mode.ENUMERATE
@@ -78,6 +80,8 @@ object ContentBookQuery {
         lastSnapshotHash = 0
         awaitingClick = true
         awaitingChange = false
+        needRewind = mode == Mode.ENUMERATE
+        rewindClicks = 0
         baselineHash = 0
         active = true
     }
@@ -136,6 +140,21 @@ object ContentBookQuery {
                 return
             }
         } else {
+            if (needRewind) {
+                val up = scrollUpSlot(m)
+                if (up != null && rewindClicks < MAX_PAGES_PER_FILTER) {
+                    rewindClicks++
+                    click(client, m, player, up)
+                    return
+                }
+                needRewind = false
+                rewindClicks = 0
+                val viewSignature = filterSignature(m)
+                if (viewSignature != null && !seenFilterSignatures.add(viewSignature)) {
+                    finish()
+                    return
+                }
+            }
             capturePage(m)
             onProgress?.invoke(results.values.toList())
         }
@@ -147,7 +166,14 @@ object ContentBookQuery {
         }
 
         if (mode == Mode.ENUMERATE) {
-            finish()
+            if (filterCount >= MAX_FILTERS) {
+                finish()
+                return
+            }
+            filterCount++
+            pageCount = 0
+            needRewind = true
+            click(client, m, player, CHANGE_VIEW_SLOT)
             return
         }
 
@@ -183,6 +209,14 @@ object ContentBookQuery {
         stableCount = 0
         lastSnapshotHash = 0
         awaitingClick = true
+    }
+
+    private fun scrollUpSlot(m: AbstractContainerMenu): Int? {
+        for (i in CONTAINER_SIZE until m.slots.size) {
+            val stack = m.slots[i].item
+            if (!stack.isEmpty && stack.hoverName.string.contains("Scroll Up")) return i
+        }
+        return null
     }
 
     private fun canGoNextPage(m: AbstractContainerMenu): Boolean {
