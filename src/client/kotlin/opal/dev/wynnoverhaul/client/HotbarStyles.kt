@@ -127,22 +127,28 @@ object HotbarStyles {
         return if (a > r) 0 else sqrt((r * r - a * a).toFloat()).roundToInt()
     }
 
-    private fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
-        if (r < 0 || (color ushr 24) == 0) return
+    private val discRuns = HashMap<Int, IntArray>()
+    private val ringRuns = HashMap<Int, IntArray>()
+
+    private fun buildDiscRuns(r: Int): IntArray {
+        val out = ArrayList<Int>()
         var start = -r
         var hw = halfWidth(r, -r)
         for (dy in -r + 1..r + 1) {
             val next = if (dy > r) -1 else halfWidth(r, dy)
             if (next != hw) {
-                g.fill(cx - hw, cy + start, cx + hw + 1, cy + dy, color)
+                out += start
+                out += dy
+                out += hw
                 start = dy
                 hw = next
             }
         }
+        return out.toIntArray()
     }
 
-    private fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
-        if (r < 0 || (color ushr 24) == 0) return
+    private fun buildRingRuns(r: Int): IntArray {
+        val out = ArrayList<Int>()
         var start = -r
         var hi = halfWidth(r, -r)
         var lo = halfWidth(r, -r + 1).coerceAtMost(hi)
@@ -154,16 +160,45 @@ object HotbarStyles {
                 nlo = if (abs(dy) >= r) 0 else halfWidth(r, abs(dy) + 1).coerceAtMost(nhi)
             }
             if (nhi != hi || nlo != lo) {
-                if (lo == 0) {
-                    g.fill(cx - hi, cy + start, cx + hi + 1, cy + dy, color)
-                } else {
-                    g.fill(cx - hi, cy + start, cx - lo + 1, cy + dy, color)
-                    g.fill(cx + lo, cy + start, cx + hi + 1, cy + dy, color)
-                }
+                out += start
+                out += dy
+                out += hi
+                out += lo
                 start = dy
                 hi = nhi
                 lo = nlo
             }
+        }
+        return out.toIntArray()
+    }
+
+    private fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
+        if (r < 0 || (color ushr 24) == 0) return
+        val runs = discRuns.getOrPut(r) { buildDiscRuns(r) }
+        var i = 0
+        while (i < runs.size) {
+            val hw = runs[i + 2]
+            g.fill(cx - hw, cy + runs[i], cx + hw + 1, cy + runs[i + 1], color)
+            i += 3
+        }
+    }
+
+    private fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
+        if (r < 0 || (color ushr 24) == 0) return
+        val runs = ringRuns.getOrPut(r) { buildRingRuns(r) }
+        var i = 0
+        while (i < runs.size) {
+            val top = cy + runs[i]
+            val bottom = cy + runs[i + 1]
+            val hi = runs[i + 2]
+            val lo = runs[i + 3]
+            if (lo == 0) {
+                g.fill(cx - hi, top, cx + hi + 1, bottom, color)
+            } else {
+                g.fill(cx - hi, top, cx - lo + 1, bottom, color)
+                g.fill(cx + lo, top, cx + hi + 1, bottom, color)
+            }
+            i += 4
         }
     }
 

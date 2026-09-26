@@ -1750,6 +1750,7 @@ object WeaponAnimations {
         if (state !is AvatarRenderState) return false
         val player = Minecraft.getInstance().player ?: return false
         if (state.id != player.id) return false
+        if (LocomotionAnimations.unseen(state)) return false
         return (SwingClock.progress() >= 0f && SwingClock.pose != null) || SwingClock.idleActive()
     }
 
@@ -1758,6 +1759,7 @@ object WeaponAnimations {
         if (state !is AvatarRenderState) return false
         val player = Minecraft.getInstance().player ?: return false
         if (state.id != player.id) return false
+        if (LocomotionAnimations.unseen(state)) return false
         SwingClock.idleStep()
         val t = SwingClock.progress()
         val pose = SwingClock.pose

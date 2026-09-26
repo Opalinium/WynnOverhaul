@@ -211,6 +211,7 @@ object LocomotionAnimations {
     private const val TERRAIN_PELVIS_LIMIT = 6f
     private const val TERRAIN_TAU = 0.07f
     private const val TERRAIN_FAR_SQ = 576.0
+    private const val ANIMATE_FAR_SQ = 4096.0
     private const val TERRAIN_DEADBAND = 0.05f
 
     private const val USE_NONE = 0
@@ -482,8 +483,16 @@ object LocomotionAnimations {
     private fun pull(current: Float, goal: Float, w: Float): Float = current + (goal - current) * w
 
     @JvmStatic
+    fun unseen(state: AvatarRenderState): Boolean =
+        state.isInvisible && !state.isInvisibleToPlayer && !state.appearsGlowing()
+
+    @JvmStatic
     fun apply(model: HumanoidModel<*>, humanoid: HumanoidRenderState) {
         val state = humanoid as? AvatarRenderState ?: return
+        if (unseen(state) || (state.distanceToCameraSq > ANIMATE_FAR_SQ && Minecraft.getInstance().player?.id != state.id)) {
+            clearBends(model)
+            return
+        }
         val armsClaimed = WeaponAnimations.claimsArms(state)
         val config = WynnOverhaulConfig.current
         if (!enabled() || state.isSpectator) {

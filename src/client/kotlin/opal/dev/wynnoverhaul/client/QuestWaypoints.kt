@@ -123,12 +123,31 @@ object QuestWaypoints {
         val match = matchStage(questName, liveTaskText, hintStage) ?: return null
         val current = match.stage
         val direct = goalsFor(current)
-        if (direct.goals.isNotEmpty()) return WaypointResult(current, direct.goals, direct.approximate)
+        if (direct.goals.isNotEmpty() && !direct.approximate) return WaypointResult(current, direct.goals, false)
         val key = resolveQuest(questName) ?: return null
+        val written = wikiWrittenGoals(key, current.stage)
+        if (written.isNotEmpty()) return WaypointResult(current, written, approximate = false)
+        if (direct.goals.isNotEmpty()) return WaypointResult(current, direct.goals, direct.approximate)
         val nearest = byQuest[key].orEmpty()
             .filter { goalsFor(it).goals.isNotEmpty() }
             .minByOrNull { abs(it.stage - current.stage) } ?: return null
         return WaypointResult(nearest, goalsFor(nearest).goals.take(1), approximate = true)
+    }
+
+    private fun wikiWrittenGoals(key: String, stageNumber: Int): List<Goal> {
+        val page = QuestWikiFetcher.find(ActivityType.QUEST, key) ?: return emptyList()
+        val title = "stage $stageNumber"
+        val section = page.sections.firstOrNull { it.title.trim().equals(title, ignoreCase = true) } ?: return emptyList()
+        val out = ArrayList<Goal>()
+        for (line in section.lines) {
+            for (m in WRITTEN_COORD.findAll(line.text)) {
+                val x = m.groupValues[1].toIntOrNull() ?: continue
+                val z = m.groupValues[3].toIntOrNull() ?: continue
+                val y = m.groupValues[2].toIntOrNull() ?: UNKNOWN_Y
+                if (out.none { it.x == x && it.z == z }) out.add(Goal(x, y, z, ROLE_DEST))
+            }
+        }
+        return out.take(MAX_GOALS)
     }
 
     fun isWorkStage(stage: Stage): Boolean = WORK_TASK.containsMatchIn(stage.task.orEmpty())
@@ -187,6 +206,7 @@ object QuestWaypoints {
     const val ROLE_TASK = "task"
     const val ROLE_DEST = "dest"
     const val ROLE_PROSE = "prose"
+    const val UNKNOWN_Y = Int.MIN_VALUE
 
     private const val MAX_GOALS = 6
     private const val MAX_PROSE_GROUP = 6
@@ -199,6 +219,7 @@ object QuestWaypoints {
 
     private val TOKEN = Regex("[a-z0-9]+")
     private val COORD = Regex("""\[?\s*-?\d+\s*,\s*-?\d+\s*,\s*-?\d+\s*]?""")
+    private val WRITTEN_COORD = Regex("""(?i)X:\s*(-?\d+)\s*,?\s*(?:Y:\s*(-?\d+)\s*,?\s*)?Z:\s*(-?\d+)""")
     private val PROGRESS = Regex("""#?\d*\s*/\s*\d+""")
     private val QUEST_SUFFIX = Regex("""\((mini-?)?quest\)""")
     private val WORK_TASK = Regex("""(?i)\b(kill|slay|defeat|destroy|collect|gather|bring|obtain|retrieve|loot|fetch|clear|craft|deliver|smash|burn)\b""")

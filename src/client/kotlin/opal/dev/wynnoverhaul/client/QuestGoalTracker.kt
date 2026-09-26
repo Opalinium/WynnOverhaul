@@ -108,7 +108,7 @@ object QuestGoalTracker {
         val labels = result.goals.map { it.label?.trim().orEmpty() }
         val useLabels = labels.all { it.isNotEmpty() && it.length <= MAX_LABEL } && labels.toSet().size == labels.size
         val candidates = result.goals.mapIndexed { index, g ->
-            Goal(g.x, g.y, g.z, wikiLabel(if (useLabels) labels[index] else null, index, total), source)
+            Goal(g.x, if (g.y == QuestWaypoints.UNKNOWN_Y) py.toInt() else g.y, g.z, wikiLabel(if (useLabels) labels[index] else null, index, total), source)
         }
 
         if (total > 1 && !work) {
