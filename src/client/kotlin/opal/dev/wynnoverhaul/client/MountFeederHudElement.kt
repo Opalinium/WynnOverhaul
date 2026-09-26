@@ -22,6 +22,16 @@ class MountFeederHudElement : HudElement {
         }
     }
 
+    private val parseCache = java.util.IdentityHashMap<net.minecraft.world.item.ItemStack, java.util.Optional<MountReading>>()
+
+    private fun parseCached(stack: net.minecraft.world.item.ItemStack): MountReading? {
+        parseCache[stack]?.let { return it.orElse(null) }
+        if (parseCache.size > PARSE_CACHE_LIMIT) parseCache.clear()
+        val parsed = MountTooltipParser.parse(stack)
+        parseCache[stack] = java.util.Optional.ofNullable(parsed)
+        return parsed
+    }
+
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame) return
         val config = WynnOverhaulConfig.current
@@ -31,12 +41,12 @@ class MountFeederHudElement : HudElement {
 
         val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`wynnoverhaul$getHoveredSlot`()
         val readings = LinkedHashMap<String, MountReading>()
-        hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { MountTooltipParser.parse(it) }?.let {
+        hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { parseCached(it) }?.let {
             readings[MountRegistry.keyOf(it.typeName, it.name, it.potential)] = it
         }
         Minecraft.getInstance().player?.containerMenu?.slots?.forEach { slot ->
             if (slot.item.isEmpty) return@forEach
-            val parsed = MountTooltipParser.parse(slot.item) ?: return@forEach
+            val parsed = parseCached(slot.item) ?: return@forEach
             readings.putIfAbsent(MountRegistry.keyOf(parsed.typeName, parsed.name, parsed.potential), parsed)
         }
         if (readings.isEmpty()) return
@@ -113,6 +123,7 @@ class MountFeederHudElement : HudElement {
         const val MOUNT_FEEDER_TITLE_MARKER = "󏿭"
         const val ID = "mount_feeder"
         const val PAD = 6
+        const val PARSE_CACHE_LIMIT = 256
         const val LINE_H = 10
         val HEADER_COLOR = OwTheme.ACCENT
         val WHITE = OwTheme.TEXT

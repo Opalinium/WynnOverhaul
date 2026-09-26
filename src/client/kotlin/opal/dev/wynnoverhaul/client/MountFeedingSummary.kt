@@ -1,8 +1,10 @@
 package opal.dev.wynnoverhaul.client
 
 object MountFeedingSummary {
-    private var cacheKey: String? = null
-    private var cacheResult: MountShoppingList? = null
+    private const val MAX_CACHED = 16
+    private val cache = object : LinkedHashMap<String, MountShoppingList>(MAX_CACHED, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MountShoppingList>): Boolean = size > MAX_CACHED
+    }
 
     fun compute(reading: MountReading): MountShoppingList? {
         val resolved = MountRegistry.resolve(reading)
@@ -16,10 +18,9 @@ object MountFeedingSummary {
         }
         val max = IntArray(8) { resolved.stats.getValue(MountMaterials.STATS[it]).max!! }
         val key = "${cur.joinToString(",")}|${lim.joinToString(",")}|${max.joinToString(",")}"
-        if (key == cacheKey) return cacheResult
+        cache[key]?.let { return it }
         val result = MountOptimizer.computeShoppingList(cur, lim, max, MountTrainMode.NORMAL, null)
-        cacheKey = key
-        cacheResult = result
+        cache[key] = result
         return result
     }
 
