@@ -28,6 +28,7 @@
     "HudItemNameMixin",
     "ChatChannelButtonsMixin",
     "ItemDebugCopyMixin",
+    "ContainerEquipCompareMixin",
     "WeaponAnimationThirdPersonMixin",
     "WeaponAnimationFirstPersonMixin",
     "WeaponAnimationSpearMixin",
