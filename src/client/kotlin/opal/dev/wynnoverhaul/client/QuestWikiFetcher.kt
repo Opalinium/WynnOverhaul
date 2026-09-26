@@ -31,7 +31,17 @@ object QuestWikiFetcher {
 
     fun allPages(): Collection<WikiPage> = byKey.values
 
-    fun find(type: ActivityType, name: String): WikiPage? {
+    private val findCache = java.util.concurrent.ConcurrentHashMap<String, java.util.Optional<WikiPage>>()
+    private val byName: Map<String, WikiPage> by lazy {
+        val out = HashMap<String, WikiPage>(byKey.size)
+        for (page in byKey.values) out.putIfAbsent(page.name, page)
+        out
+    }
+
+    fun find(type: ActivityType, name: String): WikiPage? =
+        findCache.computeIfAbsent("$type::$name") { java.util.Optional.ofNullable(lookup(type, name)) }.orElse(null)
+
+    private fun lookup(type: ActivityType, name: String): WikiPage? {
         val labels = labelsFor(type)
         for (label in labels) {
             byKey["$label::$name"]?.let { return it }
@@ -39,13 +49,12 @@ object QuestWikiFetcher {
         for (label in labels) {
             byDisambiguatedKey["$label::$name"]?.let { return it }
         }
-        val fallback = byKey.values.firstOrNull { it.name == name }
+        val fallback = byName[name]
         if (fallback == null) {
             val triedKeys = labels.joinToString(", ") { "$it::$name" }
             WynnOverhaul.LOGGER.warn(
-                "WynnOverhaul activity wiki lookup failed: type={} name='{}' triedKeys=[{}] bundleSize={} sampleKeys={}",
+                "WynnOverhaul activity wiki lookup failed: type={} name='{}' triedKeys=[{}] bundleSize={}",
                 type, name, triedKeys, byKey.size,
-                byKey.keys.filter { it.startsWith(labels.firstOrNull().orEmpty()) }.take(5),
             )
         }
         return fallback
