@@ -25,16 +25,22 @@ object HudStyle {
 
     fun wrap(font: Font, text: String, maxWidth: Int): List<String> {
         val lines = ArrayList<String>()
+        val spaceWidth = font.width(" ")
         var current = StringBuilder()
+        var currentWidth = 0
         for (word in text.split(' ')) {
             if (word.isEmpty()) continue
+            val wordWidth = font.width(word)
             if (current.isEmpty()) {
                 current.append(word)
-            } else if (font.width("$current $word") <= maxWidth) {
+                currentWidth = wordWidth
+            } else if (currentWidth + spaceWidth + wordWidth <= maxWidth) {
                 current.append(' ').append(word)
+                currentWidth += spaceWidth + wordWidth
             } else {
                 lines.add(current.toString())
                 current = StringBuilder(word)
+                currentWidth = wordWidth
             }
         }
         if (current.isNotEmpty()) lines.add(current.toString())
