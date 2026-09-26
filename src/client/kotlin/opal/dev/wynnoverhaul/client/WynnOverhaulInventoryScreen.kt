@@ -1957,6 +1957,11 @@ class WynnOverhaulInventoryScreen(
         val isIngredientPouch = WynnPouches.isIngredientPouch(stack)
         val isSellConfirm = WynnPouches.isSellConfirm(stack) || WynnPouches.isConfirmMorph(stack)
 
+        if ((button == 0 || button == 1) && !event.hasShiftDown() && isPowderApplication(menu.carried, stack)) {
+            sendInput(slot, button, ContainerInput.PICKUP)
+            return true
+        }
+
         when (button) {
             0 -> {
                 if (event.hasShiftDown()) {
@@ -2015,11 +2020,19 @@ class WynnOverhaulInventoryScreen(
         return false
     }
 
+    private fun isPowderApplication(carried: ItemStack, target: ItemStack): Boolean {
+        if (carried.isEmpty || target.isEmpty) return false
+        if (!POWDER_NAME.containsMatchIn(TextClean.clean(carried.hoverName.string))) return false
+        return !POWDER_NAME.containsMatchIn(TextClean.clean(target.hoverName.string))
+    }
+
     private fun inWindow(layout: Layout, x: Int, y: Int): Boolean {
         val left = panelLeft()
         val top = panelTopFor(layout.panelH)
         return x in left until left + panelWidth() && y in top until top + layout.panelH
     }
+
+    private val POWDER_NAME = Regex("""(?:Earth|Thunder|Water|Fire|Air) Powder [IV]{1,3}$""")
 
     private fun isPrecisePlacement(slot: Int): Boolean {
         if (slot in HOTBAR_SLOTS) return true
