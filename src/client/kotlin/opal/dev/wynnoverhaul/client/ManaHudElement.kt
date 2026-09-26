@@ -32,7 +32,7 @@ class ManaHudElement : HudElement {
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())
 
         val fraction = if (maxMana > 0) mana.toFloat() / maxMana else 0f
-        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, MANA_FILL, label)
+        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, MANA_FILL, label, ID)
     }
 
     private companion object {

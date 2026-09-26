@@ -84,6 +84,7 @@ data class WynnOverhaulConfig(
     var customPotionHudEnabled: Boolean = false,
     var abilityCooldownHudEnabled: Boolean = true,
     var questLogHudEnabled: Boolean = true,
+    var ultimateHudEnabled: Boolean = true,
 
     var hudPanelsEnabled: Boolean = false,
 
@@ -138,6 +139,8 @@ data class WynnOverhaulConfig(
     var trackerHudShowDistance: Boolean = true,
     var trackerRules: MutableList<TrackerRule> = mutableListOf(),
     var hudLayouts: MutableMap<String, HudElementLayout> = mutableMapOf(),
+    var hudLayoutPreset: String = "DEFAULT",
+    var hudLayoutSlots: MutableMap<String, MutableMap<String, HudElementLayout>> = mutableMapOf(),
     var customInventoryEnabled: Boolean = true,
 
     var customHudEnabled: Boolean = false,
@@ -193,6 +196,8 @@ data class WynnOverhaulConfig(
         var barWidth: Int = 0,
 
         var boxH: Int = 0,
+
+        var style: String = "",
     )
 
     fun sanitize(): WynnOverhaulConfig {

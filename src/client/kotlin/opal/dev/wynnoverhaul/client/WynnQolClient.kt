@@ -53,6 +53,10 @@ class WynnQolClient : ClientModInitializer {
             AbilityCooldownHudElement(),
         )
         HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "ultimates"),
+            UltimateHudElement(),
+        )
+        HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "toast"),
             WynnOverhaulToastHudElement(),
         )
@@ -119,6 +123,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_feeder", "Mount Feeder", "TOP_RIGHT", fallbackW = 230, fallbackH = 60, hidden = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("lootrun", "Lootrun", "TOP_LEFT", fallbackW = 180, fallbackH = 50))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("ability_cooldowns", "Ability Cooldowns", "BOTTOM_RIGHT", fallbackW = 140, fallbackH = 42))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("ultimates", "Ultimates", "BOTTOM_LEFT", defaultOffsetX = 200, defaultOffsetY = 60, fallbackW = 110, fallbackH = 16))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("toast", "Toasts", "TOP_LEFT", defaultOffsetX = 220, defaultOffsetY = 24, fallbackW = 200, fallbackH = 34))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("potion_effects", "Potion Effects", "TOP_RIGHT", fallbackW = 160, fallbackH = 54))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("tracker", "Entity Tracker", "TOP_LEFT", fallbackW = 160, fallbackH = 60))

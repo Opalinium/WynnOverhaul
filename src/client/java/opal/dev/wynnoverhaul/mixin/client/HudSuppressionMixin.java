@@ -12,6 +12,7 @@ import opal.dev.wynnoverhaul.client.WynnOverhaulGate;
 import opal.dev.wynnoverhaul.client.WynnActionBar;
 import opal.dev.wynnoverhaul.client.WynnGuildBarTracker;
 import opal.dev.wynnoverhaul.client.WynnRegionBarTracker;
+import opal.dev.wynnoverhaul.client.WynnUltimateTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -41,7 +42,10 @@ public abstract class HudSuppressionMixin {
         }
         if (WynnActionBar.INSTANCE.isComposite(overlayMessageString)) {
             Component leftover = WynnActionBar.INSTANCE.leftover(overlayMessageString);
-            if (leftover == null) {
+            if (WynnOverhaulConfig.Companion.getCurrent().getUltimateHudEnabled()) {
+                WynnUltimateTracker.INSTANCE.update(leftover);
+                ci.cancel();
+            } else if (leftover == null) {
                 ci.cancel();
             } else {
                 overlayMessageString = leftover;

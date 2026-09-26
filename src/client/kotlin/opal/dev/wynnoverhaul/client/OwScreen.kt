@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.Renderable
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
+import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 
 private const val KEY_ESCAPE = 256
@@ -30,6 +31,7 @@ abstract class OwScreen(
     }
 
     override fun init() {
+        OwDropdownOverlay.close()
         addRenderableOnly(Renderable { graphics, _, _, _ -> drawChrome(graphics) })
         if (parent != null) {
             addRenderableWidget(
@@ -46,7 +48,24 @@ abstract class OwScreen(
         graphics.centeredText(Minecraft.getInstance().font, title.string.uppercase(), left + panelWidth / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
     }
 
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+        val covered = OwDropdownOverlay.covers(mouseX, mouseY, height)
+        val mx = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseX
+        val my = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseY
+        super.extractRenderState(graphics, mx, my, partialTick)
+        OwDropdownOverlay.render(graphics, mouseX, mouseY, height)
+    }
+
+    override fun mouseClicked(event: MouseButtonEvent, doubled: Boolean): Boolean {
+        if (OwDropdownOverlay.mouseClicked(event.x().toInt(), event.y().toInt(), height)) return true
+        return super.mouseClicked(event, doubled)
+    }
+
     override fun keyPressed(event: KeyEvent): Boolean {
+        if (OwDropdownOverlay.isOpen && event.key() == KEY_ESCAPE) {
+            OwDropdownOverlay.close()
+            return true
+        }
         if (isTextInputFocused() && event.key() == KEY_ESCAPE) {
             releaseTextInputFocus()
             return true
@@ -62,6 +81,7 @@ abstract class OwScreen(
     private val panelList = OwPanelList({ addRenderableWidget(it) })
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+        if (OwDropdownOverlay.mouseScrolled(mouseX.toInt(), mouseY.toInt(), scrollY, height)) return true
         if (panelList.handleMouseScrolled(mouseX, mouseY, scrollX, scrollY)) return true
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }

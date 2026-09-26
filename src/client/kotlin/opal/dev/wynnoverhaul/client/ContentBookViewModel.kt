@@ -49,8 +49,8 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
     fun filterOptions(): List<String?> =
         listOf<String?>(null) + ActivityType.entries.distinctBy { it.filterName }.sortedBy { it.filterName }.map { it.filterName }
 
-    fun cycleSort() {
-        sort = Sort.entries[(sort.ordinal + 1) % Sort.entries.size]
+    fun selectSort(value: Sort) {
+        sort = value
         saveViewPrefs()
     }
 

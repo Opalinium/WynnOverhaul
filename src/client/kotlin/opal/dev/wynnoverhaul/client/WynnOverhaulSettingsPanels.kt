@@ -207,6 +207,18 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         }
 
         fun cycleButton(labelFor: () -> String, tooltip: String, onPress: () -> Unit) = button(labelFor(), tooltip, onPress)
+
+        fun dropdown(label: String, tooltip: String, options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
+            var current = selected
+            add(
+                OwDropdown(left, 0, w, OwTheme.ROW_H - 2, label, options.map { OwDropdownOverlay.Option(it.first, it.second) }, { current }) { id ->
+                    current = id
+                    onSelect(id)
+                    host.rebuildPanels()
+                },
+                tooltip,
+            )
+        }
     }
 
     private fun panel(left: Int, w: Int, top: Int, build: PanelScope.() -> Unit) {
@@ -490,8 +502,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         )
     }
 
-    private fun soundLabel(): String = NotificationSounds.label(config.trackerPingSoundId)
-
     private fun buildDiscoveredTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             rows += OwSectionHeader(left, 0, w, "Discovered Chests") to 18
@@ -589,9 +599,12 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Restyles how player bodies move: walking, sprinting, jumping, landing, crouching, swimming, climbing, riding, gliding, eating, blocking, getting hurt and dying. Layers on top of vanilla and never overrides an active weapon animation on your arms.",
                 config.locomotionEnabled,
             ) { config.locomotionEnabled = it }
-            cycleButton({ "Style: " + LocomotionAnimations.labelOf(config.locomotionStyle) }, "Heroic: broad, powerful strides. Stealth: low and quiet. Lightfoot: springy and bouncy. Heavy: weighty stomps and slow sway. Weary: slumped and dragging.") {
-                config.locomotionStyle = LocomotionAnimations.nextStyle(config.locomotionStyle)
-            }
+            dropdown(
+                "Style",
+                "Heroic: broad, powerful strides. Stealth: low and quiet. Lightfoot: springy and bouncy. Heavy: weighty stomps and slow sway. Weary: slumped and dragging.",
+                LocomotionAnimations.styleKeys.map { it to LocomotionAnimations.labelOf(it) },
+                config.locomotionStyle,
+            ) { config.locomotionStyle = it }
             checkbox("Apply to other players", "Also restyles every other player you can see, not just you.", config.locomotionOtherPlayers) { config.locomotionOtherPlayers = it }
             checkbox("Randomize other players' styles", "Each other player gets one of the styles based on their identity, so a crowd does not move in lockstep. Turn off to give everyone your selected style.", config.locomotionRandomizeOthers) { config.locomotionRandomizeOthers = it }
             checkbox("Joint bending", "Bends arms at the elbow and legs at the knee instead of swinging them as stiff blocks. Skin, sleeves, pants and armor bend together.", config.locomotionBend) { config.locomotionBend = it }
@@ -791,11 +804,13 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
 
             header("${kind.label} Toast")
             rows += enabledBox to OwTheme.ROW_H
-            button(
-                "Style: ${WynnOverhaulToastQueue.styleFor(kind).label}",
+            dropdown(
+                "Style",
                 "Classic: a boxed panel. Souls: large fading text with a soft dark band and ornamental rule.",
+                ToastStyle.entries.map { it.name to it.label },
+                WynnOverhaulToastQueue.styleFor(kind).name,
             ) {
-                setToastStyle(kind, WynnOverhaulToastQueue.styleFor(kind).next().name)
+                setToastStyle(kind, it)
                 config.save()
             }
 
@@ -853,15 +868,21 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Sound/chat alert when an item at or above the rarity below shows up in your inventory. Reads the item's Wynncraft rarity straight off its name colour.",
                 config.mythicAlertEnabled,
             ) { config.mythicAlertEnabled = it }
-            cycleButton({ "Minimum rarity: ${rarityLabel()}" }, "Click to cycle: Normal / Unique / Rare / Legendary / Fabled / Mythic.") {
-                val opts = WynnRarity.entries
-                val i = opts.indexOfFirst { it.name == config.mythicAlertMinRarity }.coerceAtLeast(0)
-                config.mythicAlertMinRarity = opts[(i + 1).mod(opts.size)].name
-            }
+            dropdown(
+                "Minimum rarity",
+                "Lowest item rarity that triggers the alert.",
+                WynnRarity.entries.map { it.name to it.displayName },
+                config.mythicAlertMinRarity,
+            ) { config.mythicAlertMinRarity = it }
             checkbox("Play sound", "", config.mythicAlertSound) { config.mythicAlertSound = it }
-            cycleButton({ "Alert sound: ${NotificationSounds.label(config.mythicAlertSoundId)}" }, "Sound played when a rare item is obtained. Click to cycle (plays a preview).") {
-                config.mythicAlertSoundId = NotificationSounds.next(config.mythicAlertSoundId, allowOff = false)
-                NotificationSounds.play(config.mythicAlertSoundId, config.mythicAlertVolume)
+            dropdown(
+                "Alert sound",
+                "Sound played when a rare item is obtained. Picking one plays a preview.",
+                NotificationSounds.PRESETS.map { it.second to it.first },
+                config.mythicAlertSoundId,
+            ) {
+                config.mythicAlertSoundId = it
+                NotificationSounds.play(it, config.mythicAlertVolume)
             }
             slider("Alert volume", 0.0, 1.0, config.mythicAlertVolume, "Volume of the rare item alert sound.") { config.mythicAlertVolume = it }
             checkbox("Show chat message", "", config.mythicAlertChat) { config.mythicAlertChat = it }
@@ -869,16 +890,19 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             header("Entity Tracker Alerts")
             checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
             checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }
-            cycleButton({ "Ping sound: ${soundLabel()}" }, "Sound played when an entity starts matching. Click to cycle (plays a preview).") {
-                config.trackerPingSoundId = NotificationSounds.next(config.trackerPingSoundId, allowOff = false)
+            dropdown(
+                "Ping sound",
+                "Sound played when an entity starts matching. Picking one plays a preview.",
+                NotificationSounds.PRESETS.map { it.second to it.first },
+                config.trackerPingSoundId,
+            ) {
+                config.trackerPingSoundId = it
                 previewTrackerSound()
             }
             slider("Ping pitch", 0.5, 2.0, config.trackerPingPitch, "Pitch of the new-match ping sound.") { config.trackerPingPitch = it }
             slider("Ping volume", 0.0, 1.0, config.trackerPingVolume, "Volume of the new-match ping sound.") { config.trackerPingVolume = it }
         }
     }
-
-    private fun rarityLabel(): String = WynnRarity.entries.firstOrNull { it.name == config.mythicAlertMinRarity }?.displayName ?: "Mythic"
 
     private fun buildHudTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
@@ -889,6 +913,22 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             ) { config.customHudEnabled = it }
             cycleButton({ "Customize HUD layout..." }, "Drag, resize and lock any HUD element -- opens the HUD designer.") {
                 Minecraft.getInstance().setScreenAndShow(HudDesignerScreen(host.screen))
+            }
+
+            dropdown(
+                "Global style",
+                "Switches every element's look at once: bars, hotbar, chat and panels, and clears per-element bar styles. Shows Custom once any group or element differs.",
+                HudPresets.PRESETS.map { it.id to it.label } + ("CUSTOM" to "Custom"),
+                HudPresets.current(config)?.id ?: "CUSTOM",
+            ) { id -> HudPresets.PRESETS.firstOrNull { it.id == id }?.let { HudPresets.apply(config, it) } }
+            dropdown(
+                "Layout preset",
+                "Rearranges the HUD elements: built-in arrangements plus three custom slots you fill with the HUD designer's Save layout... button. Applying one overrides locks and keeps your previous arrangement so it can be undone.",
+                HudLayoutPresets.IDS.map { it to HudLayoutPresets.label(it) },
+                HudLayoutPresets.selected(config),
+            ) { HudLayoutPresets.apply(config, it) }
+            cycleButton({ "Undo last layout swap" }, "Restores the arrangement you had before the last layout preset was applied. Clicking again swaps back.") {
+                HudLayoutPresets.undo(config)
             }
 
             header("Potion Effects")
@@ -908,6 +948,13 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.abilityCooldownHudEnabled,
             ) { config.abilityCooldownHudEnabled = it }
 
+            header("Ultimates")
+            checkbox(
+                "Show ultimates as a HUD element",
+                "Moves the ultimate icons from the action bar into their own element you can drag, scale and lock in the HUD designer. Off leaves them in the vanilla action bar position.",
+                config.ultimateHudEnabled,
+            ) { config.ultimateHudEnabled = it }
+
             header("Quest Log")
             checkbox(
                 "Show custom quest log",
@@ -916,19 +963,26 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             ) { config.questLogHudEnabled = it }
 
             header("Bars")
-            cycleButton({ "Bar style: ${HudBars.styleLabel(config.hudBarStyle)}" }, "Look shared by the health, mana, sprint, experience, class resource and mount energy bars. Height comes from the HUD designer: drag a bar's corner handle taller or shorter.") {
-                val i = HudBars.STYLES.indexOf(config.hudBarStyle).coerceAtLeast(0)
-                config.hudBarStyle = HudBars.STYLES[(i + 1).mod(HudBars.STYLES.size)]
+            dropdown(
+                "Bar style",
+                "Look for the whole bar group (health, mana, sprint, experience, class resource, mount energy); resets any per-bar override set in the HUD designer. Height comes from the HUD designer: drag a bar's corner handle taller or shorter.",
+                HudBars.STYLES.map { it to HudBars.styleLabel(it) },
+                config.hudBarStyle,
+            ) {
+                config.hudBarStyle = it
+                HudLayoutManager.clearStyleOverrides()
             }
 
             header("Chat")
             checkbox("Custom chat layout", "Makes the chat a HUD element you can drag and resize in the HUD designer. Off keeps the vanilla chat position and size.", config.chatHudEnabled) {
                 config.chatHudEnabled = it
             }
-            cycleButton({ "Chat style: ${ChatHud.label(config.chatStyle)}" }, "Classic is the vanilla per-line backdrop. Glass, fade band and no backdrop restyle only the backgrounds behind chat lines.") {
-                val i = ChatHud.STYLES.indexOf(config.chatStyle).coerceAtLeast(0)
-                config.chatStyle = ChatHud.STYLES[(i + 1).mod(ChatHud.STYLES.size)]
-            }
+            dropdown(
+                "Chat style",
+                "Classic is the vanilla per-line backdrop. Glass, fade band and no backdrop restyle only the backgrounds behind chat lines.",
+                ChatHud.STYLES.map { it to ChatHud.label(it) },
+                config.chatStyle,
+            ) { config.chatStyle = it }
 
             checkbox("Smart reply", "When someone messages you (or you message them) in the last 3 minutes, opening chat switches to a direct conversation with them. Pick ALL to go back.", config.chatSmartReply) {
                 config.chatSmartReply = it
@@ -938,10 +992,12 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             }
 
             header("Hotbar")
-            cycleButton({ "Hotbar style: ${HotbarStyles.label(config.hotbarStyle)}" }, "Classic is the vanilla bar. Glass strip, floating tiles, arc, radial wheel and Elden cross are redrawn layouts of the same nine slots; drag and scale them in the HUD designer.") {
-                val i = HotbarStyles.STYLES.indexOf(config.hotbarStyle).coerceAtLeast(0)
-                config.hotbarStyle = HotbarStyles.STYLES[(i + 1).mod(HotbarStyles.STYLES.size)]
-            }
+            dropdown(
+                "Hotbar style",
+                "Classic is the vanilla bar. Glass strip, floating tiles, arc, radial wheel and Elden cross are redrawn layouts of the same nine slots; drag and scale them in the HUD designer.",
+                HotbarStyles.STYLES.map { it to HotbarStyles.label(it) },
+                config.hotbarStyle,
+            ) { config.hotbarStyle = it }
 
             header("Panels")
             checkbox(

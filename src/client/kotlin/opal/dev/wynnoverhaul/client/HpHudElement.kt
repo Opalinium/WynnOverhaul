@@ -32,7 +32,7 @@ class HpHudElement : HudElement {
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())
 
         val fraction = if (maxHealth > 0) health.toFloat() / maxHealth else 0f
-        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, HEALTH_FILL, label)
+        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, HEALTH_FILL, label, ID)
     }
 
     private companion object {

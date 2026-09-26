@@ -32,16 +32,20 @@ class OwButton(
             accent -> OwTheme.ACCENT
             else -> OwTheme.HAIRLINE
         }
-        graphics.fill(x, y, x + width, y + height, fill)
-        graphics.fill(x, y, x + width, y + 1, border)
-        graphics.fill(x, y + height - 1, x + width, y + height, border)
-        graphics.fill(x, y, x + 1, y + height, border)
-        graphics.fill(x + width - 1, y, x + width, y + height, border)
-        val color = when {
-            !active -> OwTheme.TEXT_FAINT
-            accent -> OwTheme.ACCENT
-            else -> textColor ?: OwTheme.TEXT
-        }
+        val fade = getAlpha()
+        graphics.fill(x, y, x + width, y + height, HudStyle.alpha(fill, fade))
+        graphics.fill(x, y, x + width, y + 1, HudStyle.alpha(border, fade))
+        graphics.fill(x, y + height - 1, x + width, y + height, HudStyle.alpha(border, fade))
+        graphics.fill(x, y, x + 1, y + height, HudStyle.alpha(border, fade))
+        graphics.fill(x + width - 1, y, x + width, y + height, HudStyle.alpha(border, fade))
+        val color = HudStyle.alpha(
+            when {
+                !active -> OwTheme.TEXT_FAINT
+                accent -> OwTheme.ACCENT
+                else -> textColor ?: OwTheme.TEXT
+            },
+            fade,
+        )
         val font = Minecraft.getInstance().font
         if (swatch != null) {
             val inset = SWATCH_INSET

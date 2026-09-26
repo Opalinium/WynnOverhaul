@@ -26,7 +26,8 @@ object HudBars {
         fraction: Float,
         fillArgb: Int,
         label: String,
-        style: String = WynnOverhaulConfig.current.hudBarStyle,
+        id: String = "",
+        style: String = if (id.isEmpty()) WynnOverhaulConfig.current.hudBarStyle else HudLayoutManager.barStyle(id),
     ) {
         if (w <= 0 || h <= 0) return
         when (style) {

@@ -38,6 +38,112 @@ object HudLayoutManager {
         }
     }
 
+    val BAR_IDS = setOf("hp", "mana", "sprint", "xp_bar", "resource_bar", "mount_energy")
+
+    fun allIds(): List<String> = specs.keys.toList()
+
+    class StyleMenu(
+        val options: List<Pair<String, String>>,
+        val selected: String,
+        val currentLabel: String,
+        val overridden: Boolean,
+        val select: (String) -> Unit,
+    )
+
+    fun styleMenu(id: String): StyleMenu? {
+        val config = WynnOverhaulConfig.current
+        return when (id) {
+            in BAR_IDS -> {
+                val override = styleOverride(id)
+                StyleMenu(
+                    listOf("" to "Follow group") + HudBars.STYLES.map { it to HudBars.styleLabel(it) },
+                    override,
+                    HudBars.styleLabel(barStyle(id)),
+                    override.isNotEmpty(),
+                ) { setStyleOverride(id, it) }
+            }
+            "hotbar" -> StyleMenu(
+                HotbarStyles.STYLES.map { it to HotbarStyles.label(it) },
+                config.hotbarStyle,
+                HotbarStyles.label(config.hotbarStyle),
+                false,
+            ) {
+                config.hotbarStyle = it
+                forgetSize(id)
+            }
+            "chat" -> StyleMenu(
+                ChatHud.STYLES.map { it to ChatHud.label(it) },
+                config.chatStyle,
+                ChatHud.label(config.chatStyle),
+                false,
+            ) { config.chatStyle = it }
+            else -> null
+        }
+    }
+
+    fun styleOverride(id: String): String {
+        val style = WynnOverhaulConfig.current.hudLayouts[id]?.style.orEmpty()
+        return if (style in HudBars.STYLES) style else ""
+    }
+
+    fun setStyleOverride(id: String, style: String) {
+        layoutFor(id).style = style
+    }
+
+    fun barStyle(id: String): String = styleOverride(id).ifEmpty { WynnOverhaulConfig.current.hudBarStyle }
+
+    fun hasStyleOverrides(): Boolean = BAR_IDS.any { styleOverride(it).isNotEmpty() }
+
+    fun clearStyleOverrides() {
+        WynnOverhaulConfig.current.hudLayouts.forEach { (id, layout) -> if (id in BAR_IDS) layout.style = "" }
+    }
+
+    fun resetPlacement(id: String) {
+        val layout = layoutFor(id)
+        val spec = specs[id]
+        layout.corner = spec?.defaultCorner ?: "TOP_LEFT"
+        layout.offsetX = spec?.defaultOffsetX ?: 4
+        layout.offsetY = spec?.defaultOffsetY ?: 4
+        layout.scale = 1.0
+        layout.barWidth = 0
+        layout.boxH = 0
+        stableSizes.remove(id)
+    }
+
+    fun placeAt(id: String, corner: String, x: Int, y: Int, width: Int, height: Int) {
+        resetPlacement(id)
+        val layout = layoutFor(id)
+        layout.corner = corner
+        layout.offsetX = x
+        layout.offsetY = y
+        layout.barWidth = width
+        layout.boxH = height
+    }
+
+    fun placeCentered(id: String, dx: Int, dy: Int, guiW: Int, guiH: Int) {
+        resetPlacement(id)
+        val scale = scale(id)
+        val (boxW, boxH) = peekSize(id)
+        val w = (boxW * scale).toInt()
+        val h = (boxH * scale).toInt()
+        val nx = (guiW / 2 + dx - w / 2).coerceIn(0, (guiW - w).coerceAtLeast(0))
+        val ny = (guiH / 2 + dy - h / 2).coerceIn(0, (guiH - h).coerceAtLeast(0))
+        place(id, nx, ny, w, h, guiW, guiH)
+    }
+
+    fun snapshot(id: String): WynnOverhaulConfig.HudElementLayout = layoutFor(id).copy()
+
+    fun restore(id: String, source: WynnOverhaulConfig.HudElementLayout) {
+        val layout = layoutFor(id)
+        layout.corner = source.corner
+        layout.offsetX = source.offsetX
+        layout.offsetY = source.offsetY
+        layout.scale = source.scale
+        layout.barWidth = source.barWidth
+        layout.boxH = source.boxH
+        stableSizes.remove(id)
+    }
+
     fun corner(id: String): String = layoutFor(id).corner
 
     fun isLocked(id: String): Boolean = layoutFor(id).locked

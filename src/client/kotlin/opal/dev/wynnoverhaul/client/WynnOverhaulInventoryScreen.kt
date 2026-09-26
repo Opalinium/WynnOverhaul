@@ -53,7 +53,7 @@ class WynnOverhaulInventoryScreen(
     )
 
     private var searchField: OwTextField? = null
-    private var inventorySortButton: OwButton? = null
+    private var inventorySortButton: AbstractWidget? = null
     private var searchText: String = ""
     private val tabButtons = ArrayList<OwButton>()
     private var scrollY: Int = 0
@@ -76,7 +76,7 @@ class WynnOverhaulInventoryScreen(
     private var journalScrollY: Int = 0
     private var journalSearchField: OwTextField? = null
     private var journalSearchRefocus = -1
-    private var journalSortButton: OwButton? = null
+    private var journalSortButton: AbstractWidget? = null
     private val journalCategoryButtons = ArrayList<Pair<OwButton, Int>>()
     private var journalTrackButton: OwButton? = null
     private var journalWikiButton: OwButton? = null
@@ -172,6 +172,7 @@ class WynnOverhaulInventoryScreen(
     private fun panelTopFor(panelH: Int): Int = ((height - panelH) / 2).coerceAtLeast(MARGIN - 4)
 
     override fun init() {
+        OwDropdownOverlay.close()
         val ox = panelLeft()
         val layout = when (invTab) {
             InvTab.SETTINGS -> computeSettingsLayout()
@@ -193,17 +194,19 @@ class WynnOverhaulInventoryScreen(
         if (invTab == InvTab.INVENTORY) {
             val fieldX = ox + MARGIN
             val fieldY = pt + SEARCH_Y_REL
-            val sortW = font.width("Sort: Default") + 16
+            val sortW = font.width("Sort: Default") + 34
             searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2 - sortW - 4, SEARCH_H).also {
                 it.value = searchText
                 addRenderableWidget(it)
             }
-            inventorySortButton = OwButton(
+            inventorySortButton = OwDropdown(
                 fieldX + panelWidth() - MARGIN * 2 - sortW, fieldY, sortW, SEARCH_H,
-                Component.literal("Sort: ${InventorySort.parse(WynnOverhaulConfig.current.inventorySort).label}"),
+                "Sort",
+                InventorySort.entries.map { OwDropdownOverlay.Option(it.name, it.label) },
+                { InventorySort.parse(WynnOverhaulConfig.current.inventorySort).name },
             ) {
                 val config = WynnOverhaulConfig.current
-                config.inventorySort = InventorySort.parse(config.inventorySort).next().name
+                config.inventorySort = it
                 config.save()
                 rebuildWidgets()
             }.also { addRenderableWidget(it) }
@@ -215,7 +218,7 @@ class WynnOverhaulInventoryScreen(
             val gx = ox + MARGIN
             val gw = panelWidth() - MARGIN * 2
             val rowY = { dy: Int -> pt + CONTENT_TOP_REL + dy }
-            val sortW = 72
+            val sortW = 100
             val refreshW = 56
             journalSearchField = OwTextField(font, gx, rowY(0), gw - sortW - refreshW - 8, SEARCH_H).also {
                 it.setValue(journal.query)
@@ -233,8 +236,13 @@ class WynnOverhaulInventoryScreen(
                     journalSearchRefocus = -1
                 }
             }
-            journalSortButton = OwButton(gx + gw - sortW - refreshW - 4, rowY(0), sortW, SEARCH_H, Component.literal(journal.sort.label)) {
-                journal.cycleSort()
+            journalSortButton = OwDropdown(
+                gx + gw - sortW - refreshW - 4, rowY(0), sortW, SEARCH_H,
+                "",
+                ContentBookViewModel.Sort.entries.map { OwDropdownOverlay.Option(it.name, it.label) },
+                { journal.sort.name },
+            ) {
+                journal.selectSort(ContentBookViewModel.Sort.valueOf(it))
                 rebuildWidgets()
             }.also { addRenderableWidget(it) }
             journalRefreshButton = OwButton(gx + gw - refreshW, rowY(0), refreshW, SEARCH_H, Component.literal("Refresh")) {
@@ -416,6 +424,14 @@ class WynnOverhaulInventoryScreen(
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+        val covered = OwDropdownOverlay.covers(mouseX, mouseY, height)
+        val mx = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseX
+        val my = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseY
+        renderInventoryScreen(graphics, mx, my, partialTick)
+        OwDropdownOverlay.render(graphics, mouseX, mouseY, height)
+    }
+
+    private fun renderInventoryScreen(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         this.mouseX = mouseX
         this.mouseY = mouseY
         val player = Minecraft.getInstance().player
@@ -1881,6 +1897,7 @@ class WynnOverhaulInventoryScreen(
     }
 
     override fun mouseClicked(event: MouseButtonEvent, doubled: Boolean): Boolean {
+        if (OwDropdownOverlay.mouseClicked(event.x().toInt(), event.y().toInt(), height)) return true
         if (super.mouseClicked(event, doubled)) return true
         val x = event.x().toInt()
         val y = event.y().toInt()
@@ -2078,6 +2095,7 @@ class WynnOverhaulInventoryScreen(
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+        if (OwDropdownOverlay.mouseScrolled(mouseX.toInt(), mouseY.toInt(), scrollY, height)) return true
         if (invTab == InvTab.SETTINGS) {
             if (panelList.handleMouseScrolled(mouseX, mouseY, scrollX, scrollY)) return true
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
@@ -2126,6 +2144,10 @@ class WynnOverhaulInventoryScreen(
 
     override fun keyPressed(event: KeyEvent): Boolean {
         val client = Minecraft.getInstance()
+        if (OwDropdownOverlay.isOpen && event.key() == KEY_ESCAPE) {
+            OwDropdownOverlay.close()
+            return true
+        }
         if (isTextInputFocused()) {
             if (event.key() == KEY_ESCAPE) {
                 releaseTextInputFocus()

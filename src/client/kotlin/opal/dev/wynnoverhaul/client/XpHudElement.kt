@@ -34,7 +34,7 @@ class XpHudElement : HudElement {
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
         val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())
 
-        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, XP_FILL, label)
+        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, fraction, XP_FILL, label, ID)
     }
 
     private companion object {
