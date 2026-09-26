@@ -24,6 +24,7 @@ object CharacterInfo {
             }
             val title = screen.title.string
             if (title.contains(ContentBookInterceptor.CONTENT_BOOK_TITLE_MARKER)) return@register
+            if (foreignActive) return@register
 
             pendingMenu = screen.menu
             pendingScreen = screen
@@ -31,7 +32,10 @@ object CharacterInfo {
         }
     }
 
+    private var foreignActive = false
+
     fun tick(client: Minecraft) {
+        if (foreignActive && client.gui.screen() == null) foreignActive = false
         val menu = pendingMenu ?: return
         if (!WynnOverhaulGate.inGame) {
             clearPending()
@@ -55,6 +59,7 @@ object CharacterInfo {
 
         if (!menuHasContents(menu)) return
         if (!isCharacterMenuContent(menu)) {
+            foreignActive = true
             clearPending()
             return
         }
@@ -134,15 +139,19 @@ object CharacterInfo {
         return menu.slots[slot].item
     }
 
+    private val OPENER_NAMES = listOf("Ability Tree", "Mastery Tomes", "Daily Reward", "View Your Guild", "Recruit A Friend")
+
     private fun isCharacterMenuContent(menu: AbstractContainerMenu): Boolean {
-        for (slot in 0 until menu.slots.size) {
+        val found = HashSet<String>()
+        val own = if (menu.slots.size > 36) menu.slots.size - 36 else menu.slots.size
+        for (slot in 0 until own) {
             val stack = menu.slots[slot].item
             if (stack.isEmpty) continue
             val letters = stack.hoverName.string.filter { it.isLetter() || it.isWhitespace() }.replace(Regex("\\s+"), " ").trim()
             if (letters.contains("Skill Crystal", ignoreCase = true)) return true
-            if (letters.contains("Ability Tree", ignoreCase = true)) return true
+            OPENER_NAMES.firstOrNull { letters.contains(it, ignoreCase = true) }?.let { found.add(it) }
         }
-        return false
+        return found.size >= 2
     }
 
     private fun menuHasContents(menu: AbstractContainerMenu): Boolean {
