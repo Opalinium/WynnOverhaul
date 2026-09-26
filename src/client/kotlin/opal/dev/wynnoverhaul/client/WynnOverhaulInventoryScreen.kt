@@ -2148,6 +2148,7 @@ class WynnOverhaulInventoryScreen(
     private fun addClaimButtons(ox: Int, pt: Int) {
         val labels = ArrayList<Pair<String, () -> Unit>>()
         if (ObjectiveClaims.weeklyClaimable) labels.add("Claim weekly" to { ObjectiveClaims.claimWeekly(); rebuildWidgets() })
+        if (ObjectiveClaims.objectiveClaimable) labels.add("Claim objective" to { ObjectiveClaims.claimObjective(); rebuildWidgets() })
         if (ObjectiveClaims.dailyClaimable) labels.add("Claim daily" to { selectTab(InvTab.CHARACTER) })
         if (labels.isEmpty()) return
         val by = (pt - CLAIM_BTN_H - 2).coerceAtLeast(2)
