@@ -50,6 +50,15 @@ public abstract class HudSuppressionMixin {
             } else {
                 overlayMessageString = leftover;
             }
+        } else if (WynnOverhaulConfig.Companion.getCurrent().getUltimateHudEnabled()
+                && WynnActionBar.INSTANCE.hasUltimateSegment(overlayMessageString.getString())) {
+            WynnUltimateTracker.INSTANCE.update(WynnActionBar.INSTANCE.leftover(overlayMessageString));
+            Component remainder = WynnActionBar.INSTANCE.withoutUltimates(overlayMessageString);
+            if (WynnActionBar.INSTANCE.isBlankOverlay(remainder)) {
+                ci.cancel();
+            } else {
+                overlayMessageString = remainder;
+            }
         }
     }
 

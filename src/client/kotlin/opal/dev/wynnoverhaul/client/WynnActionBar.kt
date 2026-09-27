@@ -35,11 +35,36 @@ object WynnActionBar {
         return WynnDialogueTracker.isDialogue(message)
     }
 
+    fun hasUltimateSegment(raw: String): Boolean = ULTIMATE_SEGMENT.containsMatchIn(raw)
+
+    fun withoutUltimates(message: Component): Component = project(message, keepUltimate = false)
+
+    fun isBlankOverlay(component: Component): Boolean = component.string.none { it.isLetterOrDigit() }
+
     fun leftover(message: Component): Component? {
         if (message === leftoverSource) return leftoverResult
         leftoverSource = message
         leftoverResult = if (WynnDialogueTracker.isDialogue(message)) null else buildLeftover(message)
         return leftoverResult
+    }
+
+    private var lastCaptureLog = ""
+    private var lastCaptureAt = 0L
+
+    private fun logCapture(raw: String, keep: BooleanArray) {
+        val now = System.currentTimeMillis()
+        if (now - lastCaptureAt < 5000) return
+        val parts = ArrayList<String>()
+        var i = 0
+        while (i < raw.length && parts.size < 16) {
+            if (i < keep.size && keep[i]) parts.add("U+%04X".format(raw[i].code))
+            i++
+        }
+        val summary = parts.joinToString(" ")
+        if (summary == lastCaptureLog) return
+        lastCaptureLog = summary
+        lastCaptureAt = now
+        WynnOverhaul.LOGGER.info("[Ultimate] captured: {}", summary)
     }
 
     private fun buildLeftover(message: Component): Component? {
@@ -51,7 +76,27 @@ object WynnActionBar {
             any = true
         }
         if (!any) return null
+        logCapture(raw, keep)
 
+        val result = Component.empty()
+        var offset = 0
+        var pending = StringBuilder()
+        var pendingStyle: Style? = null
+
+        fun flush() {
+            val style = pendingStyle
+            if (style != null && pending.isNotEmpty()) result.append(Component.literal(pending.toString()).withStyle(style))
+            pending = StringBuilder()
+            pendingStyle = null
+        }
+
+        return project(message, keepUltimate = true)
+    }
+
+    private fun project(message: Component, keepUltimate: Boolean): Component {
+        val raw = message.string
+        val mark = BooleanArray(raw.length)
+        for (match in ULTIMATE_SEGMENT.findAll(raw)) for (i in match.range) mark[i] = true
         val result = Component.empty()
         var offset = 0
         var pending = StringBuilder()
@@ -67,7 +112,7 @@ object WynnActionBar {
         message.visit(
             FormattedText.StyledContentConsumer<Unit> { style, text ->
                 for (ch in text) {
-                    val kept = offset < keep.size && keep[offset]
+                    val kept = offset < mark.size && (mark[offset] == keepUltimate)
                     offset++
                     if (!kept) continue
                     if (pendingStyle != style) {
@@ -103,5 +148,5 @@ object WynnActionBar {
         return false
     }
 
-    private val ULTIMATE_SEGMENT = Regex("\uDAFF\uDFE8[\uE4F0-\uE52F\uE190-\uE19C]+\uDAFF\uDFE7")
+    private val ULTIMATE_SEGMENT = Regex("\uDAFF\uDFFA\uE4E0\uDAFF\uDFF6")
 }

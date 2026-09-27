@@ -24,24 +24,21 @@ class UltimateHudElement : HudElement {
         if (!WynnOverhaulGate.inGame) return
         val config = WynnOverhaulConfig.current
         if (!config.customHudEnabled || !config.ultimateHudEnabled) return
-        val component = WynnUltimateTracker.active() ?: return
+        if (!WynnUltimateTracker.visible(System.currentTimeMillis()) && !isHudDesignerOpen()) return
+        val label = "Ultimate READY"
 
         val font = Minecraft.getInstance().font
-        val (boxW, boxH) = HudLayoutManager.stableSize(ID, font.width(component) + PAD * 2, font.lineHeight + PAD * 2)
-        val scale = HudLayoutManager.scale(ID)
-        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
+        val contentW = font.width(label) + PAD * 2
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
+        val (ox, oy) = HudLayoutManager.resolveFlat(ID, graphics.guiWidth(), graphics.guiHeight())
 
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(baseX.toFloat(), baseY.toFloat())
-        if (scale != 1f) pose.scale(scale)
-        OwTheme.hudPanel(graphics, 0, 0, boxW, boxH)
-        graphics.text(font, component, (boxW - font.width(component)) / 2, (boxH - font.lineHeight) / 2 + 1, OwTheme.TEXT, true)
-        pose.popMatrix()
+        HudBars.drawBar(graphics, font, ox, oy, boxW, boxH, 1f, ULTIMATE_FILL, label)
     }
 
     companion object {
         const val ID = "ultimates"
+        private const val CONTENT_H = 15
         private const val PAD = 3
+        private const val ULTIMATE_FILL = 0xFFD4AF37.toInt()
     }
 }
