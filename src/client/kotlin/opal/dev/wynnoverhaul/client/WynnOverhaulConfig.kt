@@ -85,6 +85,8 @@ data class WynnOverhaulConfig(
     var abilityCooldownHudEnabled: Boolean = true,
     var questLogHudEnabled: Boolean = true,
     var ultimateHudEnabled: Boolean = true,
+    var powderSpecialHudEnabled: Boolean = true,
+    var powderSpecialStyle: String = "GLYPH",
 
     var hudPanelsEnabled: Boolean = false,
 
@@ -108,6 +110,7 @@ data class WynnOverhaulConfig(
     var toastDurationSeconds: Double = 4.0,
     var toastKinds: MutableMap<String, ToastSettings>? = null,
     var customPartyNametagsEnabled: Boolean = true,
+    var partyBuffTrackerEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var equipComparisonEnabled: Boolean = true,
     var powderSpecialsTooltipEnabled: Boolean = true,

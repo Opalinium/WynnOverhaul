@@ -77,6 +77,12 @@ object HudLayoutManager {
                 ChatHud.label(config.chatStyle),
                 false,
             ) { config.chatStyle = it }
+            "powder_special" -> StyleMenu(
+                PowderSpecialHudElement.STYLES.map { it to PowderSpecialHudElement.styleLabel(it) },
+                config.powderSpecialStyle,
+                PowderSpecialHudElement.styleLabel(config.powderSpecialStyle),
+                false,
+            ) { config.powderSpecialStyle = it }
             else -> null
         }
     }
@@ -380,7 +386,7 @@ object HudLayoutManager {
 
     const val SNAP_GRID = 20
 
-    const val CENTER_SNAP_RADIUS = 5
+    const val CENTER_SNAP_RADIUS = 9
 
     const val EDGE_SNAP_RADIUS = 6
 

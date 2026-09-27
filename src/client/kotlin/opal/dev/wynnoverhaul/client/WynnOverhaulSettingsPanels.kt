@@ -726,6 +726,13 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.customPartyNametagsEnabled,
             ) { config.customPartyNametagsEnabled = it }
 
+            header("Party buffs")
+            checkbox(
+                "Party buff tracker",
+                "Moves \"[name] gave you [+N]\" heal spam and buff refresh notices out of chat into a small HUD feed showing who healed you, running totals and hit counts. Entries fade after 30 seconds.",
+                config.partyBuffTrackerEnabled,
+            ) { config.partyBuffTrackerEnabled = it }
+
             header("Gear")
             checkbox(
                 "Equipped item comparison",
@@ -950,10 +957,15 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
 
             header("Ultimates")
             checkbox(
-                "Show ultimates as a HUD element",
-                "Moves the ultimate icons from the action bar into their own element you can drag, scale and lock in the HUD designer. Off leaves them in the vanilla action bar position.",
+                "Show ultimate ready indicator",
+                "Shows a persistent Ultimate READY indicator when your class ultimate is fully charged, in its own element you can drag, scale and lock in the HUD designer. Off leaves it in the vanilla action bar position. Charge progress itself has no readable action-bar signal (the meter there echoes stamina), so only the ready state is shown.",
                 config.ultimateHudEnabled,
             ) { config.ultimateHudEnabled = it }
+            checkbox(
+                "Show powder special status",
+                "Subtle powder special charge indicator as its own HUD element; the style (server glyph, circle, half circle) is picked on the element itself in the HUD designer. Powder specials are separate from class ultimates and track nothing else.",
+                config.powderSpecialHudEnabled,
+            ) { config.powderSpecialHudEnabled = it }
 
             header("Quest Log")
             checkbox(

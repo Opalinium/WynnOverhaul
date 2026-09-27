@@ -18,6 +18,7 @@ class WynnQolClient : ClientModInitializer {
         ChatHud.init()
         WynnDirectMessages.register()
         PartyFriendModel.register()
+        PartyBuffTracker.register()
         WynnBuffTracker.register()
         WynnLevelTracker.register()
         WynnVitalsTracker.register()
@@ -27,6 +28,7 @@ class WynnQolClient : ClientModInitializer {
         WynnDialogueTracker.register()
         WynnCombatXpTracker.register()
         WynnSpellTracker.register()
+        WynnPowderSpecialTracker.register()
         WynnChatChannels.register()
         WynnOverhaulInventory.register()
         CharacterInfo.register()
@@ -51,6 +53,10 @@ class WynnQolClient : ClientModInitializer {
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "ability_cooldowns"),
             AbilityCooldownHudElement(),
+        )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "party_buffs"),
+            PartyBuffHudElement(),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "ultimates"),
@@ -106,6 +112,10 @@ class WynnQolClient : ClientModInitializer {
             WynnSpellComboHudElement(),
         )
         HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "powder_special"),
+            PowderSpecialHudElement(),
+        )
+        HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_pickup"),
             WynnMountPickupHudElement(),
         )
@@ -123,6 +133,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_feeder", "Mount Feeder", "TOP_RIGHT", fallbackW = 230, fallbackH = 60, hidden = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("lootrun", "Lootrun", "TOP_LEFT", fallbackW = 180, fallbackH = 50))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("ability_cooldowns", "Ability Cooldowns", "BOTTOM_RIGHT", fallbackW = 140, fallbackH = 42))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("party_buffs", "Party Buffs", "TOP_RIGHT", defaultOffsetY = 140, fallbackW = 170, fallbackH = 42))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("ultimates", "Ultimates", "BOTTOM_LEFT", defaultOffsetX = 200, defaultOffsetY = 60, fallbackW = 110, fallbackH = 16))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("toast", "Toasts", "TOP_LEFT", defaultOffsetX = 220, defaultOffsetY = 24, fallbackW = 200, fallbackH = 34))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("potion_effects", "Potion Effects", "TOP_RIGHT", fallbackW = 160, fallbackH = 54))
@@ -131,6 +142,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mana", "Mana", "TOP_LEFT", defaultOffsetY = 24, fallbackW = 180, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("spell_cast", "Spell Cast", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 46, fallbackW = 140, fallbackH = 15))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("spell_combo", "Spell Combo", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 66, fallbackW = 100, fallbackH = 16))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("powder_special", "Powder Special", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 112, fallbackW = 36, fallbackH = 36))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("sprint", "Sprint / Stamina", "BOTTOM_LEFT", fallbackW = 140, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_energy", "Mount Energy", "BOTTOM_LEFT", defaultOffsetY = 20, fallbackW = 140, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_pickup", "Mount Pickup", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 86, fallbackW = 140, fallbackH = 24))
@@ -168,6 +180,7 @@ class WynnQolClient : ClientModInitializer {
         }
         VoxyVista.tick(client)
         PartyFriendModel.tick(client)
+        PartyBuffTracker.tick()
         WynnBuffTracker.tick(client)
         LootrunModel.tick(client)
         LootrunBeaconTracker.tick(client)

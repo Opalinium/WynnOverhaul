@@ -37,6 +37,8 @@ object WynnOverhaulGate {
             WynnRegionBarTracker.clear()
             WynnSpellTracker.clear()
             WynnUltimateTracker.clear()
+            WynnPowderSpecialTracker.clear()
+            PartyBuffTracker.clear()
             HudLayoutManager.clearSizes()
             ContentBookCache.clearTracking()
             ObjectiveClaims.clear()
