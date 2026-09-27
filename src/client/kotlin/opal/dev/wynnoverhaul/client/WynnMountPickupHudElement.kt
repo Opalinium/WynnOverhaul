@@ -22,9 +22,14 @@ class WynnMountPickupHudElement : HudElement {
 
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
-        val pickup = WynnMountPickupTracker.last ?: return
-        if (!WynnMountPickupTracker.pickupVisible(System.currentTimeMillis())) return
-        if (pickup.words.isEmpty()) return
+        val live = WynnMountPickupTracker.last?.takeIf {
+            WynnMountPickupTracker.pickupVisible(System.currentTimeMillis()) && it.words.isNotEmpty()
+        }
+        val pickup = live ?: if (isHudDesignerOpen()) {
+            WynnMountPickupTracker.Pickup("Mount Training", listOf("handling", "level"), System.currentTimeMillis())
+        } else {
+            return
+        }
 
         val font = Minecraft.getInstance().font
         val title = pickup.title
