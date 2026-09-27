@@ -40,6 +40,8 @@ public abstract class SoulsCameraMixin {
         }
         this.setRotation(pose.getYaw(), pose.getPitch());
         this.setPosition(pose.getX(), pose.getY(), pose.getZ());
-        this.move(-this.getMaxZoom(pose.getDistance()), 0.0F, 0.0F);
+        float rawZoom = this.getMaxZoom(pose.getDistance());
+        float zoom = SoulsCamera.smoothZoom(rawZoom);
+        this.move(-zoom, 0.0F, 0.0F);
     }
 }

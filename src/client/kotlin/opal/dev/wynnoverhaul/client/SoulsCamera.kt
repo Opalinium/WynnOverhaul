@@ -46,6 +46,8 @@ object SoulsCamera {
     private var lastFrameNanos = 0L
     private var lastActionNanos = 0L
     private var saved: SavedRotation? = null
+    private var smoothedZoom = -1f
+    private var lastZoomNanos = 0L
 
     private fun eligible(mc: Minecraft): Boolean {
         if (!WynnOverhaulConfig.current.soulsCameraEnabled) return false
@@ -66,9 +68,31 @@ object SoulsCamera {
             camPitch = player.xRot.coerceIn(PITCH_MIN, PITCH_MAX)
             pivot = null
         }
-        if (!now) pivot = null
+        if (!now) {
+            pivot = null
+            smoothedZoom = -1f
+        }
         active = now
         return now
+    }
+
+    @JvmStatic
+    fun smoothZoom(rawZoom: Float): Float {
+        val now = System.nanoTime()
+        val dt = ((now - lastZoomNanos) / 1.0e9).coerceIn(0.0, 0.1)
+        lastZoomNanos = now
+
+        val current = smoothedZoom
+        if (current < 0f || rawZoom < current) {
+            smoothedZoom = rawZoom
+            return rawZoom
+        }
+
+        val rate = 10.0
+        val a = 1.0 - exp(-dt * rate)
+        val next = current + ((rawZoom - current) * a).toFloat()
+        smoothedZoom = next
+        return next
     }
 
     @JvmStatic
