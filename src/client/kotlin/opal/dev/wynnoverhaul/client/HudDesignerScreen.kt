@@ -185,8 +185,9 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
             val dragging = activeId == spec.id
             val locked = HudLayoutManager.isLocked(spec.id)
 
-            graphics.fill(x0, y0, x1, y1, if (dragging) 0x60FFD54F.toInt() else if (hovered) 0x40FFD54F.toInt() else 0x30120D08.toInt())
-            graphics.outline(x0 - 1, y0 - 1, (x1 - x0) + 2, (y1 - y0) + 2, if (hovered) OwTheme.ACCENT else OwTheme.BORDER_BRIGHT)
+            graphics.fill(x0, y0, x1, y1, if (dragging) 0x14FFD54F.toInt() else if (hovered) 0x40FFD54F.toInt() else 0x30120D08.toInt())
+            graphics.outline(x0 - 1, y0 - 1, (x1 - x0) + 2, (y1 - y0) + 2, if (hovered || dragging) OwTheme.ACCENT else OwTheme.BORDER_BRIGHT)
+            val stripBg = if (dragging) 0x80100C08.toInt() else 0xE0100C08.toInt()
 
             val compact = (y1 - y0) < COMPACT_H
             val lockX = if (compact) x0 + 2 else x1 - LOCK_SIZE - 2
@@ -206,7 +207,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
             val labelW = (labelX1 - labelX0).coerceAtLeast(0)
             if (labelW > MIN_LABEL_W && (y1 - y0) >= TEXT_H + 3) {
                 val shortLabel = truncateToWidth(font, label, labelW)
-                graphics.fill(labelX0 - 1, y0 + 1, labelX1, y0 + TEXT_H + 2, 0xE0100C08.toInt())
+                graphics.fill(labelX0 - 1, y0 + 1, labelX1, y0 + TEXT_H + 2, stripBg)
                 graphics.text(font, shortLabel, labelX0, y0 + 2, OwTheme.TEXT)
             }
 
@@ -224,7 +225,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
                 val chip = chipRect(spec)
                 val chipHovered = mouseX >= chip[0] && mouseX < chip[0] + CHIP_W && mouseY >= chip[1] && mouseY < chip[1] + LOCK_SIZE
                 val tint = if (menu.overridden || chipHovered) OwTheme.ACCENT else OwTheme.TEXT_DIM
-                graphics.fill(chip[0], chip[1], chip[0] + CHIP_W, chip[1] + LOCK_SIZE, if (chipHovered) OwTheme.TILE_HOVER else 0xE0100C08.toInt())
+                graphics.fill(chip[0], chip[1], chip[0] + CHIP_W, chip[1] + LOCK_SIZE, if (chipHovered) OwTheme.TILE_HOVER else stripBg)
                 graphics.outline(chip[0], chip[1], CHIP_W, LOCK_SIZE, if (menu.overridden) OwTheme.ACCENT else OwTheme.BORDER_BRIGHT)
                 val initial = menu.currentLabel.take(1)
                 graphics.text(font, initial, chip[0] + 3, chip[1] + (LOCK_SIZE - TEXT_H) / 2 + 1, tint)
@@ -420,6 +421,8 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
         if (p != null) minecraft.setScreenAndShow(p) else minecraft.gui.setScreen(null)
     }
 
+
+
     private fun boxOf(spec: HudLayoutManager.HudElementSpec): IntArray {
         return HudLayoutManager.bounds(spec.id, width, height)
     }
@@ -499,3 +502,6 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
         const val GUIDE_LINE = 0xA0FFD54F.toInt()
     }
 }
+
+fun isHudDesignerOpen(): Boolean =
+    Minecraft.getInstance().gui.screen() is HudDesignerScreen
