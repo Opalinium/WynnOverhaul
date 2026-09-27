@@ -4,6 +4,24 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.2.0 - 2026-09-26
+
+### Added
+- Dungeon completions show a toast with the dungeon name, XP, emeralds and item count. The chat lines are hidden while the toast is on.
+- Completing a daily objective shows a toast, and a Claim objective button appears in the inventory next to Claim weekly. It runs `/daily`.
+- The equipped item comparison tooltip now works in any container, not only the custom inventory.
+- The level-up toast now includes the Ability Point and stat lines (for example +1 Ability Point, +5 Maximum HP) instead of leaving them in chat.
+
+### Fixed
+- Resetting your ability tree no longer gets taken over by the custom Character screen. Only the real Character Info menu is replaced now.
+- Right-clicking or left-clicking a powder onto an item in the custom inventory now applies it.
+- The Content Book refresh reads every view from the first page and no longer drops activity types it did not see. Tracking an activity during a refresh resumes the refresh afterwards instead of leaving the book incomplete.
+- The Gargoyle Fortress cave now has wiki data, and a missing wiki page is logged once instead of on every lookup.
+
+### Changed
+- The journal, inventory tab, mount feeder overlay and item tooltips do far less work each frame, so the custom screens stay smoother with a large Content Book.
+- A failed Character or Journal open no longer keeps the old screen in memory.
+
 ## 1.1.0 - 2026-09-25
 
 ### Added
