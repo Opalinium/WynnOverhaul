@@ -4,6 +4,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.2.1 - 2026-09-26
+
 ### Fixed
 - The Content Book search and refresh now work the way the Content Book itself does. They read the book's own Filter button to switch to the right category (for example Quest), rewind to the first page, and wait for every slot of a page to arrive before reading it. Tracking a quest or activity no longer fails after the book was left on another category or page, and a refresh reads every category.
 
