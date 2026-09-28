@@ -23,8 +23,10 @@ class WynnMountEnergyHudElement : HudElement {
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
         val now = System.currentTimeMillis()
-        if (!WynnMountEnergyTracker.energyVisible(now)) return
-        val energy = WynnMountEnergyTracker.energy ?: return
+        val live = WynnMountEnergyTracker.energy?.takeIf {
+            WynnMountEnergyTracker.energyVisible(now)
+        }
+        val energy = live ?: if (isHudDesignerOpen()) 24 else return
         val label = "Mount Energy  $energy/${WynnMountEnergyTracker.MAX_ENERGY}"
 
         val font = Minecraft.getInstance().font

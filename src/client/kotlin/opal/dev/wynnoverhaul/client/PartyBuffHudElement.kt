@@ -24,9 +24,23 @@ class PartyBuffHudElement : HudElement {
         if (!WynnOverhaulGate.inGame) return
         if (!WynnOverhaulConfig.current.partyBuffTrackerEnabled) return
         val now = System.currentTimeMillis()
-        val heals = PartyBuffTracker.heals.take(MAX_FEEDS)
-        val notices = PartyBuffTracker.notices.takeLast(MAX_NOTICES)
-        if (heals.isEmpty() && notices.isEmpty()) return
+        val liveHeals = PartyBuffTracker.heals.take(MAX_FEEDS)
+        val liveNotices = PartyBuffTracker.notices.takeLast(MAX_NOTICES)
+        val heals = liveHeals.takeIf { it.isNotEmpty() } ?: if (isHudDesignerOpen()) {
+            listOf(
+                PartyBuffTracker.HealFeed("Tankhun_TH", 4500, 3, 1500, System.currentTimeMillis()),
+                PartyBuffTracker.HealFeed("MageMaster", 2800, 2, 1400, System.currentTimeMillis() - 5000),
+            )
+        } else {
+            return
+        }
+        val notices = liveNotices.takeIf { it.isNotEmpty() } ?: if (isHudDesignerOpen()) {
+            listOf(
+                PartyBuffTracker.Notice("Provoke has been refreshed!", System.currentTimeMillis() - 2000),
+            )
+        } else {
+            emptyList()
+        }
 
         val font = Minecraft.getInstance().font
         val contentW = maxOf(

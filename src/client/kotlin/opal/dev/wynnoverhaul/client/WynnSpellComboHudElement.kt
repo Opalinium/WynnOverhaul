@@ -23,9 +23,23 @@ class WynnSpellComboHudElement : HudElement {
 
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
-        val glyphs = WynnSpellTracker.comboComponents ?: return
-        val arrow = WynnSpellTracker.comboArrow ?: return
-        if (!WynnSpellTracker.comboVisible(System.currentTimeMillis())) return
+        val liveGlyphs = WynnSpellTracker.comboComponents
+        val liveArrow = WynnSpellTracker.comboArrow
+        val liveVisible = WynnSpellTracker.comboVisible(System.currentTimeMillis())
+        val glyphs: List<Component>
+        val arrow: Component
+        if (liveGlyphs != null && liveArrow != null && liveVisible) {
+            glyphs = liveGlyphs
+            arrow = liveArrow
+        } else if (isHudDesignerOpen()) {
+            val left = Component.literal("L")
+            val right = Component.literal("R")
+            val empty = Component.literal(" ")
+            glyphs = listOf(left, empty, right, empty, left)
+            arrow = Component.literal("\u2192")
+        } else {
+            return
+        }
 
         val font = Minecraft.getInstance().font
         val parts = ArrayList<Component>(glyphs.size * 2 - 1)

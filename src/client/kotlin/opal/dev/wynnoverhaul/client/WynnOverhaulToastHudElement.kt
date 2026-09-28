@@ -27,16 +27,37 @@ class WynnOverhaulToastHudElement : HudElement {
 
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame) return
-        val toast = WynnOverhaulToastQueue.current() ?: return
-        val fraction = WynnOverhaulToastQueue.elapsedFraction()
-        when (toast.style) {
-            ToastStyle.CLASSIC -> renderClassic(graphics, toast, fraction)
-            ToastStyle.SOULS -> renderSouls(graphics, toast, fraction)
+        val toast = WynnOverhaulToastQueue.current()
+        val designer = isHudDesignerOpen()
+        val title: String
+        val subtitle: String
+        val detail: String
+        val colorArgb: Int
+        val style: ToastStyle
+        if (toast != null) {
+            title = toast.title
+            subtitle = toast.subtitle
+            detail = toast.detail
+            colorArgb = toast.colorArgb
+            style = toast.style
+        } else if (designer) {
+            title = "Level Up!"
+            subtitle = "You reached combat level 100!"
+            detail = ""
+            colorArgb = 0xFFFFD700.toInt()
+            style = ToastStyle.CLASSIC
+        } else {
+            return
+        }
+        val fraction = if (toast != null) WynnOverhaulToastQueue.elapsedFraction() else 0.5f
+        when (style) {
+            ToastStyle.CLASSIC -> renderClassic(graphics, title, subtitle, detail, colorArgb, fraction)
+            ToastStyle.SOULS -> renderSouls(graphics, title, subtitle, detail, colorArgb, fraction)
         }
     }
 
-    private fun renderClassic(graphics: GuiGraphicsExtractor, toast: WynnOverhaulToastQueue.Toast, fraction: Float) {
-        val settings = WynnOverhaulConfig.current.toast(toast.kind)
+    private fun renderClassic(graphics: GuiGraphicsExtractor, title: String, subtitle: String, detail: String, colorArgb: Int, fraction: Float) {
+        val settings = WynnOverhaulConfig.current.toast(WynnOverhaulToastQueue.Kind.LEVEL_UP)
         val alpha = (
             when {
                 fraction < FADE_IN_END -> 255 * (fraction / FADE_IN_END)
@@ -51,9 +72,9 @@ class WynnOverhaulToastHudElement : HudElement {
         val guiH = graphics.guiHeight()
         val textScale = settings.scale.toFloat().coerceIn(0.5f, 4f)
         val total = HudLayoutManager.scale(ID) * textScale
-        val subtitle = if (toast.detail.isBlank()) toast.subtitle else "${toast.subtitle}  ·  ${toast.detail}"
+        val subtitleText = if (detail.isBlank()) subtitle else "$subtitle  ·  $detail"
         val (floorW, floorH) = HudLayoutManager.boxSize(ID)
-        val boxW = max((floorW / textScale).toInt(), max(font.width(toast.title), font.width(subtitle)) + PAD * 2)
+        val boxW = max((floorW / textScale).toInt(), max(font.width(title), font.width(subtitleText)) + PAD * 2)
         val boxH = max((floorH / textScale).toInt(), LINE_HEIGHT * 2 + PAD * 2)
 
         val configured = HudLayoutManager.bounds(ID, guiW, guiH)
@@ -68,15 +89,15 @@ class WynnOverhaulToastHudElement : HudElement {
         pose.pushMatrix()
         pose.translate(originX, originY)
         pose.scale(total)
-        HudStyle.plate(graphics, 0, 0, boxW, boxH, toast.colorArgb, alpha / 255f)
-        HudStyle.fadeRule(graphics, 4, 2, boxW - 8, HudStyle.withAlpha(toast.colorArgb, alpha), leftSolid = true)
-        graphics.text(font, toast.title, (boxW - font.width(toast.title)) / 2, PAD, HudStyle.withAlpha(toast.colorArgb, alpha), true)
-        graphics.text(font, subtitle, (boxW - font.width(subtitle)) / 2, PAD + LINE_HEIGHT, HudStyle.withAlpha(OwTheme.TEXT, alpha), true)
+        HudStyle.plate(graphics, 0, 0, boxW, boxH, colorArgb, alpha / 255f)
+        HudStyle.fadeRule(graphics, 4, 2, boxW - 8, HudStyle.withAlpha(colorArgb, alpha), leftSolid = true)
+        graphics.text(font, title, (boxW - font.width(title)) / 2, PAD, HudStyle.withAlpha(colorArgb, alpha), true)
+        graphics.text(font, subtitleText, (boxW - font.width(subtitleText)) / 2, PAD + LINE_HEIGHT, HudStyle.withAlpha(OwTheme.TEXT, alpha), true)
         pose.popMatrix()
     }
 
-    private fun renderSouls(graphics: GuiGraphicsExtractor, toast: WynnOverhaulToastQueue.Toast, fraction: Float) {
-        val settings = WynnOverhaulConfig.current.toast(toast.kind)
+    private fun renderSouls(graphics: GuiGraphicsExtractor, title: String, subtitle: String, detail: String, colorArgb: Int, fraction: Float) {
+        val settings = WynnOverhaulConfig.current.toast(WynnOverhaulToastQueue.Kind.LEVEL_UP)
         val af = soulsAlpha(fraction) * settings.opacity.toFloat()
         if (af <= 0.02f) return
 
@@ -85,12 +106,12 @@ class WynnOverhaulToastHudElement : HudElement {
         val guiH = graphics.guiHeight()
         val total = HudLayoutManager.scale(ID) * settings.scale.toFloat().coerceIn(0.5f, 4f)
 
-        val kicker = toast.title.uppercase()
-        val name = toast.subtitle
+        val kicker = title.uppercase()
+        val name = subtitle
         val nameSpacing = NAME_SPACING_START + fraction * NAME_SPACING_GROWTH
         val nameW = spacedWidth(font, name, nameSpacing) * NAME_SCALE
         val kickerW = spacedWidth(font, kicker, KICKER_SPACING)
-        val detailW = if (toast.detail.isBlank()) 0f else spacedWidth(font, toast.detail, DETAIL_SPACING)
+        val detailW = if (detail.isBlank()) 0f else spacedWidth(font, detail, DETAIL_SPACING)
         val contentW = max(nameW, max(kickerW, detailW))
         val bandW = max(contentW + BAND_PAD * 2, MIN_BAND_W)
 
@@ -106,7 +127,7 @@ class WynnOverhaulToastHudElement : HudElement {
 
         fadeBand(graphics, -bandW / 2f, -BAND_H / 2f, bandW, BAND_H, 0.62f * af)
 
-        val accent = toast.colorArgb
+        val accent = colorArgb
         drawSpaced(graphics, font, kicker, -kickerW / 2f, KICKER_Y, KICKER_SPACING, withAlphaF(accent, 0.85f * af), false, 1f)
 
         pose.pushMatrix()
@@ -120,8 +141,8 @@ class WynnOverhaulToastHudElement : HudElement {
         val diamondColor = withAlphaF(accent, af)
         if ((diamondColor ushr 24) >= MIN_TEXT_ALPHA) HudStyle.diamond(graphics, 0, RULE_Y.toInt(), DIAMOND_R, diamondColor)
 
-        if (toast.detail.isNotBlank()) {
-            drawSpaced(graphics, font, toast.detail, -detailW / 2f, DETAIL_Y, DETAIL_SPACING, withAlphaF(DETAIL_COLOR, 0.8f * af), false, 1f)
+        if (detail.isNotBlank()) {
+            drawSpaced(graphics, font, detail, -detailW / 2f, DETAIL_Y, DETAIL_SPACING, withAlphaF(DETAIL_COLOR, 0.8f * af), false, 1f)
         }
         pose.popMatrix()
     }

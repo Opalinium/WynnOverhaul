@@ -24,8 +24,16 @@ class AbilityCooldownHudElement : HudElement {
         if (!WynnOverhaulGate.inGame) return
         val config = WynnOverhaulConfig.current
         if (!config.abilityCooldownHudEnabled) return
-        val cooldowns = WynnStatusEffectTracker.activeCooldowns.sortedBy { it.displaySeconds() }
-        if (cooldowns.isEmpty()) return
+        val live = WynnStatusEffectTracker.activeCooldowns.sortedBy { it.displaySeconds() }
+        val cooldowns = live.takeIf { it.isNotEmpty() } ?: if (isHudDesignerOpen()) {
+            listOf(
+                WynnStatusEffectTracker.Cooldown("War Scream", 12, 20, System.currentTimeMillis()),
+                WynnStatusEffectTracker.Cooldown("Uppercut", 8, 15, System.currentTimeMillis()),
+                WynnStatusEffectTracker.Cooldown("Thunder", 20, 30, System.currentTimeMillis()),
+            )
+        } else {
+            return
+        }
 
         val font = Minecraft.getInstance().font
 

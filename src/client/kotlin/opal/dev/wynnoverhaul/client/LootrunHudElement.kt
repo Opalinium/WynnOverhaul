@@ -24,13 +24,14 @@ class LootrunHudElement : HudElement {
         if (!WynnOverhaulGate.inGame) return
         val config = WynnOverhaulConfig.current
         if (!config.lootrunEnabled || !config.lootrunHudEnabled) return
-        if (LootrunModel.state == LootrunModel.State.NOT_RUNNING) return
+        val state = if (isHudDesignerOpen()) LootrunModel.State.IN_TASK else LootrunModel.state
+        if (state == LootrunModel.State.NOT_RUNNING) return
 
         val lines = ArrayList<Pair<String, Int>>()
         lines.add(stateLine() to STATE_COLOR)
-        val timer = LootrunModel.timeLeftSeconds?.let { "%d:%02d".format(it / 60, it % 60) }.orEmpty()
-        if (LootrunModel.challengesTotal > 0) {
-            lines.add("Challenges: ${LootrunModel.challengesDone}/${LootrunModel.challengesTotal}" to TEXT_COLOR)
+        val timer = if (isHudDesignerOpen()) "15:30" else LootrunModel.timeLeftSeconds?.let { "%d:%02d".format(it / 60, it % 60) }.orEmpty()
+        if (LootrunModel.challengesTotal > 0 || isHudDesignerOpen()) {
+            lines.add("Challenges: ${if (isHudDesignerOpen()) "3/5" else "${LootrunModel.challengesDone}/${LootrunModel.challengesTotal}"}" to TEXT_COLOR)
         }
         if (config.lootrunRecorderEnabled && LootrunRecorder.recordedPointCount > 0) {
             lines.add("Recording: ${LootrunRecorder.recordedPointCount} pts" to DIM_COLOR)

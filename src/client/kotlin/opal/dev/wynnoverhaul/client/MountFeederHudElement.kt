@@ -7,6 +7,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import opal.dev.wynnoverhaul.WynnOverhaul
 import opal.dev.wynnoverhaul.mixin.client.ContainerScreenHoveredSlotAccessor
+import opal.dev.wynnoverhaul.client.MountReading
+import opal.dev.wynnoverhaul.client.MountStatReading
 
 class MountFeederHudElement : HudElement {
     private var loggedError = false
@@ -39,15 +41,31 @@ class MountFeederHudElement : HudElement {
         val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return
         if (!screen.title.string.contains(MOUNT_FEEDER_TITLE_MARKER)) return
 
-        val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`wynnoverhaul$getHoveredSlot`()
-        val readings = LinkedHashMap<String, MountReading>()
-        hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { parseCached(it) }?.let {
-            readings[MountRegistry.keyOf(it.typeName, it.name, it.potential)] = it
-        }
-        Minecraft.getInstance().player?.containerMenu?.slots?.forEach { slot ->
-            if (slot.item.isEmpty) return@forEach
-            val parsed = parseCached(slot.item) ?: return@forEach
-            readings.putIfAbsent(MountRegistry.keyOf(parsed.typeName, parsed.name, parsed.potential), parsed)
+        val readings = if (isHudDesignerOpen()) {
+            mapOf(
+                "Rider|Scarlet Sorrel|unknown" to MountReading("Scarlet Sorrel", "Rider", 0, null, null, null, null, mapOf(
+                    "Strength" to MountStatReading(10, 10, 100),
+                    "Intelligence" to MountStatReading(10, 10, 100),
+                    "Agility" to MountStatReading(10, 10, 100),
+                    "Defence" to MountStatReading(10, 10, 100),
+                    "Health" to MountStatReading(10, 10, 100),
+                    "Speed" to MountStatReading(10, 10, 100),
+                    "Jump" to MountStatReading(10, 10, 100),
+                    "Stamina" to MountStatReading(10, 10, 100),
+                )),
+            )
+        } else {
+            val hoveredSlot = (screen as ContainerScreenHoveredSlotAccessor).`wynnoverhaul$getHoveredSlot`()
+            val r = LinkedHashMap<String, MountReading>()
+            hoveredSlot?.item?.takeIf { !it.isEmpty }?.let { parseCached(it) }?.let {
+                r[MountRegistry.keyOf(it.typeName, it.name, it.potential)] = it
+            }
+            Minecraft.getInstance().player?.containerMenu?.slots?.forEach { slot ->
+                if (slot.item.isEmpty) return@forEach
+                val parsed = parseCached(slot.item) ?: return@forEach
+                r.putIfAbsent(MountRegistry.keyOf(parsed.typeName, parsed.name, parsed.potential), parsed)
+            }
+            r
         }
         if (readings.isEmpty()) return
         readings.values.forEach { MountRegistry.note(it) }

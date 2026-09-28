@@ -31,13 +31,28 @@ class WynnDialogueHudElement : HudElement {
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
         val now = System.currentTimeMillis()
-        if (!WynnDialogueTracker.dialogueVisible(now)) {
+        val live = if (WynnDialogueTracker.dialogueVisible(now)) {
+            true
+        } else if (isHudDesignerOpen()) {
+            true
+        } else {
+            return
+        }
+        if (!live) {
             wasVisible = false
             return
         }
-        val body = WynnDialogueTracker.body
-        val rawChoices = WynnDialogueTracker.choices
-        val speaker = WynnDialogueTracker.speaker
+        val body = if (isHudDesignerOpen()) "Welcome to Wynncraft! This is a sample dialogue for the HUD designer." else WynnDialogueTracker.body
+        val rawChoices = if (isHudDesignerOpen()) {
+            listOf(
+                WynnDialogueTracker.Choice(text = "Accept", selected = true),
+                WynnDialogueTracker.Choice(text = "Decline", selected = false),
+                WynnDialogueTracker.Choice(text = "Ask later", selected = false),
+            )
+        } else {
+            WynnDialogueTracker.choices
+        }
+        val speaker = if (isHudDesignerOpen()) "NPC Name" else WynnDialogueTracker.speaker
         if (body.isEmpty() && rawChoices.isEmpty()) return
         if (!wasVisible) {
             wasVisible = true
