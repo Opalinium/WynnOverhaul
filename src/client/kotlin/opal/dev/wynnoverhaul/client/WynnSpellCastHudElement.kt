@@ -22,8 +22,13 @@ class WynnSpellCastHudElement : HudElement {
 
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
-        val cast = WynnSpellTracker.lastCast ?: return
-        if (!WynnSpellTracker.castVisible(System.currentTimeMillis())) return
+        val cast = WynnSpellTracker.lastCast?.takeIf {
+            WynnSpellTracker.castVisible(System.currentTimeMillis())
+        } ?: if (isHudDesignerOpen()) {
+            WynnSpellTracker.Cast("War Scream", listOf(WynnSpellSegments.SpellCost(17, true)), System.currentTimeMillis())
+        } else {
+            return
+        }
 
         val font = Minecraft.getInstance().font
         val parts = ArrayList<Pair<String, Int>>(1 + cast.costs.size)
