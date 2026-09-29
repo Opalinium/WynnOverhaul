@@ -954,6 +954,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Shows active class/archetype ability cooldowns (read from the tab-list \"Status Effects\" listing) as a name + timer + bar per ability.",
                 config.abilityCooldownHudEnabled,
             ) { config.abilityCooldownHudEnabled = it }
+            checkbox(
+                "Show totem timers",
+                "Shows your active shaman totems with remaining time, read from their floating timer labels.",
+                config.totemHudEnabled,
+            ) { config.totemHudEnabled = it }
 
             header("Ultimates")
             checkbox(

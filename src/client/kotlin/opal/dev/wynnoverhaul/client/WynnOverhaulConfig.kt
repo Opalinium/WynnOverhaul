@@ -83,6 +83,7 @@ data class WynnOverhaulConfig(
     var hideVanillaPotionHud: Boolean = false,
     var customPotionHudEnabled: Boolean = false,
     var abilityCooldownHudEnabled: Boolean = true,
+    var totemHudEnabled: Boolean = true,
     var questLogHudEnabled: Boolean = true,
     var ultimateHudEnabled: Boolean = true,
     var powderSpecialHudEnabled: Boolean = true,
