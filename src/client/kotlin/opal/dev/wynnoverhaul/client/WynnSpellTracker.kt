@@ -29,8 +29,17 @@ object WynnSpellTracker {
     var comboAtMillis: Long = 0L
         private set
 
+    @Volatile
+    private var castDisplayed = false
+
+    @Volatile
+    private var displayedName: String? = null
+
+    @Volatile
+    private var displayedCosts: List<WynnSpellSegments.SpellCost>? = null
+
     fun register() {
-        ClientReceiveMessageEvents.GAME.register { message, _ -> onActionBar(message) }
+        ClientReceiveMessageEvents.GAME.register { message, overlay -> onActionBar(message, overlay) }
     }
 
     fun clear() {
@@ -39,6 +48,9 @@ object WynnSpellTracker {
         comboComponents = null
         comboArrow = null
         comboAtMillis = 0L
+        castDisplayed = false
+        displayedName = null
+        displayedCosts = null
     }
 
     fun castVisible(now: Long): Boolean {
@@ -51,19 +63,27 @@ object WynnSpellTracker {
         return now - comboAtMillis < COMBO_TTL_MS
     }
 
-    private fun onActionBar(message: Component) {
+    private fun onActionBar(message: Component, overlay: Boolean) {
+        if (!overlay) return
         val raw = message.string
         val now = System.currentTimeMillis()
         val cast = WynnSpellSegments.parseCast(raw)
         if (cast != null) {
-            val fresh = lastCast?.let { it.name != cast.name || now - it.atMillis > CAST_TTL_MS } ?: true
             lastCast = Cast(cast.name, cast.costs, now)
-            if (fresh) WeaponAnimations.onSpellCast(cast.name)
+            if (!castDisplayed || displayedName != cast.name || displayedCosts != cast.costs) {
+                WeaponAnimations.onSpellCast(cast.name)
+            }
+            castDisplayed = true
+            displayedName = cast.name
+            displayedCosts = cast.costs
             combo = null
             comboComponents = null
             WynnOverhaulGate.noteActionBar()
             return
         }
+        castDisplayed = false
+        displayedName = null
+        displayedCosts = null
         val glyphs = WynnSpellSegments.parseInputs(raw)
         if (glyphs != null) {
             combo = glyphs.map { WynnSpellSegments.classifyInput(it) }
