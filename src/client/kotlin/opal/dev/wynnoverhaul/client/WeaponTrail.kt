@@ -14,7 +14,7 @@ object WeaponTrail {
     const val GHOST_MAX_ALPHA = 250
 
     private const val LIFE_NANOS = 260_000_000L
-    private const val GHOST_COUNT = 6
+    private const val GHOST_COUNT = 4
     private const val MAX_SAMPLES = 12
     private const val MIN_INTERVAL_NANOS = 45_000_000L
     private const val BASE_ALPHA = 0.42f
@@ -53,6 +53,7 @@ object WeaponTrail {
     private val local = Matrix4f()
     private val rel = Matrix4f()
     private val ghostPose = Matrix4f()
+    private val lerpMat = Matrix4f()
     private val probe = Vector3f()
     private val origin = Vector3f()
 
@@ -142,34 +143,69 @@ object WeaponTrail {
         intensity: Float,
     ) {
         var reference = current
-        var drawn = 0
-        var cursor = samples.size - 1
-        while (drawn < GHOST_COUNT && cursor >= 0) {
-            val s = samples[cursor--]
-            if (distance(s, reference) >= MIN_MOVE) {
-                val age = ((now - s.nanos).toFloat() / LIFE_NANOS).coerceIn(0f, 1f)
-                val alpha = ((1f - age).pow(1.5f) * BASE_ALPHA * s.strength * intensity).coerceIn(0f, 1f)
-                val a = (alpha * 255f).toInt().coerceAtMost(GHOST_MAX_ALPHA)
-                if (a >= 5) {
-                    if (first) {
-                        ghostPose.set(handRoot).mul(s.matrix)
-                    } else {
-                        ghostPose.identity().translation(origin.x - s.ox, origin.y - s.oy, origin.z - s.oz).mul(s.matrix)
-                    }
-                    stack.pushPose()
-                    stack.setIdentity()
-                    stack.mulPose(ghostPose)
-                    replaying = true
-                    try {
-                        state.submit(stack, collector, FULL_BRIGHT or (a shl 24), overlay, 0)
-                    } finally {
-                        replaying = false
-                        stack.popPose()
-                    }
-                    reference = s
-                    drawn++
-                }
+        for (slot in 0 until GHOST_COUNT) {
+            val targetAge = LIFE_NANOS * (slot + 1) / (GHOST_COUNT + 1)
+            val ghost = interpolatedAt(now - targetAge)
+            if (distance(ghost, reference) < MIN_MOVE) continue
+            val age = (targetAge.toFloat() / LIFE_NANOS).coerceIn(0f, 1f)
+            val alpha = ((1f - age).pow(1.5f) * BASE_ALPHA * ghost.strength * intensity).coerceIn(0f, 1f)
+            val a = (alpha * 255f).toInt().coerceAtMost(GHOST_MAX_ALPHA)
+            if (a < 5) continue
+            if (first) {
+                ghostPose.set(handRoot).mul(ghost.matrix)
+            } else {
+                ghostPose.identity().translation(origin.x - ghost.ox, origin.y - ghost.oy, origin.z - ghost.oz).mul(ghost.matrix)
             }
+            stack.pushPose()
+            stack.setIdentity()
+            stack.mulPose(ghostPose)
+            replaying = true
+            try {
+                state.submit(stack, collector, FULL_BRIGHT or (a shl 24), overlay, 0)
+            } finally {
+                replaying = false
+                stack.popPose()
+            }
+            reference = ghost
         }
     }
+
+    private fun interpolatedAt(targetNanos: Long): Sample {
+        var lower = samples.first()
+        var upper: Sample? = null
+        for (s in samples) {
+            if (s.nanos < targetNanos) {
+                lower = s
+            } else {
+                upper = s
+                break
+            }
+        }
+        val up = upper ?: return lower
+        if (up === lower || up.nanos == lower.nanos) return lower
+        val t = ((targetNanos - lower.nanos).toFloat() / (up.nanos - lower.nanos)).coerceIn(0f, 1f)
+        lower.matrix.lerp(up.matrix, t, lerpMat)
+        return Sample(
+            lower.first,
+            targetNanos,
+            lerpD(lower.camX, up.camX, t),
+            lerpD(lower.camY, up.camY, t),
+            lerpD(lower.camZ, up.camZ, t),
+            Matrix4f(lerpMat),
+            lerpD(lower.ax, up.ax, t),
+            lerpD(lower.ay, up.ay, t),
+            lerpD(lower.az, up.az, t),
+            lerpD(lower.bx, up.bx, t),
+            lerpD(lower.by, up.by, t),
+            lerpD(lower.bz, up.bz, t),
+            lerpF(lower.strength, up.strength, t),
+            lerpF(lower.ox, up.ox, t),
+            lerpF(lower.oy, up.oy, t),
+            lerpF(lower.oz, up.oz, t),
+        )
+    }
+
+    private fun lerpF(a: Float, b: Float, t: Float): Float = a + (b - a) * t
+
+    private fun lerpD(a: Double, b: Double, t: Float): Double = a + (b - a) * t
 }
