@@ -893,6 +893,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             }
             slider("Alert volume", 0.0, 1.0, config.mythicAlertVolume, "Volume of the rare item alert sound.") { config.mythicAlertVolume = it }
             checkbox("Show chat message", "", config.mythicAlertChat) { config.mythicAlertChat = it }
+            checkbox(
+                "Block closing loot chests with rare items",
+                "Refuses Escape and inventory keys while an open loot chest still holds an item at or above the minimum rarity above.",
+                config.mythicBlockerEnabled,
+            ) { config.mythicBlockerEnabled = it }
 
             header("Entity Tracker Alerts")
             checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }

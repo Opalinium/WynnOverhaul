@@ -64,6 +64,7 @@ data class WynnOverhaulConfig(
     var mythicAlertMinRarity: String = "MYTHIC",
     var mythicAlertSound: Boolean = true,
     var mythicAlertChat: Boolean = true,
+    var mythicBlockerEnabled: Boolean = false,
     var mythicAlertSoundId: String = "minecraft:entity.player.levelup",
     var mythicAlertVolume: Double = 1.0,
     var discordRpcEnabled: Boolean = true,
