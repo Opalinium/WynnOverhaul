@@ -30,7 +30,7 @@
 
 ### HUD
 - Health, mana, resource, XP, sprint, mount energy, guild and region bars.
-- Compass, ability cooldowns, potion effects, spell combo and cast display, quest log and dialogue.
+- Compass, ability cooldowns, potion effects, a spell bar with combo indicator, quest log and dialogue.
 - Six hotbar styles: Classic, Glass, Tiles, Arc, Radial and Cross.
 - Chat restyle with channel buttons and a direct message panel.
 - Quest, level-up, discovery and location toasts.

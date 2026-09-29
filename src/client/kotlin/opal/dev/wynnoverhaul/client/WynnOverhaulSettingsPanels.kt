@@ -705,6 +705,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Restores your last camera mode (first person, third person back or front) when you join a world or server.",
                 config.rememberCameraMode,
             ) { config.rememberCameraMode = it }
+            checkbox(
+                "Quick spell casting",
+                "Adds bindable keys (Controls) that cast each of the four spell slots by replaying its click combo. Keys are unbound by default.",
+                config.quickCastEnabled,
+            ) { config.quickCastEnabled = it }
 
             header("Town")
             checkbox(
@@ -920,7 +925,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         panel(left, w, top) {
             checkbox(
                 "Custom HUD",
-                "One switch for the whole New World-styled HUD: health/mana, sprint (mount energy while riding, plus mount pickup announcements), experience and class resource bars, spell cast/combo indicators, NPC dialogue, plus the draggable hotbar, parsed from the real action bar and boss bars. Also hides the vanilla overlay text, hotbar and hunger bar they replace.",
+                "One switch for the whole New World-styled HUD: health/mana, sprint (mount energy while riding, plus mount pickup announcements), experience and class resource bars, the spell bar and combo indicator, NPC dialogue, plus the draggable hotbar, parsed from the real action bar and boss bars. Also hides the vanilla overlay text, hotbar and hunger bar they replace.",
                 config.customHudEnabled,
             ) { config.customHudEnabled = it }
             cycleButton({ "Customize HUD layout..." }, "Drag, resize and lock any HUD element -- opens the HUD designer.") {

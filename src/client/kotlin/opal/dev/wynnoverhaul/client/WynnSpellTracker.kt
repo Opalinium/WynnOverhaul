@@ -38,6 +38,10 @@ object WynnSpellTracker {
     @Volatile
     private var displayedCosts: List<WynnSpellSegments.SpellCost>? = null
 
+    private val castCostsByName = HashMap<String, List<WynnSpellSegments.SpellCost>>()
+
+    fun spellCosts(name: String): List<WynnSpellSegments.SpellCost> = castCostsByName[name] ?: emptyList()
+
     fun register() {
         ClientReceiveMessageEvents.GAME.register { message, overlay -> onActionBar(message, overlay) }
     }
@@ -51,6 +55,7 @@ object WynnSpellTracker {
         castDisplayed = false
         displayedName = null
         displayedCosts = null
+        castCostsByName.clear()
     }
 
     fun castVisible(now: Long): Boolean {
@@ -69,6 +74,8 @@ object WynnSpellTracker {
         val now = System.currentTimeMillis()
         val cast = WynnSpellSegments.parseCast(raw)
         if (cast != null) {
+            WynnClassTracker.noteCastSpell(cast.name)
+            castCostsByName[cast.name] = cast.costs
             lastCast = Cast(cast.name, cast.costs, now)
             if (!castDisplayed || displayedName != cast.name || displayedCosts != cast.costs) {
                 WeaponAnimations.onSpellCast(cast.name)

@@ -12,13 +12,17 @@ object SpellComboGuard {
     private var wasAttackDown = false
 
     fun tick(client: Minecraft) {
-        val config = WynnOverhaulConfig.current
         val useDown = client.options.keyUse.isDown
         val attackDown = client.options.keyAttack.isDown
         val useEdge = useDown && !wasUseDown
         val attackEdge = attackDown && !wasAttackDown
         wasUseDown = useDown
         wasAttackDown = attackDown
+        registerEdge(client, useEdge, attackEdge)
+    }
+
+    fun registerEdge(client: Minecraft, useEdge: Boolean, attackEdge: Boolean) {
+        val config = WynnOverhaulConfig.current
         if (!config.combatSpellGuardEnabled) {
             inputs = 0
             return

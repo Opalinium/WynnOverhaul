@@ -1740,14 +1740,14 @@ object WeaponAnimations {
     fun styleLabel(key: String): String =
         if (key == WeaponAnimationRegistry.AUTO) "Auto" else LABELS[key] ?: key
 
-    private fun classKind(stack: ItemStack): GearSlotKind? {
+    internal fun classKind(stack: ItemStack): GearSlotKind? {
         if (WynnWeapons.attacksPerSecond(stack) == null) return null
         val line = WynnItemRarity.loreLines(stack).firstOrNull { it.contains("Class Type", ignoreCase = true) } ?: return null
         val name = CLASS_NAME.find(line)?.value?.lowercase()?.replace(" ", "") ?: return null
         return CLASS_KINDS[name]
     }
 
-    private fun autoKind(stack: ItemStack): GearSlotKind? =
+    internal fun autoKind(stack: ItemStack): GearSlotKind? =
         WynnGearKind.of(stack)?.takeIf { it.name in POSES } ?: classKind(stack)
 
     fun autoStyleKey(stack: ItemStack): String? = autoKind(stack)?.name

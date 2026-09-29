@@ -5,5 +5,9 @@
   "key.wynnoverhaul.souls_recenter": "Recenter Souls Camera",
   "key.wynnoverhaul.weapon_anim": "Register Weapon for Animations",
   "key.wynnoverhaul.tracker.toggle": "Toggle Entity Tracker",
+  "key.wynnoverhaul.quick_cast_1": "Cast 1st Spell",
+  "key.wynnoverhaul.quick_cast_2": "Cast 2nd Spell",
+  "key.wynnoverhaul.quick_cast_3": "Cast 3rd Spell",
+  "key.wynnoverhaul.quick_cast_4": "Cast 4th Spell",
   "key.category.wynnoverhaul.main": "WynnOverhaul"
 }

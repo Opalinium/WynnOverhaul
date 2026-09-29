@@ -13,6 +13,7 @@ data class WynnOverhaulConfig(
     var maxCps: Double = 8.0,
     var combatSpellGuardEnabled: Boolean = true,
     var combatSpellGuardMs: Double = 1500.0,
+    var quickCastEnabled: Boolean = true,
     var wynnAttackSpeed: Boolean = true,
     var qolPreventHotbarOverscroll: Boolean = false,
     var rememberCameraMode: Boolean = false,

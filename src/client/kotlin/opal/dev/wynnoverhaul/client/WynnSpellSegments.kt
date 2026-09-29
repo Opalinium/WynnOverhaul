@@ -19,6 +19,22 @@ object WynnSpellSegments {
         return ComboInput.EMPTY
     }
 
+    fun clickGlyph(left: Boolean): String = if (left) LEFT_B else RIGHT_B
+
+    val SLOT_COMBOS: List<List<Boolean>> = listOf(
+        listOf(true, false, true),
+        listOf(true, true, true),
+        listOf(true, false, false),
+        listOf(true, true, false),
+    )
+
+    val SLOT_COMBOS_LEFT: List<List<Boolean>> = listOf(
+        listOf(false, true, false),
+        listOf(false, false, false),
+        listOf(false, true, true),
+        listOf(false, false, true),
+    )
+
     data class SpellCost(val amount: Int, val mana: Boolean)
     data class SpellCast(val name: String, val costs: List<SpellCost>)
 
