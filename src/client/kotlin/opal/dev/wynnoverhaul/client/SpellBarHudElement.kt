@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.FontDescription
 import net.minecraft.network.chat.Style
+import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
 import opal.dev.wynnoverhaul.WynnOverhaul
 import kotlin.math.roundToInt
@@ -150,14 +151,17 @@ class SpellBarHudElement : HudElement {
             graphics.fill(x, y, x + 1, y + TILE, edge)
             graphics.fill(x + TILE - 1, y, x + TILE, y + TILE, edge)
 
-            val numColor = if (lit[slot]) OwTheme.TEXT else OwTheme.TEXT_DIM
-            scaledText(graphics, font, x + TILE / 2, y + 5, (slot + 1).toString(), numColor, 1.3f, centered = true)
+            val icon = SpellIcons.iconFor(names[slot])
+            if (icon != null) {
+                val inset = 3
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, icon, x + inset, y + inset, TILE - inset * 2, TILE - inset * 2)
+            } else {
+                val numColor = if (lit[slot]) OwTheme.TEXT else OwTheme.TEXT_DIM
+                scaledText(graphics, font, x + TILE / 2, y + 5, (slot + 1).toString(), numColor, 1.3f, centered = true)
+            }
 
             val key = keys[slot]
-            val bw = keyBadgeWidth(font, key, slot)
-            val bx = x + (TILE - bw) / 2
-            val by = y + TILE - font.lineHeight - 5
-            drawKeyBadge(graphics, font, bx, by, key, slot, if (lit[slot]) 1f else 0.75f)
+            drawKeyBadge(graphics, font, x + 1, y + 1, key, slot, if (lit[slot]) 1f else 0.75f)
 
             if (fired[slot]) HudStyle.brackets(graphics, x, y, TILE, TILE, OwTheme.ACCENT, 5)
         }
@@ -191,7 +195,13 @@ class SpellBarHudElement : HudElement {
             HotbarStyles.disc(graphics, cx, cy, r, HudStyle.GLASS_DEEP)
             HotbarStyles.ring(graphics, cx, cy, r, if (big) OwTheme.ACCENT else OwTheme.HAIRLINE)
             if (big) HotbarStyles.ring(graphics, cx, cy, r + 2, HudStyle.alpha(OwTheme.ACCENT, 0.5f))
-            scaledText(graphics, font, cx, cy - 3, (slot + 1).toString(), if (big) OwTheme.TEXT else OwTheme.TEXT_DIM, if (big) 1f else 0.85f, centered = true)
+            val icon = SpellIcons.iconFor(names[slot])
+            if (icon != null) {
+                val iconSize = (r * 1.5f).roundToInt()
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, icon, cx - iconSize / 2, cy - iconSize / 2, iconSize, iconSize)
+            } else {
+                scaledText(graphics, font, cx, cy - 3, (slot + 1).toString(), if (big) OwTheme.TEXT else OwTheme.TEXT_DIM, if (big) 1f else 0.85f, centered = true)
+            }
 
             val key = keys[slot]
             val bw = keyBadgeWidth(font, key, slot)
@@ -241,7 +251,13 @@ class SpellBarHudElement : HudElement {
             graphics.fill(sideX, cy, sideX + CROSS_SIDE_W, cy + CROSS_CHIP_H, HudStyle.TRACK)
             graphics.fill(sideX, cy, sideX + CROSS_SIDE_W, cy + 1, edge)
             graphics.fill(sideX, cy + CROSS_CHIP_H - 1, sideX + CROSS_SIDE_W, cy + CROSS_CHIP_H, edge)
-            graphics.text(font, (slot + 1).toString(), sideX + 4, cy + (CROSS_CHIP_H - font.lineHeight) / 2, if (lit[slot]) OwTheme.TEXT else OwTheme.TEXT_DIM, true)
+            val chipIcon = SpellIcons.iconFor(names[slot])
+            if (chipIcon != null) {
+                val s = CROSS_CHIP_H - 4
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, chipIcon, sideX + 2, cy + 2, s, s)
+            } else {
+                graphics.text(font, (slot + 1).toString(), sideX + 4, cy + (CROSS_CHIP_H - font.lineHeight) / 2, if (lit[slot]) OwTheme.TEXT else OwTheme.TEXT_DIM, true)
+            }
             val chipKey = keys[slot]
             val cbw = keyBadgeWidth(font, chipKey, slot)
             val cbh = font.lineHeight + 3
