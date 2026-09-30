@@ -173,7 +173,8 @@ class HotbarHudElement : HudElement {
             hiddenCache[stack]?.let { return it }
             val hidden = CharacterInfo.isInfo(stack) ||
                 ContentBookInterceptor.isContentBook(stack) ||
-                WynnPouches.isIngredientPouch(stack)
+                WynnPouches.isIngredientPouch(stack) ||
+                WynnPouches.isEmeraldPouch(stack)
             if (hiddenCache.size > 256) hiddenCache.clear()
             hiddenCache[stack] = hidden
             return hidden
