@@ -4,6 +4,31 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.3.0 - 2026-09-30
+
+### Added
+- Spell Bar HUD element: shows your class's four spells with their keybind or click combo and mana/health cost, in four selectable layouts (row list, tiles, arc, focus cross) with class-specific spell icons and a boxed key-cap style for every hotkey. It only highlights the spell you actually have queued or just cast, shows each spell's true base cost rather than an inflated repeat-cast cost, and is fully integrated with the HUD designer.
+- Quick-cast keybinds fire a spell without manually clicking the combo. They turn your character to face the camera's current aim (same as a manual cast), play cleanly alongside auto-attack instead of fighting it, and queue up to three casts in a row.
+- A Totem tracker HUD element times your placed totems.
+- A blocker warns before you open a loot chest that could contain an unlocked mythic.
+- A Pouch panel in the inventory adds emerald pouch support and a command shortcut dropdown.
+- The Character page shows the full Combat Information stat block (health, effective health, elemental defences, damage, Convergence).
+- A Party buff tracker HUD element.
+- A Powder special status HUD element.
+- The souls camera zoom is now smooth.
+- The HUD designer previews every element, including mount pickup and spell cast.
+
+### Fixed
+- Weapon animations no longer pop when one swing or spell interrupts another mid-blend.
+- Fixed self-intersecting arms and head in several spell animation poses.
+- Spell-cast animations trigger once per new cast instead of repeating with the action bar.
+- The ultimate HUD element's bar and ready state render more reliably.
+
+### Changed
+- Weapon trail ghosts interpolate between samples for smoother trails.
+- The attack-speed animation ramp is smoother, and the Charge, Dash and Haul spell poses were retuned.
+- Minor visual polish to the HUD designer's drag state and style chips.
+
 ## 1.2.1 - 2026-09-26
 
 ### Fixed
