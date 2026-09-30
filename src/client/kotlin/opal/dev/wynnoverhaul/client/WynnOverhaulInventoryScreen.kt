@@ -2070,7 +2070,21 @@ class WynnOverhaulInventoryScreen(
         val lines = ArrayList<Pair<String, Int>>()
         val total = menu.slots.size
         val ownSlots = if (total > PLAYER_INV_SIZE) total - PLAYER_INV_SIZE else total
+
+        var combatInfoSlot = -1
+        var combatInfoLines: List<String>? = null
         for (slot in 0 until ownSlots) {
+            val stack = menu.slots[slot].item
+            if (stack.isEmpty) continue
+            if (stripCodes(stack.hoverName.string).trim() == "Combat Information") {
+                combatInfoSlot = slot
+                combatInfoLines = WynnItemRarity.loreLines(stack).map { it.trim() }.filter { it.isNotEmpty() }
+                break
+            }
+        }
+
+        for (slot in 0 until ownSlots) {
+            if (slot == combatInfoSlot) continue
             val stack = menu.slots[slot].item
             if (stack.isEmpty) {
                 if (slot == combatInfoPager.slot) identityCache?.let { lines.addAll(it) }
@@ -2090,7 +2104,10 @@ class WynnOverhaulInventoryScreen(
                     }
                     identityCache = identityLines
                     lines.addAll(identityLines)
-                    if (combatInfoPager.done) {
+                    if (combatInfoLines != null) {
+                        lines.add("Combat" to combatInfoSlot)
+                        for (text in combatInfoLines) lines.add("  $text" to combatInfoSlot)
+                    } else if (combatInfoPager.done) {
                         val combat = combatInfoPager.result()
                         if (combat.isNotEmpty()) {
                             lines.add("Combat" to slot)
