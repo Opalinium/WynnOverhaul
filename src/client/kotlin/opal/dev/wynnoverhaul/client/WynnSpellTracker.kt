@@ -38,9 +38,21 @@ object WynnSpellTracker {
     @Volatile
     private var displayedCosts: List<WynnSpellSegments.SpellCost>? = null
 
-    private val castCostsByName = HashMap<String, List<WynnSpellSegments.SpellCost>>()
+    private class CostRecord(var costs: List<WynnSpellSegments.SpellCost>, var lastMillis: Long)
 
-    fun spellCosts(name: String): List<WynnSpellSegments.SpellCost> = castCostsByName[name] ?: emptyList()
+    private val baseCostsByName = HashMap<String, CostRecord>()
+
+    fun spellCosts(name: String): List<WynnSpellSegments.SpellCost> = baseCostsByName[name]?.costs ?: emptyList()
+
+    private fun noteCastCost(name: String, observed: List<WynnSpellSegments.SpellCost>, now: Long) {
+        val record = baseCostsByName[name]
+        val observedTotal = observed.sumOf { it.amount }
+        if (record == null || now - record.lastMillis > SPAM_RESET_MS || observedTotal <= record.costs.sumOf { it.amount }) {
+            baseCostsByName[name] = CostRecord(observed, now)
+        } else {
+            record.lastMillis = now
+        }
+    }
 
     fun register() {
         ClientReceiveMessageEvents.GAME.register { message, overlay -> onActionBar(message, overlay) }
@@ -55,7 +67,7 @@ object WynnSpellTracker {
         castDisplayed = false
         displayedName = null
         displayedCosts = null
-        castCostsByName.clear()
+        baseCostsByName.clear()
     }
 
     fun castVisible(now: Long): Boolean {
@@ -75,7 +87,7 @@ object WynnSpellTracker {
         val cast = WynnSpellSegments.parseCast(raw)
         if (cast != null) {
             WynnClassTracker.noteCastSpell(cast.name)
-            castCostsByName[cast.name] = cast.costs
+            noteCastCost(cast.name, cast.costs, now)
             lastCast = Cast(cast.name, cast.costs, now)
             if (!castDisplayed || displayedName != cast.name || displayedCosts != cast.costs) {
                 WeaponAnimations.onSpellCast(cast.name)
@@ -121,4 +133,5 @@ object WynnSpellTracker {
 
     private const val CAST_TTL_MS = 2500L
     private const val COMBO_TTL_MS = 2000L
+    private const val SPAM_RESET_MS = 8000L
 }
