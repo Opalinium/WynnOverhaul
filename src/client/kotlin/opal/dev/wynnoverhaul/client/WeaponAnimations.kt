@@ -2,7 +2,6 @@ package opal.dev.wynnoverhaul.client
 
 import com.mojang.blaze3d.vertex.PoseStack
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.HumanoidModel
 import net.minecraft.client.model.geom.ModelPart
@@ -43,6 +42,7 @@ object WeaponAnimations {
     private const val MIN_GAP_HIGH = 0.9f
     private const val FALLBACK_GAP = 0.25f
     private const val BLEND_SECONDS = 0.09f
+    private const val AMP_SMOOTH_TAU = 0.09f
     private const val SPELL_BLEND_SECONDS = 0.12f
     private const val IDLE_TAU = 0.16f
     private const val COMBO_RESET_SECONDS = 1.6f
@@ -646,18 +646,19 @@ object WeaponAnimations {
             step = curve(0f to B, 0.15f to -0.4f, 0.35f to 1.0f, 0.6f to 0.6f, 1f to B),
         ),
         "SPELL:CHARGE" to Pose(
-            pitch = curve(0f to B, 0.1f to -0.5f, 0.3f to -1.5f, 0.6f to -1.8f, 0.85f to -1.5f, 1f to B),
-            across = curve(0f to B, 0.1f to 0.1f, 0.3f to 0.5f, 0.6f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.2f, 0.3f to 0.5f, 0.6f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.5f, 0.3f to -1.3f, 0.6f to -1.5f, 0.85f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.6f, 0.3f to 0.7f, 0.6f to 0.6f, 1f to B),
-            offAbduct = curve(0f to B, 0.1f to 0.4f, 0.3f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.1f to -0.5f, 0.3f to 0.6f, 0.6f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.1f to 2.0f, 0.3f to -4.0f, 0.6f to -3.5f, 0.85f to -3.0f, 1f to B),
-            headA = curve(0f to B, 0.1f to 0.3f, 0.3f to -0.2f, 0.6f to -0.5f, 1f to B),
-            headY = curve(0f to B, 0.1f to -0.4f, 0.3f to 0.7f, 0.6f to 0.4f, 1f to B),
-            lean = curve(0f to B, 0.1f to -0.3f, 0.3f to 1.2f, 0.6f to 0.9f, 0.85f to 0.7f, 1f to B),
-            step = curve(0f to B, 0.1f to -0.5f, 0.3f to 1.5f, 0.6f to 1.2f, 0.85f to 1.0f, 1f to B),
+            pitch = curve(0f to B, 0.08f to -0.6f, 0.25f to -1.7f, 0.6f to -1.7f, 0.85f to -1.1f, 1f to B),
+            across = curve(0f to B, 0.08f to 0.0f, 0.25f to 0.2f, 0.6f to 0.15f, 1f to B),
+            abduct = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.2f, 1f to B),
+            offPitch = curve(0f to B, 0.08f to -0.5f, 0.25f to -1.5f, 0.6f to -1.5f, 0.85f to -1.0f, 1f to B),
+            offAcross = curve(0f to B, 0.08f to 0.2f, 0.25f to 0.4f, 0.6f to 0.35f, 1f to B),
+            offAbduct = curve(0f to B, 0.08f to 0.2f, 0.25f to 0.3f, 1f to B),
+            turn = curve(0f to B, 0.08f to -0.15f, 0.25f to 0.25f, 0.6f to 0.1f, 1f to B),
+            reach = curve(0f to B, 0.08f to 1.8f, 0.25f to -4.0f, 0.6f to -4.0f, 0.85f to -2.5f, 1f to B),
+            headA = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.3f, 0.6f to 0.35f, 0.85f to 0.3f, 1f to B),
+            headY = curve(0f to B, 0.25f to 0.1f, 0.6f to -0.1f, 1f to B),
+            twist = curve(0f to B, 0.08f to -0.1f, 0.25f to 0.15f, 0.6f to 0.1f, 1f to B),
+            lean = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.9f, 0.6f to 1.0f, 0.85f to 0.6f, 1f to B),
+            step = curve(0f to B, 0.08f to -0.35f, 0.25f to -0.3f, 0.6f to -0.2f, 0.75f to 0.9f, 0.9f to 0.7f, 1f to B),
         ),
         "SPELL:UPPERCUT" to Pose(
             pitch = curve(0f to B, 0.1f to 0.2f, 0.3f to -2.5f, 0.55f to -2.0f, 0.8f to -1.5f, 1f to B),
@@ -881,11 +882,14 @@ object WeaponAnimations {
             step = curve(0f to B, 0.08f to 0.1f, 0.25f to -0.2f, 0.5f to 0.3f, 0.75f to 0.1f, 1f to B),
         ),
         "SPELL:DASH" to Pose(
-            pitch = curve(0f to B, 0.3f to 0.3f, 0.6f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to 0.3f, 0.6f to 0.1f, 1f to B),
-            headA = curve(0f to B, 0.3f to 0.6f, 0.6f to 0.3f, 1f to B),
-            lean = curve(0f to B, 0.3f to 0.7f, 0.6f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.3f to 1.2f, 0.6f to 0.8f, 1f to B),
+            pitch = curve(0f to B, 0.15f to 0.2f, 0.35f to 0.5f, 0.65f to 0.45f, 0.85f to 0.2f, 1f to B),
+            across = curve(0f to B, 0.15f to 0.1f, 0.35f to 0.2f, 1f to B),
+            offPitch = curve(0f to B, 0.15f to 0.2f, 0.35f to 0.5f, 0.65f to 0.45f, 0.85f to 0.2f, 1f to B),
+            offAcross = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.4f, 1f to B),
+            turn = curve(0f to B, 0.15f to -0.15f, 0.35f to 0.2f, 0.65f to 0.1f, 1f to B),
+            headA = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.45f, 0.65f to 0.4f, 0.85f to 0.2f, 1f to B),
+            lean = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.65f, 0.65f to 0.6f, 0.85f to 0.3f, 1f to B),
+            step = curve(0f to B, 0.15f to 0.6f, 0.35f to -0.3f, 0.65f to -0.25f, 0.85f to 0.4f, 1f to B),
         ),
         "SPELL:MULTIHIT" to Pose(
             pitch = curve(0f to B, 0.08f to -1.0f, 0.2f to -1.6f, 0.35f to -1.6f, 0.5f to -1.4f, 0.65f to -1.6f, 0.8f to -1.3f, 0.9f to -1.1f, 1f to B),
@@ -955,13 +959,15 @@ object WeaponAnimations {
             step = curve(0f to B, 0.55f to 0.5f, 1f to B),
         ),
         "SPELL:HAUL" to Pose(
-            pitch = curve(0f to B, 0.25f to -1.5f, 0.5f to -1.0f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -1.5f, 0.6f to -1.0f, 1f to B),
-            offAcross = curve(0f to B, 0.25f to 0.3f, 0.6f to 0.7f, 1f to B),
-            reach = curve(0f to B, 0.25f to -2.5f, 0.6f to 1.0f, 1f to B),
-            headA = curve(0f to B, 0.25f to -0.2f, 0.6f to -0.4f, 1f to B),
-            lean = curve(0f to B, 0.25f to 0.3f, 0.6f to -0.3f, 1f to B),
-            step = curve(0f to B, 0.25f to 0.5f, 0.6f to -0.4f, 1f to B),
+            pitch = curve(0f to B, 0.15f to -1.2f, 0.3f to -1.8f, 0.55f to -1.6f, 0.8f to -1.2f, 1f to B),
+            across = curve(0f to B, 0.15f to 0.1f, 0.3f to 0.2f, 1f to B),
+            offPitch = curve(0f to B, 0.15f to -1.0f, 0.3f to -1.5f, 0.55f to -1.3f, 0.8f to -1.0f, 1f to B),
+            offAcross = curve(0f to B, 0.15f to 0.2f, 0.3f to 0.4f, 0.55f to 0.35f, 1f to B),
+            turn = curve(0f to B, 0.15f to -0.15f, 0.3f to 0.25f, 0.55f to 0.15f, 1f to B),
+            reach = curve(0f to B, 0.15f to -1.0f, 0.3f to -2.2f, 0.55f to -2.0f, 0.8f to -1.2f, 1f to B),
+            headA = curve(0f to B, 0.15f to -0.2f, 0.3f to -0.3f, 0.55f to 0.0f, 0.8f to 0.3f, 1f to B),
+            lean = curve(0f to B, 0.15f to 0.2f, 0.3f to 0.7f, 0.55f to 0.7f, 0.8f to 0.4f, 1f to B),
+            step = curve(0f to B, 0.15f to -0.3f, 0.3f to -0.35f, 0.55f to -0.25f, 0.7f to 0.8f, 0.9f to 0.5f, 1f to B),
         ),
         "SPELL:AURA" to Pose(
             pitch = curve(0f to B, 0.3f to -2.0f, 0.5f to -1.9f, 0.7f to -2.0f, 1f to B),
@@ -1554,7 +1560,9 @@ object WeaponAnimations {
             hitSeconds = minOf(HIT_SECONDS, total * HIT_SHARE)
             blendSeconds = if (chained) hitSeconds else BLEND_SECONDS
             val span = chosen.seconds - MIN_SECONDS
-            amp = if (span <= 0f) 1f else AMP_MIN + (1f - AMP_MIN) * ((total - MIN_SECONDS) / span).coerceIn(0f, 1f)
+            val target = if (span <= 0f) 1f else AMP_MIN + (1f - AMP_MIN) * ((total - MIN_SECONDS) / span).coerceIn(0f, 1f)
+            val settle = 1f - exp(-gap / AMP_SMOOTH_TAU)
+            amp += (target - amp) * settle.coerceIn(0f, 1f)
         }
 
         fun beginSpell(player: LocalPlayer, chosen: Pose) {
