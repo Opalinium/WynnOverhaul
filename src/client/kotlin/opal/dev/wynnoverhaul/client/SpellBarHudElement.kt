@@ -337,13 +337,7 @@ class SpellBarHudElement : HudElement {
         val inner = QuickCast.slotCombo(slot).size * (GLYPH_W + GLYPH_GAP) - GLYPH_GAP
         val w = inner + 8
         val h = font.lineHeight + 3
-        graphics.fill(x, y, x + w, y + h, HudStyle.alpha(0xFF1B150E.toInt(), fade))
-        graphics.fill(x, y, x + w, y + 1, HudStyle.alpha(OwTheme.ACCENT_DIM, fade))
-        graphics.fill(x, y + h - 2, x + w, y + h - 1, HudStyle.alpha(0xFF0A0705.toInt(), fade))
-        graphics.fill(x, y + h - 1, x + w, y + h, HudStyle.alpha(OwTheme.ACCENT_DIM, fade))
-        graphics.fill(x, y, x + 1, y + h, HudStyle.alpha(OwTheme.ACCENT_DIM, fade))
-        graphics.fill(x + w - 1, y, x + w, y + h, HudStyle.alpha(OwTheme.ACCENT_DIM, fade))
-        drawComboGlyphs(graphics, font, x + 4, y + 2, slot, HudStyle.alpha(OwTheme.TEXT, fade))
+        drawComboGlyphs(graphics, font, x + 4, y + (h - font.lineHeight) / 2, slot, HudStyle.alpha(OwTheme.TEXT, fade))
         return w
     }
 
