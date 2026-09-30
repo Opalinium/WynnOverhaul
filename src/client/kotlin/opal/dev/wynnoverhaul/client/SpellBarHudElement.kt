@@ -1,7 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
-import net.minecraft.ChatFormatting
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -42,39 +41,24 @@ class SpellBarHudElement : HudElement {
             base?.getOrNull(slot) ?: DEMO_NAMES.getOrNull(slot).takeIf { showPlaceholder }
         }
         val keys = (0 until SLOT_COUNT).map { QuickCast.keyLabel(it) }
-        val nameParts = ArrayList<Component>(SLOT_COUNT)
-        val comboParts = ArrayList<Component>(SLOT_COUNT)
-        val costParts = ArrayList<Component?>(SLOT_COUNT)
         val costs = (0 until SLOT_COUNT).map { slot ->
             names[slot]?.let { WynnSpellTracker.spellCosts(it) }?.ifEmpty { null }
                 ?: if (showPlaceholder) DEMO_COSTS.getOrNull(slot) ?: emptyList() else emptyList()
         }
         val lastName = WynnSpellTracker.lastCast?.takeIf { WynnSpellTracker.castVisible(now) }?.name
-        var contentW = 0
-        for (slot in 0 until SLOT_COUNT) {
-            val name = names[slot] ?: UNKNOWN_NAME
-            nameParts.add(Component.literal("${slot + 1} $name"))
-            val key = keys[slot]
-            val combo = if (key != null) {
-                Component.literal(key)
-            } else {
-                val row = StringBuilder()
-                QuickCast.slotCombo(slot).forEachIndexed { i, right ->
-                    if (i > 0) row.append(' ')
-                    row.append(if (right) RIGHT_GLYPH else LEFT_GLYPH)
-                }
-                Component.literal(row.toString())
-            }
-            comboParts.add(combo)
+
+        val nameParts = (0 until SLOT_COUNT).map { slot -> Component.literal("${slot + 1}  ${names[slot] ?: UNKNOWN_NAME}") }
+        val costParts = (0 until SLOT_COUNT).map { slot ->
             val cost = costs[slot].firstOrNull { it.mana } ?: costs[slot].firstOrNull()
-            val costPart = cost?.let { Component.literal("-${it.amount}") }
-            costParts.add(costPart)
-            var w = maxOf(font.width(nameParts[slot]), font.width(combo))
-            if (costPart != null) w += font.width(costPart) + COST_GAP
-            contentW = maxOf(contentW, w)
+            cost?.let { it to Component.literal("-${it.amount}") }
         }
-        val cellW = contentW + PAD * 2
-        val (boxW, boxH) = HudLayoutManager.stableSize(ID, cellW * COLS, ROW_H * ROWS)
+        val badgeW = (0 until SLOT_COUNT).maxOf { slot -> badgeWidth(font, keys[slot], slot) }
+        val costW = costParts.maxOf { it?.second?.let { c -> font.width(c) } ?: 0 }
+
+        val contentW = (0 until SLOT_COUNT).maxOf { slot ->
+            PAD + font.width(nameParts[slot]) + GAP + costW + GAP + badgeW + PAD
+        }
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, ROW_H * SLOT_COUNT)
 
         val scale = HudLayoutManager.scale(ID)
         val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
@@ -93,59 +77,60 @@ class SpellBarHudElement : HudElement {
             val match = QuickCast.slotCombo(slot).take(prefix.size) == prefix
             val fired = lastName != null && names[slot] == lastName
             val lit = match || fired
-            val color = if (lit) ChatFormatting.WHITE else ChatFormatting.GRAY
-            val cx = ox + (slot % COLS) * cellW
-            val cy = oy + (slot / COLS) * ROW_H
-            if (match) graphics.fill(cx, cy, cx + cellW, cy + ROW_H, HudStyle.alpha(OwTheme.ACCENT, FILL_FADE))
-            var tx = cx + PAD
-            graphics.text(font, nameParts[slot].copy().withStyle(color), tx, cy + NAME_Y, 0xFFFFFFFF.toInt(), true)
-            tx += font.width(nameParts[slot])
-            costParts[slot]?.let {
-                tx += COST_GAP
-                val cost = costs[slot].firstOrNull { c -> c.mana } ?: costs[slot].first()
-                val costColor = if (!lit) {
-                    GRAY_TEXT
-                } else if (cost.mana) {
-                    MANA_TEXT
-                } else {
-                    HP_TEXT
-                }
-                graphics.text(font, it.copy().setStyle(Style.EMPTY.withColor(costColor)), tx, cy + NAME_Y, 0xFFFFFFFF.toInt(), true)
+            val nameColor = if (lit) OwTheme.TEXT else OwTheme.TEXT_DIM
+            val cy = oy + slot * ROW_H
+
+            if (match) graphics.fill(ox, cy, ox + boxW, cy + ROW_H, HudStyle.alpha(OwTheme.ACCENT, FILL_FADE))
+            if (slot > 0) graphics.fill(ox + 1, cy, ox + boxW - 1, cy + 1, HudStyle.alpha(OwTheme.HAIRLINE, 0.6f))
+
+            graphics.text(font, nameParts[slot].copy().withStyle(Style.EMPTY.withColor(nameColor)), ox + PAD, cy + TEXT_Y, 0xFFFFFFFF.toInt(), true)
+
+            var tx = ox + boxW - PAD - badgeW
+            val key = keys[slot]
+            if (key != null) {
+                HudStyle.keycap(graphics, font, tx, cy + (ROW_H - font.lineHeight - 3) / 2, key, if (lit) 1f else 0.75f)
+            } else {
+                drawComboGlyphs(graphics, font, tx, cy + TEXT_Y, slot, if (lit) OwTheme.TEXT else OwTheme.TEXT_FAINT)
             }
-            graphics.text(font, glyphRun(comboParts[slot].string, color), cx + PAD, cy + COMBO_Y, 0xFFFFFFFF.toInt(), true)
-            if (match) HudStyle.fadeRule(graphics, cx, cy + ROW_H - 2, cellW, OwTheme.ACCENT_DIM, leftSolid = true)
-            if (fired) graphics.outline(cx, cy, cellW, ROW_H, OwTheme.ACCENT)
+
+            costParts[slot]?.let { (cost, part) ->
+                val cw = font.width(part)
+                val costColor = if (!lit) OwTheme.TEXT_FAINT else if (cost.mana) MANA_TEXT else HP_TEXT
+                graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(costColor)), tx - GAP - cw, cy + TEXT_Y, 0xFFFFFFFF.toInt(), true)
+            }
+
+            if (fired) HudStyle.brackets(graphics, ox + 1, cy + 1, boxW - 2, ROW_H - 2, OwTheme.ACCENT)
         }
+
+        if (boxH > 0) graphics.fill(ox + 1, oy + boxH - 1, ox + boxW - 1, oy + boxH, HudStyle.alpha(OwTheme.HAIRLINE, 0.6f))
 
         if (scaled) graphics.pose().popMatrix()
     }
 
-    private fun glyphRun(text: String, color: ChatFormatting): Component {
-        val out = Component.empty()
-        for (ch in text) {
-            val part = Component.literal(ch.toString())
-            val glyph = ch.toString()
-            if (glyph == RIGHT_GLYPH || glyph == LEFT_GLYPH || glyph == ARROW_GLYPH) {
-                part.setStyle(Style.EMPTY.withColor(color).withFont(GLYPH_FONT))
-            } else {
-                part.withStyle(color)
-            }
-            out.append(part)
+    private fun badgeWidth(font: net.minecraft.client.gui.Font, key: String?, slot: Int): Int {
+        if (key != null) return font.width(key) + 8
+        return QuickCast.slotCombo(slot).size * (GLYPH_W + GLYPH_GAP) - GLYPH_GAP
+    }
+
+    private fun drawComboGlyphs(graphics: GuiGraphicsExtractor, font: net.minecraft.client.gui.Font, x: Int, y: Int, slot: Int, color: Int) {
+        var gx = x
+        for (right in QuickCast.slotCombo(slot)) {
+            val glyph = Component.literal(if (right) RIGHT_GLYPH else LEFT_GLYPH).setStyle(Style.EMPTY.withColor(color).withFont(GLYPH_FONT))
+            graphics.text(font, glyph, gx, y, 0xFFFFFFFF.toInt(), true)
+            gx += GLYPH_W + GLYPH_GAP
         }
-        return out
     }
 
     private companion object {
         const val ID = "spell_bar"
         const val SLOT_COUNT = 4
-        const val COLS = 2
-        const val ROWS = 2
-        const val ROW_H = 30
-        const val PAD = 3
-        const val NAME_Y = 3
-        const val COMBO_Y = 13
+        const val ROW_H = 16
+        const val PAD = 4
+        const val GAP = 6
+        const val TEXT_Y = 4
         const val UNKNOWN_NAME = "..."
-        const val COST_GAP = 4
+        const val GLYPH_W = 6
+        const val GLYPH_GAP = 1
         val DEMO_PREFIX = listOf(true, false)
         val DEMO_NAMES = listOf("Bash", "Charge", "Uppercut", "War Scream")
         val DEMO_COSTS = listOf(
@@ -154,13 +139,11 @@ class SpellBarHudElement : HudElement {
             emptyList(),
             emptyList(),
         )
-        const val FILL_FADE = 0.12f
+        const val FILL_FADE = 0.14f
         const val MANA_TEXT = 0xFF7FE3FF.toInt()
         const val HP_TEXT = 0xFFD64545.toInt()
-        const val GRAY_TEXT = 0xFFAAAAAA.toInt()
-        const val RIGHT_GLYPH = "\uE104"
-        const val LEFT_GLYPH = "\uE103"
-        const val ARROW_GLYPH = "\uE106"
+        const val RIGHT_GLYPH = ""
+        const val LEFT_GLYPH = ""
         val GLYPH_FONT = FontDescription.Resource(Identifier.fromNamespaceAndPath("minecraft", "hud/gameplay/default/bottom_middle"))
     }
 }
