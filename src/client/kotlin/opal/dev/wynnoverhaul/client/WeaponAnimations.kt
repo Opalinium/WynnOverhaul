@@ -1479,7 +1479,7 @@ object WeaponAnimations {
                 idleTable = null
                 return
             }
-            if (!player.swinging) suppress = false
+            if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
             refreshIdle(player)
             val config = WynnOverhaulConfig.current
             if (config.weaponAnimationPreview && enabled()) {
@@ -1538,17 +1538,7 @@ object WeaponAnimations {
             cueFired = BooleanArray(cues.size)
             cueFinisher = combo.finisher
             trailStrength = if (combo.finisher) 1.25f else 1f
-            val previous = pose
-            val previousT = progress()
-            carry = if (previous != null && previousT >= 0f) {
-                val relax = relaxWeight()
-                FloatArray(CHANNELS).also { out ->
-                    sampleRaw(previous, previousT, REST_BASE, out)
-                    for (i in 0 until CHANNELS) out[i] = REST_BASE[i] + (out[i] - REST_BASE[i]) * relax
-                }
-            } else {
-                null
-            }
+            carry = captureCarry()
             val chained = carry != null
             pose = chosen
             right = arm == HumanoidArm.RIGHT
@@ -1567,22 +1557,14 @@ object WeaponAnimations {
 
         fun beginSpell(player: LocalPlayer, chosen: Pose) {
             if (!enabled()) return
+            suppress = true
             val now = System.nanoTime()
             readyUntil = now + READY_NANOS
             cues = SFX[chosen.key] ?: emptyList()
             cueFired = BooleanArray(cues.size)
             cueFinisher = false
             trailStrength = 1f
-            val previous = pose
-            val previousT = progress()
-            carry = if (previous != null && previousT >= 0f) {
-                FloatArray(CHANNELS).also { out ->
-                    sampleRaw(previous, previousT, REST_BASE, out)
-                    for (i in 0 until CHANNELS) out[i] = REST_BASE[i] + (out[i] - REST_BASE[i]) * relaxWeight()
-                }
-            } else {
-                null
-            }
+            carry = captureCarry()
             pose = chosen
             right = player.mainArm == HumanoidArm.RIGHT
             startNanos = now
@@ -1671,6 +1653,15 @@ object WeaponAnimations {
             } else {
                 current.hit + (tau - hitSeconds) / (totalSeconds - hitSeconds) * (1f - current.hit)
             }
+        }
+
+        private fun captureCarry(): FloatArray? {
+            val previous = pose ?: return null
+            val previousT = progress()
+            if (previousT < 0f) return null
+            val out = FloatArray(CHANNELS)
+            sample(previous, previousT, REST_BASE, 1f, out)
+            return out
         }
 
         private fun sampleRaw(p: Pose, t: Float, base: FloatArray, out: FloatArray) {
