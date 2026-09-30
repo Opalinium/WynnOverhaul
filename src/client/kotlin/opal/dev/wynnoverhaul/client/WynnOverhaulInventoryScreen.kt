@@ -11,8 +11,6 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.ChatFormatting
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.FormattedText
-import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
@@ -20,7 +18,6 @@ import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.item.ItemStack
 import opal.dev.wynnoverhaul.WynnOverhaul
 import opal.dev.wynnoverhaul.client.CharacterMenuModel
-import java.util.Optional
 
 class WynnOverhaulInventoryScreen(
     private val menu: InventoryMenu,
@@ -103,6 +100,10 @@ class WynnOverhaulInventoryScreen(
     private var selectedJournal: ActivityInfo? = null
     private var hoveredChar: Int = -1
     private var hoveredJournal: JournalSlot? = null
+
+    private val fade = OwFade()
+    private var lastCharReady = false
+    private var lastJournalReady = false
 
     private val charWidgets = ArrayList<OwButton>()
     private var charSnapshot: CharacterMenuModel.Snapshot? = null
@@ -267,7 +268,7 @@ class WynnOverhaulInventoryScreen(
             val rowY = { dy: Int -> pt + CONTENT_TOP_REL + dy }
             val sortW = 100
             val refreshW = 56
-            journalSearchField = OwTextField(font, gx, rowY(0), gw - sortW - refreshW - 8, SEARCH_H).also {
+            journalSearchField = OwTextField(font, gx, rowY(-JOURNAL_TOP_SHIFT), gw - sortW - refreshW - 8, SEARCH_H).also {
                 it.setValue(journal.query)
                 it.setResponder { v ->
                     journal.query = v
@@ -284,7 +285,7 @@ class WynnOverhaulInventoryScreen(
                 }
             }
             journalSortButton = OwDropdown(
-                gx + gw - sortW - refreshW - 4, rowY(0), sortW, SEARCH_H,
+                gx + gw - sortW - refreshW - 4, rowY(-JOURNAL_TOP_SHIFT), sortW, SEARCH_H,
                 "",
                 ContentBookViewModel.Sort.entries.map { OwDropdownOverlay.Option(it.name, it.label) },
                 { journal.sort.name },
@@ -292,7 +293,7 @@ class WynnOverhaulInventoryScreen(
                 journal.selectSort(ContentBookViewModel.Sort.valueOf(it))
                 rebuildWidgets()
             }.also { addRenderableWidget(it) }
-            journalRefreshButton = OwButton(gx + gw - refreshW, rowY(0), refreshW, SEARCH_H, Component.literal("Refresh")) {
+            journalRefreshButton = OwButton(gx + gw - refreshW, rowY(-JOURNAL_TOP_SHIFT), refreshW, SEARCH_H, Component.literal("Refresh")) {
                 refreshJournal()
             }.also { addRenderableWidget(it) }
 
@@ -318,12 +319,12 @@ class WynnOverhaulInventoryScreen(
                     else -> "Track"
                 }
                 journalTrackButton = OwButton(
-                    gx, rowY(header.actionsTop), 120, JOURNAL_ACTION_BTN_H, Component.literal(trackText),
+                    gx + JOURNAL_CARD_PAD, rowY(header.actionsTop), 120, JOURNAL_ACTION_BTN_H, Component.literal(trackText),
                     enabled = { selected.trackingState != ActivityTrackingState.UNTRACKABLE || mapLocated != null },
                 ) {
                     toggleJournalTrack(selected)
                 }.also { addRenderableWidget(it) }
-                journalWikiButton = OwButton(gx + 124, rowY(header.actionsTop), 100, JOURNAL_ACTION_BTN_H, Component.literal("Wiki Info")) {
+                journalWikiButton = OwButton(gx + JOURNAL_CARD_PAD + 124, rowY(header.actionsTop), 100, JOURNAL_ACTION_BTN_H, Component.literal("Wiki Info")) {
                     Minecraft.getInstance().setScreenAndShow(WynnOverhaulQuestWikiScreen(selected.type, selected.name, this))
                 }.also { addRenderableWidget(it) }
             } else {
@@ -479,7 +480,26 @@ class WynnOverhaulInventoryScreen(
         val mx = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseX
         val my = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseY
         renderInventoryScreen(graphics, mx, my, partialTick)
+        drawContentFade(graphics)
         OwDropdownOverlay.render(graphics, mouseX, mouseY, height)
+    }
+
+    private fun drawContentFade(graphics: GuiGraphicsExtractor) {
+        val charReady = characterMenu != null
+        if (charReady != lastCharReady) {
+            lastCharReady = charReady
+            if (charReady && invTab == InvTab.CHARACTER) fade.restart()
+        }
+        val journalReady = journalMenu != null || journal.activities.isNotEmpty()
+        if (journalReady != lastJournalReady) {
+            lastJournalReady = journalReady
+            if (journalReady && invTab == InvTab.JOURNAL) fade.restart()
+        }
+        if (invTab == InvTab.SETTINGS) return
+        val layout = lastLayout ?: return
+        val top = layout.scrollTop
+        val bottom = panelTopFor(layout.panelH) + layout.panelH
+        fade.overlay(graphics, panelLeft(), top, panelWidth(), bottom - top)
     }
 
     private fun renderInventoryScreen(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
@@ -499,9 +519,9 @@ class WynnOverhaulInventoryScreen(
                 pouchEmeraldButton?.let { it.y = pouchBy }
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
                 inventorySortButton?.let { button -> button.y = pt + SEARCH_Y_REL }
-                journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL }
-                journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
-                journalRefreshButton?.let { button -> button.y = pt + CONTENT_TOP_REL }
+                journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
+                journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
+                journalRefreshButton?.let { button -> button.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
                 for ((button, relY) in journalCategoryButtons) button.y = pt + CONTENT_TOP_REL + relY
                 journalTrackButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
                 journalWikiButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
@@ -1116,6 +1136,7 @@ class WynnOverhaulInventoryScreen(
         painted.clear()
         lastClickSlot = -1
         invTab = tab
+        fade.restart()
         rebuildWidgets()
     }
 
@@ -1554,16 +1575,27 @@ class WynnOverhaulInventoryScreen(
         val gx = layout.gridX
         val gw = layout.gridW
         val top = layout.scrollTop
-        graphics.text(font, "JOURNAL", gx, top + 2, OwTheme.ACCENT)
+        
         val header = computeJournalHeader(gw)
-        for ((i, line) in header.detailLines.take(JOURNAL_MAX_DETAIL_LINES).withIndex()) {
-            graphics.text(font, trimToWidth(line.text, gw), gx, top + header.detailTop + i * JOURNAL_DETAIL_LINE_H, line.color)
+        drawJournalProgress(graphics, gx, gw, top - JOURNAL_TOP_SHIFT + JOURNAL_ROW1_H + 5)
+
+        val shownLines = header.detailLines.take(JOURNAL_MAX_DETAIL_LINES)
+        val cardTop = top + header.detailTop - JOURNAL_CARD_PAD
+        val cardBottom = if (selectedJournal != null) {
+            top + header.actionsTop + JOURNAL_ACTION_BTN_H + JOURNAL_CARD_PAD
+        } else {
+            top + header.detailTop + shownLines.size * JOURNAL_DETAIL_LINE_H + JOURNAL_CARD_PAD
+        }
+        graphics.fill(gx, cardTop, gx + gw, cardBottom, CHAR_CARD_BG)
+        graphics.outline(gx, cardTop, gw, cardBottom - cardTop, OwTheme.HAIRLINE)
+        for ((i, line) in shownLines.withIndex()) {
+            drawJournalDetailLine(graphics, line, gx + JOURNAL_CARD_PAD, top + header.detailTop + i * JOURNAL_DETAIL_LINE_H, gw - JOURNAL_CARD_PAD * 2, i)
         }
         graphics.text(font, journal.statusLine(), gx, top + header.statusTop, OwTheme.TEXT_DIM)
         val listTop = top + header.listTop
         val listBottom = minOf(layout.scrollBottom, listTop + JOURNAL_LIST_ROWS * ContentBookViewModel.ROW_H)
         if (journalMenu == null && journal.activities.isEmpty()) {
-            graphics.text(font, "Opening the Content Book...", gx, listTop, OwTheme.TEXT_DIM)
+            OwSkeleton.bars(graphics, gx, listTop, gw, 6, ContentBookViewModel.ROW_H - 4, 2)
         }
         val colW = gw / ContentBookViewModel.LIST_COLS
         graphics.enableScissor(gx, listTop, gx + gw, listBottom)
@@ -1578,6 +1610,7 @@ class WynnOverhaulInventoryScreen(
     private fun drawJournalRow(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, a: ActivityInfo, hovered: Boolean) {
         val rowH = ContentBookViewModel.ROW_H - 2
         val selected = a === selectedJournal
+        val typeColor = (a.type.colorArgb and 0xFFFFFF) or 0xFF000000.toInt()
         val bg = when {
             selected -> OwTheme.TILE_HOVER
             hovered -> OwTheme.PANEL_RAISED
@@ -1585,11 +1618,79 @@ class WynnOverhaulInventoryScreen(
         }
         graphics.fill(x, y, x + w - 2, y + rowH, bg)
         graphics.outline(x, y, w - 2, rowH, if (selected) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
-        graphics.item(a.icon, x + 2, y + 1)
+        graphics.fill(x + 1, y + 1, x + 3, y + rowH - 1, if (selected || hovered) typeColor else OwTheme.ACCENT_DIM)
+        graphics.item(a.icon, x + 5, y + 1)
         val prefix = if (a.trackingState == ActivityTrackingState.TRACKED) "* " else ""
-        val name = trimToWidth("$prefix${a.name}", w - 22 - 10)
-        graphics.text(font, name, x + 22, y + (rowH - 8) / 2, (a.type.colorArgb and 0xFFFFFF) or 0xFF000000.toInt())
-        graphics.fill(x + w - 8, y + 2, x + w - 4, y + rowH - 2, statusColorArgb(a.status))
+        val name = trimToWidth("$prefix${a.name}", w - 26 - 14)
+        graphics.text(font, name, x + 25, y + (rowH - 8) / 2, typeColor)
+        graphics.fill(x + w - 9, y + 3, x + w - 5, y + rowH - 3, statusColorArgb(a.status))
+    }
+
+    private fun drawJournalProgress(graphics: GuiGraphicsExtractor, gx: Int, gw: Int, y: Int) {
+        val entries = (Minecraft.getInstance().player?.let { ContentBookProgress.read(it) } ?: emptyList()).ifEmpty { derivedJournalProgress() }
+        if (entries.isEmpty()) {
+            OwSkeleton.bars(graphics, gx, y + 2, gw, 1, 8)
+            return
+        }
+        val gap = 8
+        val cellW = (gw - gap * (entries.size - 1)) / entries.size
+        for ((i, entry) in entries.withIndex()) {
+            val cx = gx + i * (cellW + gap)
+            val value = "${entry.done}/${entry.total}"
+            val valueW = font.width(value)
+            graphics.text(font, trimToWidth(entry.label, cellW - valueW - 6), cx, y, OwTheme.TEXT_DIM)
+            graphics.text(font, value, cx + cellW - valueW, y, OwTheme.TEXT)
+            val barY = y + 11
+            graphics.fill(cx, barY, cx + cellW, barY + BAR_H, OwTheme.TILE_BORDER)
+            val fillW = cellW * entry.percent.coerceIn(0, 100) / 100
+            if (fillW > 0) graphics.fill(cx, barY, cx + fillW, barY + BAR_H, journalProgressColor(entry.label))
+        }
+    }
+
+    private fun derivedJournalProgress(): List<ContentBookProgress.Entry> {
+        val groups = listOf<Pair<String, (ActivityType) -> Boolean>>(
+            "Quests" to { it.isQuest },
+            "Territorial" to { it == ActivityType.TERRITORIAL_DISCOVERY },
+            "World" to { it == ActivityType.WORLD_DISCOVERY },
+            "Secret" to { it == ActivityType.SECRET_DISCOVERY },
+        )
+        return groups.mapNotNull { (label, matches) ->
+            val items = journal.activities.filter { matches(it.type) }
+            if (items.isEmpty()) return@mapNotNull null
+            val done = items.count { it.status == ActivityStatus.COMPLETED }
+            ContentBookProgress.Entry(label, done, items.size, done * 100 / items.size)
+        }
+    }
+
+    private fun journalProgressColor(label: String): Int = when {
+        label.startsWith("Quest") -> 0xFFB86BE0.toInt()
+        label.startsWith("Territorial") -> 0xFFD8D2C4.toInt()
+        label.startsWith("World") -> 0xFFE0A63A.toInt()
+        label.startsWith("Secret") -> 0xFF58C7E8.toInt()
+        else -> OwTheme.ACCENT
+    }
+
+    private fun drawJournalDetailLine(graphics: GuiGraphicsExtractor, line: DetailLine, x: Int, y: Int, w: Int, index: Int) {
+        val text = line.text
+        val labelEnd = text.indexOf(": ")
+        val requirement = labelEnd > 0 && (line.color == OwTheme.GOOD || line.color == OwTheme.BAD)
+        when {
+            index == 0 -> graphics.text(font, trimToWidth(text, w), x, y, line.color)
+            text == "Rewards" -> {
+                graphics.text(font, "REWARDS", x, y, OwTheme.ACCENT_DIM)
+                graphics.fill(x, y + 9, x + w, y + 10, OwTheme.HAIRLINE)
+            }
+            text.startsWith("- ") -> {
+                graphics.text(font, "-", x + 2, y, OwTheme.TEXT_FAINT)
+                graphics.text(font, trimToWidth(text.removePrefix("- "), w - 10), x + 10, y, line.color)
+            }
+            requirement -> {
+                val label = text.substring(0, labelEnd + 1)
+                graphics.text(font, label, x, y, OwTheme.TEXT_DIM)
+                graphics.text(font, trimToWidth(text.substring(labelEnd + 2), w - font.width(label) - 4), x + font.width(label) + 4, y, line.color)
+            }
+            else -> graphics.text(font, trimToWidth(text, w), x, y, line.color)
+        }
     }
 
     private fun drawJournalHoverAndTooltip(graphics: GuiGraphicsExtractor) {
@@ -1744,18 +1845,19 @@ class WynnOverhaulInventoryScreen(
     )
 
     private fun computeJournalHeader(width: Int): JournalHeader {
-        val chips = journalCategoryChips(0, JOURNAL_ROW1_H + JOURNAL_SECTION_GAP, width)
-        val chipsBottom = (chips.maxOfOrNull { it.y } ?: (JOURNAL_ROW1_H + JOURNAL_SECTION_GAP)) + JOURNAL_TAB_H
-        val detailTop = chipsBottom + JOURNAL_SECTION_GAP
+        val chipsTop = JOURNAL_ROW1_H + JOURNAL_PROGRESS_H + JOURNAL_SECTION_GAP - JOURNAL_TOP_SHIFT
+        val chips = journalCategoryChips(0, chipsTop, width)
+        val chipsBottom = (chips.maxOfOrNull { it.y } ?: chipsTop) + JOURNAL_TAB_H
+        val detailTop = chipsBottom + JOURNAL_SECTION_GAP + JOURNAL_CARD_PAD
         val selected = selectedJournal
         val detailLines = if (selected != null) {
-            buildJournalDetailLines(selected, width - 8)
+            buildJournalDetailLines(selected, width - JOURNAL_CARD_PAD * 2 - 8)
         } else {
             listOf(DetailLine("Select an activity from the list below to see its details.", OwTheme.TEXT_DIM))
         }
         val actionsTop = detailTop + minOf(detailLines.size, JOURNAL_MAX_DETAIL_LINES) * JOURNAL_DETAIL_LINE_H + 4
-        val statusTop = actionsTop + JOURNAL_ACTION_BTN_H + JOURNAL_SECTION_GAP
-        val listTop = statusTop + 12
+        val statusTop = actionsTop + JOURNAL_ACTION_BTN_H + JOURNAL_CARD_PAD + JOURNAL_SECTION_GAP
+        val listTop = statusTop + 14
         return JournalHeader(chips, detailLines, detailTop, actionsTop, statusTop, listTop)
     }
 
@@ -1805,7 +1907,15 @@ class WynnOverhaulInventoryScreen(
         drawFloatingCharacter(graphics, player, layout)
         drawCharStrip(graphics, layout)
         if (characterMenu == null) {
-            graphics.text(font, "Opening Character Info...", layout.gridX, layout.scrollTop + CHARACTER_GRID_Y, OwTheme.TEXT_DIM)
+            val sx = layout.gridX
+            val sw = layout.gridW
+            val sLeftW = (sw * 0.44).toInt()
+            val sRightW = sw - sLeftW - CHAR_CARD_GAP
+            val cardY = layout.scrollTop + CHARACTER_GRID_Y - CARD_PAD
+            drawCharCard(graphics, sx, cardY, sLeftW, SKELETON_CARD_H)
+            drawCharCard(graphics, sx + sLeftW + CHAR_CARD_GAP, cardY, sRightW, SKELETON_CARD_H)
+            OwSkeleton.bars(graphics, sx + CARD_PAD, cardY + CARD_PAD + STAT_TAB_H + CHAR_TAB_GAP, sLeftW - CARD_PAD * 2, 9, 9)
+            OwSkeleton.bars(graphics, sx + sLeftW + CHAR_CARD_GAP + CARD_PAD, cardY + CARD_PAD + HEADER_H, sRightW - CARD_PAD * 2, 5, 16, 6)
             return
         }
 
@@ -1853,6 +1963,11 @@ class WynnOverhaulInventoryScreen(
                     graphics.text(font, trimToWidth(row.text, placed.w - 6), placed.x + 3, py + 3, OwTheme.TEXT_FAINT)
                 }
             }
+        }
+
+        if (charStatsTab == CharStatsTab.IDENTIFICATIONS && !combatInfoPager.done) {
+            val barsY = (charPlaced.maxOfOrNull { it.y + CHAR_ROW_H } ?: (CHARACTER_GRID_Y + STAT_TAB_H + CHAR_TAB_GAP)) + 4
+            OwSkeleton.bars(graphics, gx + CARD_PAD, barsY - charScrollY + layout.scrollTop, leftW - CARD_PAD * 2, 6, 9)
         }
 
         val snap = charSnapshot
@@ -2057,6 +2172,8 @@ class WynnOverhaulInventoryScreen(
             private set
         var done = false
             private set
+        var total = 0
+            private set
         private val seenPages = HashSet<Int>()
         private val merged = LinkedHashSet<String>()
         private val colors = HashMap<String, Int>()
@@ -2072,6 +2189,7 @@ class WynnOverhaulInventoryScreen(
             merged.clear()
             colors.clear()
             ticksUntilNext = 0
+            total = 0
             done = false
         }
 
@@ -2079,19 +2197,7 @@ class WynnOverhaulInventoryScreen(
 
         fun colorOf(line: String): Int? = colors[line.trim()]
 
-        private fun valueColor(component: Component): Int? {
-            var color: Int? = null
-            component.visit(
-                FormattedText.StyledContentConsumer<Unit> { style, text ->
-                    if (text.any { !it.isWhitespace() && !it.isSurrogate() && it.code !in 0xE000..0xF8FF }) {
-                        color = style.color?.value?.let { 0xFF000000.toInt() or it }
-                    }
-                    Optional.empty()
-                },
-                Style.EMPTY,
-            )
-            return color
-        }
+        fun status(): String = if (total > 0) "Reading page ${seenPages.size.coerceAtLeast(1)} of $total..." else "Loading..."
 
         fun tick(menu: AbstractContainerMenu, click: (Int) -> Unit) {
             if (slot < 0) {
@@ -2106,6 +2212,7 @@ class WynnOverhaulInventoryScreen(
                 return
             }
             val lore = WynnItemRarity.loreLines(stack)
+            lore.firstOrNull { it.contains('«') }?.let { line -> total = line.count { it == '■' || it == '□' } }
             val statEnd = lore.indexOfLast { line -> PLAYER_STAT_KEYS.any { key -> line.startsWith(key) } }
             val pageIdx = lore.indexOfFirst { PAGE_LINE.containsMatchIn(it) }
             val pageNum = if (pageIdx >= 0) PAGE_LINE.find(lore[pageIdx])?.groupValues?.get(1)?.toIntOrNull() else null
@@ -2120,7 +2227,7 @@ class WynnOverhaulInventoryScreen(
                 val text = lore[idx].trim()
                 if (text.isEmpty()) continue
                 merged.add(text)
-                components?.getOrNull(idx)?.let { valueColor(it) }?.let { colors.putIfAbsent(text, it) }
+                components?.getOrNull(idx)?.let { LoreColors.lastColor(it) }?.let { colors.putIfAbsent(text, 0xFF000000.toInt() or it) }
             }
             if (pageNum == null || !seenPages.add(pageNum) || merged.size >= MAX_LINES || seenPages.size >= MAX_PAGES) {
                 done = true
@@ -2211,7 +2318,7 @@ class WynnOverhaulInventoryScreen(
             }
         } else {
             lines.add("Identifications" to headSlot)
-            lines.add("  Loading..." to headSlot)
+            lines.add("  ${combatInfoPager.status()}" to headSlot)
         }
         if (professions.isNotEmpty()) {
             lines.add("Professions" to professions.first().second)
@@ -2682,9 +2789,10 @@ class WynnOverhaulInventoryScreen(
 
         const val ROW_H = 20
         const val JOURNAL_ROW1_H = 16
+        const val JOURNAL_TOP_SHIFT = CONTENT_TOP_REL - SEARCH_Y_REL
         const val JOURNAL_SECTION_GAP = 6
         const val JOURNAL_TAB_H = 16
-        const val JOURNAL_DETAIL_LINE_H = 10
+        const val JOURNAL_DETAIL_LINE_H = 11
         const val JOURNAL_MAX_DETAIL_LINES = 16
         const val JOURNAL_ACTION_BTN_H = 18
         const val JOURNAL_LIST_ROWS = 11
@@ -2696,6 +2804,9 @@ class WynnOverhaulInventoryScreen(
         const val OPENER_BTN_H = 20
         const val STAT_TAB_H = 16
         const val CHAR_SECTION_GAP = 6
+        const val SKELETON_CARD_H = 150
+        const val JOURNAL_CARD_PAD = 6
+        const val JOURNAL_PROGRESS_H = 22
         const val CHAR_CARD_BG = 0x38000000
         const val CHAR_STRIPE = 0x16FFFFFF
         const val CARD_PAD = 6

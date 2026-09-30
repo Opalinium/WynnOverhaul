@@ -6,10 +6,12 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ### Added
 - The Character page has an Identifications sub-tab that lists your total identifications across every page, colored positive or negative as in game.
+- The Journal shows your Content Book completion progress for quests, territorial, world and secret discoveries.
 
 ### Changed
 - The Character page stats sit in cards with aligned label and value columns. Combat stats are grouped under their headings, and quests moved up into the header line.
 - The Mount Settings screen shows each setting as a card with its options, with the active option highlighted.
+- The Journal detail pane is a card with aligned requirements and a clearer rewards list.
 
 ## 1.3.0 - 2026-09-30
 
