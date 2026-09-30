@@ -29,7 +29,7 @@ object WynnActionBar {
 
     fun isComposite(message: Component): Boolean {
         val raw = message.string
-        if (!hasPrivateUse(raw)) return false
+        if (!TextClean.hasPrivateUse(raw)) return false
         if (isPersistentComposite(raw)) return true
 
         return WynnDialogueTracker.isDialogue(message)
@@ -77,19 +77,6 @@ object WynnActionBar {
         }
         if (!any) return null
         logCapture(raw, keep)
-
-        val result = Component.empty()
-        var offset = 0
-        var pending = StringBuilder()
-        var pendingStyle: Style? = null
-
-        fun flush() {
-            val style = pendingStyle
-            if (style != null && pending.isNotEmpty()) result.append(Component.literal(pending.toString()).withStyle(style))
-            pending = StringBuilder()
-            pendingStyle = null
-        }
-
         return project(message, keepUltimate = true)
     }
 
@@ -138,14 +125,6 @@ object WynnActionBar {
         if (WynnSprintTracker.hasSegment(raw)) families++
         if (WynnCombatXpTracker.hasSegment(raw)) families++
         return families >= 2
-    }
-
-    private fun hasPrivateUse(text: String): Boolean {
-        for (i in text.indices) {
-            val c = text[i]
-            if ((c >= '' && c <= '') || Character.isSurrogate(c)) return true
-        }
-        return false
     }
 
     private val ULTIMATE_SEGMENT = Regex("\uDAFF\uDFFA\uE4E0\uDAFF\uDFF6")

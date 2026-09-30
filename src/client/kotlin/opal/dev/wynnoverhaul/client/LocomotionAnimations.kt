@@ -288,8 +288,8 @@ object LocomotionAnimations {
         val now = System.nanoTime()
         val dt = if (body.lastNanos == 0L) 0f else ((now - body.lastNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
         body.lastNanos = now
-        val a = 1f - exp(-dt / TAU)
-        val slow = 1f - exp(-dt / (TAU * 2f))
+        val a = MathX.expApproach(dt, TAU)
+        val slow = MathX.expApproach(dt, TAU * 2f)
 
         val swimming = state.isVisuallySwimming
         val tread = state.isInWater && !swimming && !body.onGround
@@ -475,8 +475,6 @@ object LocomotionAnimations {
         model.body.yScale = if (lift > 0f) 1f + lift / trunk else 1f
     }
 
-    private fun pull(current: Float, goal: Float, w: Float): Float = current + (goal - current) * w
-
     @JvmStatic
     fun unseen(state: AvatarRenderState): Boolean =
         state.isInvisible && !state.isInvisibleToPlayer && !state.appearsGlowing()
@@ -658,8 +656,8 @@ object LocomotionAnimations {
             val ph = state.ageInTicks * 0.4f
             val amp = body.climbMove
             if (armsFree) {
-                rArm.xRot = pull(rArm.xRot, -1.9f + sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
-                lArm.xRot = pull(lArm.xRot, -1.9f - sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
+                rArm.xRot = approach(rArm.xRot, -1.9f + sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
+                lArm.xRot = approach(lArm.xRot, -1.9f - sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
                 rArm.zRot += 0.15f * w * k
                 lArm.zRot -= 0.15f * w * k
             }
@@ -724,8 +722,8 @@ object LocomotionAnimations {
             if (armsFree) {
                 rArm.zRot += style.deathFlop * w * k
                 lArm.zRot -= style.deathFlop * w * k
-                rArm.xRot = pull(rArm.xRot, -0.3f, w * 0.5f)
-                lArm.xRot = pull(lArm.xRot, -0.3f, w * 0.5f)
+                rArm.xRot = approach(rArm.xRot, -0.3f, w * 0.5f)
+                lArm.xRot = approach(lArm.xRot, -0.3f, w * 0.5f)
             }
             rLeg.zRot += 0.3f * w * k
             lLeg.zRot -= 0.3f * w * k
@@ -736,7 +734,7 @@ object LocomotionAnimations {
         guardJoints(model, armsFree)
         val wTerrain = grounded * (1f - body.wDead)
         val terrainActive = config.locomotionTerrain && config.locomotionBend && applyTerrain(model, state, body, wTerrain, k)
-        if (config.locomotionBend) setBends(model, body, style, armsFree, owned, k, if (terrainActive) terrainKnees else null) else clearBends(model)
+        if (config.locomotionBend) setBends(model, body, style, armsFree, owned, if (terrainActive) terrainKnees else null) else clearBends(model)
     }
 
     private val terrainKnees = FloatArray(2)
@@ -775,11 +773,11 @@ object LocomotionAnimations {
         val now = System.nanoTime()
         val dt = if (body.terrainNanos == 0L) 0f else ((now - body.terrainNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
         body.terrainNanos = now
-        val a = 1f - exp(-dt / TERRAIN_TAU)
+        val a = MathX.expApproach(dt, TERRAIN_TAU)
         val rLeg = model.rightLeg
         val lLeg = model.leftLeg
-        val kneeRight = knee(rLeg, body, k)
-        val kneeLeft = knee(lLeg, body, k)
+        val kneeRight = knee(rLeg, body)
+        val kneeLeft = knee(lLeg, body)
         legFoot(rLeg.xRot, kneeRight, footRight)
         legFoot(lLeg.xRot, kneeLeft, footLeft)
 
@@ -849,7 +847,7 @@ object LocomotionAnimations {
         }
     }
 
-    private fun knee(leg: ModelPart, body: Body, k: Float): Float {
+    private fun knee(leg: ModelPart, body: Body): Float {
         val swing = leg.xRot
         var bend = KNEE_BACK * max(0f, swing) + KNEE_FORWARD * max(0f, -swing)
         bend += KNEE_TUCK * body.wRise * body.wAir + KNEE_LAND * body.wLand + KNEE_CROUCH * body.wCrouch
@@ -873,18 +871,18 @@ object LocomotionAnimations {
         return bend
     }
 
-    private fun elbow(arm: ModelPart, armsFree: Boolean, owned: Boolean): Float {
-        if (owned || !armsFree) return 0f
+    private fun elbow(arm: ModelPart, armsFree: Boolean): Float {
+        if (!armsFree) return 0f
         val forward = max(0f, -arm.xRot)
         return -(ELBOW_REST + ELBOW_FORWARD * forward).coerceIn(0f, ELBOW_LIMIT)
     }
 
-    private fun setBends(model: HumanoidModel<*>, body: Body, style: Style, armsFree: Boolean, owned: Boolean, k: Float, kneeOverride: FloatArray?) {
+    private fun setBends(model: HumanoidModel<*>, body: Body, style: Style, armsFree: Boolean, owned: Boolean, kneeOverride: FloatArray?) {
         val stamp = System.nanoTime()
-        val rKnee = kneeOverride?.get(0) ?: knee(model.rightLeg, body, k)
-        val lKnee = kneeOverride?.get(1) ?: knee(model.leftLeg, body, k)
-        val rElbow = if (owned) combatElbow(model.rightArm, true) else elbow(model.rightArm, armsFree, false)
-        val lElbow = if (owned) combatElbow(model.leftArm, false) else elbow(model.leftArm, armsFree, false)
+        val rKnee = kneeOverride?.get(0) ?: knee(model.rightLeg, body)
+        val lKnee = kneeOverride?.get(1) ?: knee(model.leftLeg, body)
+        val rElbow = if (owned) combatElbow(model.rightArm, true) else elbow(model.rightArm, armsFree)
+        val lElbow = if (owned) combatElbow(model.leftArm, false) else elbow(model.leftArm, armsFree)
         setBend(model.rightLeg, rKnee, stamp)
         setBend(model.leftLeg, lKnee, stamp)
         setBend(model.rightArm, rElbow, stamp)

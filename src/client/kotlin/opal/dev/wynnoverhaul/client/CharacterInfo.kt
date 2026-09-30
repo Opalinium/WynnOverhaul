@@ -18,10 +18,6 @@ object CharacterInfo {
             if (!WynnOverhaulConfig.current.customInventoryEnabled) return@register
             if (screen !is net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>) return@register
             if (screen is InventoryScreen) return@register
-            if (bypassOnce) {
-                bypassOnce = false
-                return@register
-            }
             val title = screen.title.string
             if (title.contains(ContentBookInterceptor.CONTENT_BOOK_TITLE_MARKER)) return@register
             if (foreignActive) return@register
@@ -79,8 +75,6 @@ object CharacterInfo {
         }
 
     private var hostSetAtNanos = 0L
-
-    var bypassOnce: Boolean = false
 
     fun openCharacterContainer(client: Minecraft, host: WynnOverhaulInventoryScreen, menuSlot: Int): String? {
         val player = client.player ?: return "No player"

@@ -23,7 +23,6 @@ import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
 import java.util.concurrent.ThreadLocalRandom
@@ -1424,7 +1423,7 @@ object WeaponAnimations {
             val now = System.nanoTime()
             val dt = if (idleLast == 0L) 0f else ((now - idleLast) / 1_000_000_000f).coerceIn(0f, 0.1f)
             idleLast = now
-            val a = 1f - exp(-dt / IDLE_TAU)
+            val a = MathX.expApproach(dt, IDLE_TAU)
             val table = idleTable
             val config = WynnOverhaulConfig.current
             val ready = now < readyUntil
@@ -1551,7 +1550,7 @@ object WeaponAnimations {
             blendSeconds = if (chained) hitSeconds else BLEND_SECONDS
             val span = chosen.seconds - MIN_SECONDS
             val target = if (span <= 0f) 1f else AMP_MIN + (1f - AMP_MIN) * ((total - MIN_SECONDS) / span).coerceIn(0f, 1f)
-            val settle = 1f - exp(-gap / AMP_SMOOTH_TAU)
+            val settle = MathX.expApproach(gap, AMP_SMOOTH_TAU)
             amp += (target - amp) * settle.coerceIn(0f, 1f)
         }
 
@@ -1948,7 +1947,7 @@ object WeaponAnimations {
         val now = System.nanoTime()
         val dt = if (gripRelaxNanos == 0L) 1f else ((now - gripRelaxNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
         gripRelaxNanos = now
-        val blend = 1f - exp(-dt / GRIP_RELAX_TAU)
+        val blend = MathX.expApproach(dt, GRIP_RELAX_TAU)
         gripRelax += (relaxGoal - gripRelax) * blend
         gripSlide += (slideGoal - gripSlide) * blend
         gripFits(gripSlide, gripRelax)

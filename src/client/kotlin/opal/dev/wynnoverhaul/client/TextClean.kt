@@ -3,6 +3,7 @@ package opal.dev.wynnoverhaul.client
 object TextClean {
     private const val LEGACY_CODE_PREFIX = '§'
     private const val PRIVATE_USE_START = 0xE000
+    private const val PRIVATE_USE_END = 0xF8FF
     private const val REPLACEMENT_CHAR = 0xFFFD
 
     fun clean(text: String): String {
@@ -32,4 +33,13 @@ object TextClean {
         if (sb.isNotEmpty() && sb[sb.length - 1] == ' ') sb.setLength(sb.length - 1)
         return sb.toString()
     }
+
+    fun hasPrivateUse(text: String): Boolean {
+        for (c in text) {
+            if ((c.code in PRIVATE_USE_START..PRIVATE_USE_END) || Character.isSurrogate(c)) return true
+        }
+        return false
+    }
+
+    fun ownsOverlayLine(name: String?, raw: String): Boolean = name != null && raw.contains(name, ignoreCase = true)
 }

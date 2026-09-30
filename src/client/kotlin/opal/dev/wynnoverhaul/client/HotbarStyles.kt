@@ -8,7 +8,6 @@ import java.util.IdentityHashMap
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -310,7 +309,7 @@ object HotbarStyles {
         var diff = (selected - radialPos) % count
         if (diff > count / 2f) diff -= count
         if (diff < -count / 2f) diff += count
-        radialPos += diff * (1f - exp(-dt / 0.07f))
+        radialPos += diff * MathX.expApproach(dt, 0.07f)
         if (abs(diff) < 0.002f) radialPos = selected.toFloat()
         radialPos = ((radialPos % count) + count) % count
         return radialPos

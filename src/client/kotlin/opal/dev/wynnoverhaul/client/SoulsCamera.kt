@@ -13,7 +13,6 @@ import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.exp
 import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -89,7 +88,7 @@ object SoulsCamera {
         }
 
         val rate = 10.0
-        val a = 1.0 - exp(-dt * rate)
+        val a = MathX.expApproach(dt, rate)
         val next = current + ((rawZoom - current) * a).toFloat()
         smoothedZoom = next
         return next
@@ -136,7 +135,7 @@ object SoulsCamera {
             target
         } else {
             val rate = Mth.lerp(config.soulsCameraSmoothing, 40.0, 4.0)
-            val a = 1.0 - exp(-dt * rate)
+            val a = MathX.expApproach(dt, rate)
             previous.add(target.subtract(previous).scale(a))
         }
         pivot = smoothed

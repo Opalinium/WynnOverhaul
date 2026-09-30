@@ -22,7 +22,7 @@ object WynnStatusEffectTracker {
     private val maxSecondsByName = HashMap<String, Int>()
 
     fun onFooterUpdate(footer: Component) {
-        val text = clean(footer.string)
+        val text = TextClean.clean(footer.string)
         if (!text.contains(STATUS_EFFECTS_TITLE)) {
             if (activeCooldowns.isNotEmpty()) activeCooldowns = emptyList()
             maxSecondsByName.clear()
@@ -49,20 +49,6 @@ object WynnStatusEffectTracker {
         }
         maxSecondsByName.keys.retainAll(seenNames)
         activeCooldowns = cooldowns
-    }
-
-    private fun clean(text: String): String {
-        val sb = StringBuilder(text.length)
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '§') {
-                i += 2
-                continue
-            }
-            sb.append(text[i])
-            i++
-        }
-        return sb.toString()
     }
 
     private const val STATUS_EFFECTS_TITLE = "Status Effects"

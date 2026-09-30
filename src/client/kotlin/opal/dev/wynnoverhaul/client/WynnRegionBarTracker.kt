@@ -80,13 +80,10 @@ object WynnRegionBarTracker : ClientboundBossEventPacket.Handler {
             name.contains(nearest, ignoreCase = true)
     }
 
-    fun ownsOverlayLine(raw: String): Boolean {
-        val name = active?.name ?: return false
-        return raw.contains(name, ignoreCase = true)
-    }
+    fun ownsOverlayLine(raw: String): Boolean = TextClean.ownsOverlayLine(active?.name, raw)
 
     private fun parse(raw: String): RegionState? {
-        if (!hasPrivateUse(raw)) return null
+        if (!TextClean.hasPrivateUse(raw)) return null
         if (raw.indexOf(SECTION_SIGN) >= 0) return null
         val sb = StringBuilder(raw.length)
         var i = 0
@@ -103,14 +100,6 @@ object WynnRegionBarTracker : ClientboundBossEventPacket.Handler {
         val name = sb.toString().replace(WHITESPACE_RUN, " ").trim()
         if (name.length < MIN_NAME_LENGTH || !name.any { it.isLetter() }) return null
         return RegionState(name)
-    }
-
-    private fun hasPrivateUse(text: String): Boolean {
-        for (i in text.indices) {
-            val c = text[i]
-            if ((c >= '\uE000' && c <= '\uF8FF') || Character.isSurrogate(c)) return true
-        }
-        return false
     }
 
     private val WHITESPACE_RUN = Regex("\\s+")

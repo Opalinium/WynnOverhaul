@@ -59,10 +59,7 @@ object WynnGuildBarTracker : ClientboundBossEventPacket.Handler {
         active = state
     }
 
-    fun ownsOverlayLine(raw: String): Boolean {
-        val name = active?.name ?: return false
-        return raw.contains(name, ignoreCase = true)
-    }
+    fun ownsOverlayLine(raw: String): Boolean = TextClean.ownsOverlayLine(active?.name, raw)
 
     private fun parse(raw: String): GuildState? {
         val match = GUILD_PATTERN.matchEntire(raw) ?: return null
