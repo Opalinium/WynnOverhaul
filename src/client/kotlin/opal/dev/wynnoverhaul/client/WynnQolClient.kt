@@ -41,6 +41,9 @@ class WynnQolClient : ClientModInitializer {
         ObjectiveClaims.register()
         WynnActionBar.registerDebug()
         PriceCheck.register()
+        LootChestBlocker.init()
+        QuickCast.init()
+        PouchInterceptor.init()
         registerHudLayouts()
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_feeder"),
@@ -104,12 +107,12 @@ class WynnQolClient : ClientModInitializer {
             HotbarHudElement(),
         )
         HudElementRegistry.addLast(
-            Identifier.fromNamespaceAndPath("wynnoverhaul", "spell_cast"),
-            WynnSpellCastHudElement(),
-        )
-        HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "spell_combo"),
             WynnSpellComboHudElement(),
+        )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "spell_bar"),
+            SpellBarHudElement(),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "powder_special"),
@@ -126,6 +129,10 @@ class WynnQolClient : ClientModInitializer {
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "dialogue"),
             WynnDialogueHudElement(),
+        )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "totems"),
+            TotemHudElement(),
         )
     }
 
@@ -147,6 +154,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_energy", "Mount Energy", "BOTTOM_LEFT", defaultOffsetY = 20, fallbackW = 140, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("mount_pickup", "Mount Pickup", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 86, fallbackW = 140, fallbackH = 24))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("dialogue", "Dialogue", "BOTTOM_LEFT", defaultOffsetX = 40, defaultOffsetY = 60, fallbackW = 300, fallbackH = 48))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("totems", "Totems", "TOP_RIGHT", defaultOffsetY = 200, fallbackW = 140, fallbackH = 42))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("xp_bar", "Experience", "BOTTOM_LEFT", defaultOffsetY = 24, fallbackW = 200, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("resource_bar", "Class Resource", "TOP_LEFT", defaultOffsetY = 24, fallbackW = 170, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("guild", "Guild", "TOP_LEFT", defaultOffsetY = 44, fallbackW = 160, fallbackH = 26))
@@ -165,6 +173,7 @@ class WynnQolClient : ClientModInitializer {
         QuestBeaconTracker.tick(client)
         ContentBookQuery.tick(client)
         ContentBookInterceptor.tick(client)
+        PouchInterceptor.tick(client)
         WynnOverhaulInventory.tick(client)
         ActiveWeapon.tick(client)
         CharacterInfo.tick(client)
@@ -182,6 +191,7 @@ class WynnQolClient : ClientModInitializer {
         PartyFriendModel.tick(client)
         PartyBuffTracker.tick()
         WynnBuffTracker.tick(client)
+        WynnTotemTracker.tick(client)
         LootrunModel.tick(client)
         LootrunBeaconTracker.tick(client)
         LootrunRecorder.tick(client)
