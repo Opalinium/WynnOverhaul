@@ -172,7 +172,7 @@ object HotbarStyles {
         return out.toIntArray()
     }
 
-    private fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
+    internal fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
         if (r < 0 || (color ushr 24) == 0) return
         val runs = discRuns.getOrPut(r) { buildDiscRuns(r) }
         var i = 0
@@ -183,7 +183,7 @@ object HotbarStyles {
         }
     }
 
-    private fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
+    internal fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
         if (r < 0 || (color ushr 24) == 0) return
         val runs = ringRuns.getOrPut(r) { buildRingRuns(r) }
         var i = 0

@@ -95,6 +95,7 @@ data class WynnOverhaulConfig(
 
     var hudBarStyle: String = "CLASSIC",
     var hotbarStyle: String = "CLASSIC",
+    var spellBarStyle: String = "ROWS",
     var shiftDragQuickMove: Boolean = true,
     var chatHudEnabled: Boolean = true,
     var chatStyle: String = "CLASSIC",

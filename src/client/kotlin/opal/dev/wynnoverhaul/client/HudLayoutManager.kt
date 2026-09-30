@@ -83,6 +83,15 @@ object HudLayoutManager {
                 PowderSpecialHudElement.styleLabel(config.powderSpecialStyle),
                 false,
             ) { config.powderSpecialStyle = it }
+            "spell_bar" -> StyleMenu(
+                SpellBarHudElement.STYLES.map { it to SpellBarHudElement.styleLabel(it) },
+                config.spellBarStyle,
+                SpellBarHudElement.styleLabel(config.spellBarStyle),
+                false,
+            ) {
+                config.spellBarStyle = it
+                forgetSize(id)
+            }
             else -> null
         }
     }
