@@ -88,8 +88,9 @@ object WynnSpellTracker {
         if (cast != null) {
             WynnClassTracker.noteCastSpell(cast.name)
             noteCastCost(cast.name, cast.costs, now)
-            lastCast = Cast(cast.name, cast.costs, now)
-            if (!castDisplayed || displayedName != cast.name || displayedCosts != cast.costs) {
+            val repeat = castDisplayed && displayedName == cast.name && displayedCosts == cast.costs
+            if (!repeat) {
+                lastCast = Cast(cast.name, cast.costs, now)
                 WeaponAnimations.onSpellCast(cast.name)
             }
             castDisplayed = true
