@@ -41,6 +41,12 @@ object SpellComboGuard {
         suspendUntilNanos = now + if (inputs >= COMBO_LENGTH) minOf(window, TAIL_NANOS) else window
     }
 
+    fun suspendFor(durationNanos: Long) {
+        if (!WynnOverhaulConfig.current.combatSpellGuardEnabled) return
+        val until = System.nanoTime() + durationNanos
+        if (until > suspendUntilNanos) suspendUntilNanos = until
+    }
+
     @JvmStatic
     fun beforeClick(client: Minecraft, use: Boolean) {
         val player = client.player ?: return

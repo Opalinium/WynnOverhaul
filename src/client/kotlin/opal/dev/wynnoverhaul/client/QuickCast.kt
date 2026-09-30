@@ -11,7 +11,9 @@ object QuickCast {
     private data class Queued(val atNanos: Long, val use: Boolean)
 
     private val queue = ArrayDeque<Queued>()
+    private val pending = ArrayDeque<Int>()
     private val keys = ArrayList<KeyMapping>()
+    private var chainAnchorNanos = Long.MIN_VALUE / 2
 
     fun init() {
         repeat(WynnSpellSegments.SLOT_COMBOS.size) { slot ->
@@ -33,39 +35,46 @@ object QuickCast {
         if (WynnOverhaulGate.inGame) WynnClassTracker.refresh(client)
         if (!WynnOverhaulConfig.current.quickCastEnabled || !WynnOverhaulGate.inGame) {
             queue.clear()
+            pending.clear()
             return
         }
         val player = client.player ?: return
         if (client.gui.screen() != null) {
             queue.clear()
+            pending.clear()
             return
         }
-        if (queue.isEmpty()) {
-            var slot = -1
-            keys.forEachIndexed { i, key ->
-                while (key.consumeClick()) {
-                    if (slot < 0) slot = i
-                }
+        keys.forEachIndexed { i, key ->
+            while (key.consumeClick()) {
+                val inFlight = pending.size + if (queue.isNotEmpty()) 1 else 0
+                if (inFlight < MAX_QUEUED) pending.addLast(i)
             }
-            if (slot >= 0) enqueue(slot)
         }
+        if (queue.isEmpty() && pending.isNotEmpty()) enqueue(pending.removeFirst())
+
         val now = System.nanoTime()
         while (queue.isNotEmpty() && queue.first().atNanos <= now) {
             val next = queue.removeFirst()
-            SpellComboGuard.registerEdge(client, next.use, !next.use)
+            SoulsCamera.onCombatAction(client)
             if (next.use) {
                 client.gameMode?.useItem(player, InteractionHand.MAIN_HAND)
             } else {
                 player.swing(InteractionHand.MAIN_HAND)
             }
+            if (queue.isEmpty() && pending.isNotEmpty()) enqueue(pending.removeFirst())
         }
     }
 
     private fun enqueue(slot: Int) {
         val now = System.nanoTime()
-        combos()[slot].forEachIndexed { i, use ->
-            queue.add(Queued(now + i * CLICK_GAP_NANOS, use))
+        val start = maxOf(now, chainAnchorNanos + CLICK_GAP_NANOS)
+        val combo = combos()[slot]
+        combo.forEachIndexed { i, use ->
+            val at = start + i * CLICK_GAP_NANOS
+            queue.add(Queued(at, use))
+            chainAnchorNanos = at
         }
+        SpellComboGuard.suspendFor((start - now) + combo.size * CLICK_GAP_NANOS)
     }
 
     private fun combos(): List<List<Boolean>> =
@@ -97,4 +106,5 @@ object QuickCast {
     }
 
     private const val CLICK_GAP_NANOS = 130_000_000L
+    private const val MAX_QUEUED = 3
 }
