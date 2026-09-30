@@ -7,6 +7,7 @@ object SpellComboGuard {
     private const val TAIL_NANOS = 400_000_000L
 
     private var suspendUntilNanos = 0L
+    private var floorUntilNanos = 0L
     private var inputs = 0
     private var wasUseDown = false
     private var wasAttackDown = false
@@ -38,12 +39,14 @@ object SpellComboGuard {
 
         inputs++
         val window = (config.combatSpellGuardMs * 1_000_000L).toLong()
-        suspendUntilNanos = now + if (inputs >= COMBO_LENGTH) minOf(window, TAIL_NANOS) else window
+        val until = now + if (inputs >= COMBO_LENGTH) minOf(window, TAIL_NANOS) else window
+        suspendUntilNanos = maxOf(until, floorUntilNanos)
     }
 
     fun suspendFor(durationNanos: Long) {
         if (!WynnOverhaulConfig.current.combatSpellGuardEnabled) return
         val until = System.nanoTime() + durationNanos
+        if (until > floorUntilNanos) floorUntilNanos = until
         if (until > suspendUntilNanos) suspendUntilNanos = until
     }
 

@@ -7,7 +7,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes
 
 object AutoAttack {
     fun tick(client: Minecraft, player: LocalPlayer, config: WynnOverhaulConfig, gate: JitteredActionGate) {
-        if (SpellComboGuard.isSuspended()) return
+        if (SpellComboGuard.isSuspended() || QuickCast.anyKeyDown()) return
         if (!gate.isReady(System.nanoTime(), immediateFirst = true) { nextDelayNanos(player, config) }) return
 
         val gameMode = client.gameMode ?: return

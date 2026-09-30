@@ -86,6 +86,8 @@ object QuickCast {
 
     fun slotCombo(slot: Int): List<Boolean> = combos()[slot]
 
+    fun anyKeyDown(): Boolean = keys.any { it.isDown }
+
     fun keyLabel(slot: Int): String? {
         val key = keys.getOrNull(slot) ?: return null
         if (key.isUnbound) return null
