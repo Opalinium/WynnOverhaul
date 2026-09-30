@@ -136,6 +136,35 @@ def arm_inside(part, shoulder_x, yaw):
     return False
 
 
+def arm_points(part):
+    m = part.matrix()
+    origin = np.array([part.x, part.y, part.z])
+    return [m @ np.array([0, GRIP_Y * f, GRIP_Z * f]) + origin for f in GUARD_POINTS]
+
+
+HEAD_BOX = (-4, 4, -8, 0, -4, 4)
+ARM_RADIUS = 2.2
+
+
+def point_in_box(p, box_origin, bounds):
+    x0, x1, y0, y1, z0, z1 = bounds
+    local = p - box_origin
+    return x0 < local[0] < x1 and y0 < local[1] < y1 and z0 < local[2] < z1
+
+
+def self_intersects(right, left, head):
+    rpts = arm_points(right)
+    lpts = arm_points(left)
+    for p in rpts + lpts:
+        if point_in_box(p, np.array([head.x, head.y, head.z]), HEAD_BOX):
+            return True
+    for rp in rpts:
+        for lp in lpts:
+            if np.linalg.norm(rp - lp) < ARM_RADIUS:
+                return True
+    return False
+
+
 def keep_out_of_body(part, shoulder_x, yaw):
     outward = -0.05 if shoulder_x > 0 else 0.05
     for _ in range(9):
@@ -440,14 +469,14 @@ def render_swing(src, key, path, frames=8):
 def audit(src):
     stances = load_stances(src)
     poses = load_poses(src)
-    total_pre = total_post = 0
+    total_pre = total_post = total_self = 0
     for key, curves in poses.items():
         stance_key = SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
         if stance_key not in stances:
             continue
         base = stances[stance_key][1]
         offset = stances[stance_key][2]
-        pre = post = 0
+        pre = post = self_hit = 0
         for i in range(61):
             out = sample_pose(curves, i / 60, base, key)
             raw = solve(out, offset, guard=False)
@@ -456,10 +485,14 @@ def audit(src):
             fixed = solve(out, offset, guard=True)
             if arm_inside(fixed[1], -5.0, fixed[0]) or arm_inside(fixed[2], 5.0, fixed[0]):
                 post += 1
+            if self_intersects(fixed[1], fixed[2], fixed[4]):
+                self_hit += 1
         total_pre += pre
         total_post += post
-        print(f"{key:14s} clipped frames before guard: {pre:2d}/61   after: {post:2d}/61")
-    print("total", total_pre, total_post)
+        total_self += self_hit
+        flag = " <-- SELF-CLIP" if self_hit else ""
+        print(f"{key:14s} clipped frames before guard: {pre:2d}/61   after: {post:2d}/61   arm/head overlap: {self_hit:2d}/61{flag}")
+    print("total", total_pre, total_post, total_self)
 
 
 FP_UNIT = 1 / 16
