@@ -55,7 +55,7 @@ class SpellBarHudElement : HudElement {
             cost?.let { it to Component.literal("-${it.amount}") }
         }
         val lit = BooleanArray(SLOT_COUNT) { slot ->
-            val match = QuickCast.slotCombo(slot).take(prefix.size) == prefix
+            val match = prefix.isNotEmpty() && QuickCast.slotCombo(slot).take(prefix.size) == prefix
             match || (lastName != null && names[slot] == lastName)
         }
         val fired = BooleanArray(SLOT_COUNT) { slot -> lastName != null && names[slot] == lastName }
