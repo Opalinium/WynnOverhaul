@@ -9,7 +9,10 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.ChatFormatting
+import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.FormattedText
+import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
@@ -17,6 +20,7 @@ import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.item.ItemStack
 import opal.dev.wynnoverhaul.WynnOverhaul
 import opal.dev.wynnoverhaul.client.CharacterMenuModel
+import java.util.Optional
 
 class WynnOverhaulInventoryScreen(
     private val menu: InventoryMenu,
@@ -103,10 +107,18 @@ class WynnOverhaulInventoryScreen(
     private val charWidgets = ArrayList<OwButton>()
     private var charSnapshot: CharacterMenuModel.Snapshot? = null
     private val combatInfoPager = CombatInfoPager()
-    private enum class CharStatsTab { COMBAT, PROFESSIONS }
+    private enum class CharStatsTab(val label: String) {
+        COMBAT("Combat"),
+        IDENTIFICATIONS("Identifications"),
+        PROFESSIONS("Professions"),
+    }
     private var charStatsTab = CharStatsTab.COMBAT
     private data class CharZone(val x: Int, val y: Int, val w: Int, val h: Int, val slot: Int)
+    private data class CharPlaced(val row: CharacterStatRows.Row, val x: Int, val y: Int, val w: Int, val stripe: Boolean)
     private val charHoverZones = ArrayList<CharZone>()
+    private val charPlaced = ArrayList<CharPlaced>()
+    private var charCardTop = 0
+    private var charCardH = 0
     private val charWidgetRows = ArrayList<Pair<OwButton, Int>>()
     private val charPinnedWidgetRows = ArrayList<Pair<OwButton, Int>>()
     private val charButtonSlots = ArrayList<Pair<OwButton, Int>>()
@@ -339,23 +351,27 @@ class WynnOverhaulInventoryScreen(
                 val gw = panelWidth() - MARGIN * 2
                 val leftW = (gw * 0.44).toInt()
                 val rightW = gw - leftW - CHAR_CARD_GAP
-                val rightX = gx + leftW + CHAR_CARD_GAP
+                val rightX = gx + leftW + CHAR_CARD_GAP + CARD_PAD
+                val rightInnerW = rightW - CARD_PAD * 2
 
-                val statsTabY = CHARACTER_GRID_Y + charSections(menu).identity.size * STATS_ROW_H
+                val statsTabY = CHARACTER_GRID_Y
                 val statsTabBy = charScreenY(statsTabY, pt)
-                val statsTabBtnW = (leftW - MENU_BTN_GAP) / 2
-                charWidgets.add(
-                    OwButton(gx, statsTabBy, statsTabBtnW, STAT_TAB_H, Component.literal("Combat"), accent = charStatsTab == CharStatsTab.COMBAT) {
-                        charStatsTab = CharStatsTab.COMBAT
-                        rebuildWidgets()
-                    }.also { addRenderableWidget(it); charWidgetRows.add(it to statsTabY) },
-                )
-                charWidgets.add(
-                    OwButton(gx + statsTabBtnW + MENU_BTN_GAP, statsTabBy, leftW - statsTabBtnW - MENU_BTN_GAP, STAT_TAB_H, Component.literal("Professions"), accent = charStatsTab == CharStatsTab.PROFESSIONS) {
-                        charStatsTab = CharStatsTab.PROFESSIONS
-                        rebuildWidgets()
-                    }.also { addRenderableWidget(it); charWidgetRows.add(it to statsTabY) },
-                )
+                val tabs = CharStatsTab.entries
+                val tabInnerW = leftW - CARD_PAD * 2
+                val tabNatural = tabs.map { font.width(it.label) + 14 }
+                val tabExtra = ((tabInnerW - MENU_BTN_GAP * (tabs.size - 1) - tabNatural.sum()) / tabs.size).coerceAtLeast(0)
+                var tabX = gx + CARD_PAD
+                for ((i, tab) in tabs.withIndex()) {
+                    val tabW = if (i == tabs.size - 1) gx + CARD_PAD + tabInnerW - tabX else tabNatural[i] + tabExtra
+                    charWidgets.add(
+                        OwButton(tabX, statsTabBy, tabW, STAT_TAB_H, Component.literal(tab.label), accent = charStatsTab == tab) {
+                            charStatsTab = tab
+                            charScrollY = 0
+                            rebuildWidgets()
+                        }.also { addRenderableWidget(it); charWidgetRows.add(it to statsTabY) },
+                    )
+                    tabX += tabW + MENU_BTN_GAP
+                }
 
                 if (snap.openers.isNotEmpty()) {
                     val cols = (snap.openers.size + OPENER_ROWS - 1) / OPENER_ROWS
@@ -385,10 +401,10 @@ class WynnOverhaulInventoryScreen(
                 for ((i, skill) in snap.skills.withIndex()) {
                     val cellY = CHARACTER_GRID_Y + HEADER_H + i * SKILL_ROW_H
                     val by = charScreenY(cellY, pt)
-                    charWidgets.add(OwButton(rightX + rightW - 44, by, 20, 16, Component.literal("-")) {
+                    charWidgets.add(OwButton(rightX + rightInnerW - 44, by, 20, 16, Component.literal("-")) {
                         sendCharInput(skill.slot, 1, if (shiftHeld()) ContainerInput.QUICK_MOVE else ContainerInput.PICKUP)
                     }.also { addRenderableWidget(it); charWidgetRows.add(it to cellY) })
-                    charWidgets.add(OwButton(rightX + rightW - 22, by, 20, 16, Component.literal("+")) {
+                    charWidgets.add(OwButton(rightX + rightInnerW - 22, by, 20, 16, Component.literal("+")) {
                         sendCharInput(skill.slot, 0, if (shiftHeld()) ContainerInput.QUICK_MOVE else ContainerInput.PICKUP)
                     }.also { addRenderableWidget(it); charWidgetRows.add(it to cellY) })
                 }
@@ -397,7 +413,7 @@ class WynnOverhaulInventoryScreen(
                     val crystal = snap.skillCrystalSlot
                     val by = charScreenY(wy, pt)
                     charWidgets.add(
-                        OwButton(rightX, by, rightW, OPENER_BTN_H, Component.literal("Reset Skills"), icon = charSlotStack(crystal)) {
+                        OwButton(rightX, by, rightInnerW, OPENER_BTN_H, Component.literal("Reset Skills"), icon = charSlotStack(crystal)) {
                             sendCharInput(crystal, 0, ContainerInput.QUICK_MOVE)
                         }.also { addRenderableWidget(it); charWidgetRows.add(it to wy); charButtonSlots.add(it to crystal) },
                     )
@@ -684,67 +700,40 @@ class WynnOverhaulInventoryScreen(
 
         if (invTab == InvTab.CHARACTER) {
             charHoverZones.clear()
+            charPlaced.clear()
             y = CHARACTER_GRID_Y
             val charMenu = characterMenu
             val snap = charSnapshot ?: characterMenu?.let { CharacterMenuModel.snapshot(it) }
             if (charMenu != null) {
                 val leftW = (w * 0.44).toInt()
                 val rightW = w - leftW - CHAR_CARD_GAP
-                val leftX = x
-                val rightX = x + leftW + CHAR_CARD_GAP
+                val leftX = x + CARD_PAD
+                val leftInnerW = leftW - CARD_PAD * 2
+                val rightX = x + leftW + CHAR_CARD_GAP + CARD_PAD
+                val rightInnerW = rightW - CARD_PAD * 2
                 val sections = charSections(charMenu)
 
-                var leftY = y
-                for ((text, slot) in sections.identity) {
-                    labels.add(PlacedLabel(text, leftX + 4, leftY + 1))
-                    charHoverZones.add(CharZone(leftX + 4, leftY + 1, leftW, STATS_ROW_H, slot))
-                    leftY += STATS_ROW_H
-                }
-                leftY += STAT_TAB_H + CHAR_SECTION_GAP
-                if (charStatsTab == CharStatsTab.COMBAT) {
-                    if (sections.combat.isNotEmpty()) {
-                        labels.add(PlacedLabel("COMBAT", leftX, leftY + 2, color = OwTheme.ACCENT))
-                        leftY += HEADER_H
-                        val flowItems = ArrayList<Pair<String, Int>>()
-                        for ((raw, slot) in sections.combat) {
-                            val text = raw.trim()
-                            if (text.endsWith(":")) {
-                                if (flowItems.isNotEmpty()) {
-                                    leftY = layoutFlow(flowItems, labels, leftX, leftY, leftW)
-                                    flowItems.clear()
-                                }
-                                labels.add(PlacedLabel(text.removeSuffix(":"), leftX, leftY + 2, color = OwTheme.ACCENT_DIM))
-                                charHoverZones.add(CharZone(leftX, leftY, leftW, STATS_ROW_H, slot))
-                                leftY += STATS_ROW_H
-                            } else {
-                                flowItems.add(text.removePrefix("-").trim() to slot)
-                            }
-                        }
-                        if (flowItems.isNotEmpty()) leftY = layoutFlow(flowItems, labels, leftX, leftY, leftW)
-                    }
-                } else if (sections.professions.isNotEmpty()) {
-                    labels.add(PlacedLabel("PROFESSIONS", leftX, leftY + 2, color = OwTheme.ACCENT))
-                    leftY += HEADER_H
-                    leftY = layoutFlow(sections.professions, labels, leftX, leftY, leftW)
-                }
-                val leftHeight = leftY - y
+                val leftBottom = layoutCharRows(charRowsFor(sections), leftX, y + STAT_TAB_H + CHAR_TAB_GAP, leftInnerW)
+                val leftHeight = leftBottom - y
 
                 val skillRows = maxOf(5, snap?.skills?.size ?: 0)
                 val resetTop = y + HEADER_H + skillRows * SKILL_ROW_H + CHAR_SECTION_GAP
                 val rightHeight: Int
+                labels.add(PlacedLabel("SKILLS", rightX, y + 2, color = OwTheme.ACCENT_DIM))
                 if (snap != null) {
-                    labels.add(PlacedLabel("SKILLS", rightX, y + 2, color = OwTheme.ACCENT))
                     for ((i, skill) in snap.skills.withIndex()) {
                         val sy = y + HEADER_H + i * SKILL_ROW_H
-                        charHoverZones.add(CharZone(rightX, sy, rightW, SKILL_ROW_H, skill.slot))
+                        charHoverZones.add(CharZone(rightX, sy, rightInnerW, SKILL_ROW_H, skill.slot))
                     }
                     rightHeight = (resetTop - y) + (if (snap.skillCrystalSlot >= 0) SKILL_ROW_H else 0)
                 } else {
-                    labels.add(PlacedLabel("SKILLS", rightX, y + 2, color = OwTheme.ACCENT))
                     rightHeight = HEADER_H + skillRows * SKILL_ROW_H + CHAR_SECTION_GAP
                 }
 
-                y += maxOf(leftHeight, rightHeight) + SECTION_GAP
+                val inner = maxOf(leftHeight, rightHeight)
+                charCardTop = y - CARD_PAD
+                charCardH = inner + CARD_PAD * 2
+                y += inner + CARD_PAD + SECTION_GAP
             }
         }
 
@@ -1798,6 +1787,7 @@ class WynnOverhaulInventoryScreen(
             append("Lv ${sections?.let { value(it.identity, "Total Lv:") } ?: "--"}")
             append("  ·  Combat ${sections?.let { value(it.identity, "Combat Lv:") } ?: "--"}")
             append("  ·  ${sections?.let { value(it.identity, "Class:") } ?: "--"}")
+            append("  ·  Quests ${sections?.let { value(it.identity, "Quests:") } ?: "--"}")
         }
         graphics.text(font, trimToWidth(summary, gw), gx, top + CHAR_STRIP_TEXT_Y + 15, OwTheme.TEXT_DIM)
         val (skillPoints, abilityPoints) = CharacterInfo.readPoints(CharacterInfo.infoStack())
@@ -1823,17 +1813,48 @@ class WynnOverhaulInventoryScreen(
         val gw = layout.gridW
         val leftW = (gw * 0.44).toInt()
         val rightW = gw - leftW - CHAR_CARD_GAP
-        val rightX = gx + leftW + CHAR_CARD_GAP
+        val rightX = gx + leftW + CHAR_CARD_GAP + CARD_PAD
+        val rightInnerW = rightW - CARD_PAD * 2
         val contentTop = layout.scrollTop + CHAR_STRIP_H
         graphics.enableScissor(gx, contentTop, gx + gw, layout.scrollBottom)
+
+        val cardY = charCardTop - charScrollY + layout.scrollTop
+        drawCharCard(graphics, gx, cardY, leftW, charCardH)
+        drawCharCard(graphics, gx + leftW + CHAR_CARD_GAP, cardY, rightW, charCardH)
+
         for (label in layout.labels) {
             if (label.docked) continue
             val ly = label.y - charScrollY + layout.scrollTop
             if (ly + STATS_ROW_H <= contentTop || ly >= layout.scrollBottom) continue
-            val maxW = if (label.maxW > 0) label.maxW
-                else if (label.x < rightX) rightX - label.x - 4 else gx + gw - label.x - 4
+            val maxW = if (label.maxW > 0) label.maxW else gx + gw - label.x - 4
             graphics.text(font, trimToWidth(label.text, maxW.coerceAtLeast(20)), label.x, ly + 2, label.color)
         }
+        val skillsHeaderY = CHARACTER_GRID_Y - charScrollY + layout.scrollTop
+        graphics.fill(rightX, skillsHeaderY + HEADER_H - 3, rightX + rightInnerW, skillsHeaderY + HEADER_H - 2, OwTheme.HAIRLINE)
+
+        for (placed in charPlaced) {
+            val py = placed.y - charScrollY + layout.scrollTop
+            if (py + CHAR_ROW_H <= contentTop || py >= layout.scrollBottom) continue
+            when (val row = placed.row) {
+                is CharacterStatRows.Header -> {
+                    graphics.text(font, trimToWidth(row.text.uppercase(), placed.w - 40), placed.x, py + 3, OwTheme.ACCENT_DIM)
+                    if (row.tag.isNotEmpty()) {
+                        graphics.text(font, row.tag, placed.x + placed.w - font.width(row.tag) - 2, py + 3, OwTheme.TEXT_DIM)
+                    }
+                    graphics.fill(placed.x, py + CHAR_HEADER_H - 2, placed.x + placed.w, py + CHAR_HEADER_H - 1, OwTheme.HAIRLINE)
+                }
+                is CharacterStatRows.Stat -> {
+                    if (placed.stripe) graphics.fill(placed.x, py, placed.x + placed.w, py + CHAR_ROW_H, CHAR_STRIPE)
+                    val valueW = font.width(row.value)
+                    graphics.text(font, trimToWidth(row.label, placed.w - valueW - 10), placed.x + 3, py + 3, row.labelColor)
+                    graphics.text(font, row.value, placed.x + placed.w - valueW - 3, py + 3, row.valueColor)
+                }
+                is CharacterStatRows.Note -> {
+                    graphics.text(font, trimToWidth(row.text, placed.w - 6), placed.x + 3, py + 3, OwTheme.TEXT_FAINT)
+                }
+            }
+        }
+
         val snap = charSnapshot
         if (snap != null) {
             val gridTop = CHARACTER_GRID_Y
@@ -1848,11 +1869,11 @@ class WynnOverhaulInventoryScreen(
                 if (skill.isConfirm) {
                     graphics.text(font, "✓ $label -- click again to confirm", rightX + 20, sy + 5, OwTheme.GOOD)
                 } else {
-                    graphics.text(font, trimToWidth(label, rightW - 68), rightX + 20, sy + 5, OwTheme.TEXT)
+                    graphics.text(font, trimToWidth(label, rightInnerW - 68), rightX + 20, sy + 5, OwTheme.TEXT)
                 }
                 skill.percent.removeSuffix("%").toFloatOrNull()?.let { pct ->
                     val barX = rightX + 20
-                    val barW = rightW - 20 - 48
+                    val barW = rightInnerW - 20 - 48
                     val barY = sy + SKILL_ROW_H - BAR_H - 2
                     graphics.fill(barX, barY, barX + barW, barY + BAR_H, OwTheme.TILE_BORDER)
                     val fillW = (barW * (pct / 100f).coerceIn(0f, 1f)).toInt()
@@ -1861,6 +1882,11 @@ class WynnOverhaulInventoryScreen(
             }
         }
         graphics.disableScissor()
+    }
+
+    private fun drawCharCard(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
+        graphics.fill(x, y, x + w, y + h, CHAR_CARD_BG)
+        graphics.outline(x, y, w, h, OwTheme.HAIRLINE)
     }
 
     private fun drawCharHoverAndTooltip(graphics: GuiGraphicsExtractor, layout: Layout) {
@@ -1946,30 +1972,65 @@ class WynnOverhaulInventoryScreen(
         val identity: List<Pair<String, Int>>,
         val combat: List<Pair<String, Int>>,
         val professions: List<Pair<String, Int>>,
+        val identifications: List<Pair<String, Int>>,
     )
 
-    private fun layoutFlow(items: List<Pair<String, Int>>, labels: MutableList<PlacedLabel>, x: Int, startY: Int, w: Int): Int {
-        var cx = x
-        var cy = startY
-        for ((text, slot) in items) {
-            val cellW = (font.width(text) + FLOW_PAD).coerceAtMost(w)
-            if (cx + cellW > x + w && cx > x) {
-                cx = x
-                cy += STATS_ROW_H
-            }
-            labels.add(PlacedLabel(text, cx + 2, cy + 1, maxW = cellW - 4))
-            charHoverZones.add(CharZone(cx, cy, cellW, STATS_ROW_H, slot))
-            cx += cellW
+    private fun charRowsFor(sections: CharSections): List<CharacterStatRows.Row> {
+        val rows = when (charStatsTab) {
+            CharStatsTab.COMBAT -> CharacterStatRows.combat(sections.combat)
+            CharStatsTab.IDENTIFICATIONS -> CharacterStatRows.identifications(sections.identifications) { combatInfoPager.colorOf(it) }
+            CharStatsTab.PROFESSIONS -> CharacterStatRows.professions(sections.professions)
         }
-        if (cx > x) cy += STATS_ROW_H
-        return cy
+        return rows.ifEmpty { listOf(CharacterStatRows.Note("Nothing to show yet", -1)) }
     }
 
-    private val SECTION_MARKERS = listOf("Combat", "Professions")
+    private fun layoutCharRows(rows: List<CharacterStatRows.Row>, x: Int, startY: Int, w: Int): Int {
+        var y = startY
+        var stripe = false
+        var i = 0
+        val halfW = (w - CHAR_COL_GAP) / 2
+        fun place(row: CharacterStatRows.Row, px: Int, pw: Int, rowH: Int, striped: Boolean) {
+            charPlaced.add(CharPlaced(row, px, y, pw, striped))
+            charHoverZones.add(CharZone(px, y, pw, rowH, row.slot))
+        }
+        while (i < rows.size) {
+            val row = rows[i]
+            if (row is CharacterStatRows.Header) {
+                if (y > startY) y += CHAR_HEADER_GAP
+                place(row, x, w, CHAR_HEADER_H, false)
+                y += CHAR_HEADER_H
+                stripe = false
+                i++
+            } else if (row is CharacterStatRows.Stat && row.half) {
+                place(row, x, halfW, CHAR_ROW_H, stripe)
+                val next = rows.getOrNull(i + 1) as? CharacterStatRows.Stat
+                if (next != null && next.half) {
+                    place(next, x + halfW + CHAR_COL_GAP, halfW, CHAR_ROW_H, stripe)
+                    i += 2
+                } else {
+                    i++
+                }
+                y += CHAR_ROW_H
+                stripe = !stripe
+            } else if (row is CharacterStatRows.Stat) {
+                place(row, x, w, CHAR_ROW_H, stripe)
+                y += CHAR_ROW_H
+                stripe = !stripe
+                i++
+            } else {
+                place(row, x, w, CHAR_ROW_H, false)
+                y += CHAR_ROW_H
+                i++
+            }
+        }
+        return y
+    }
+
+    private val SECTION_MARKERS = listOf("Combat", "Identifications", "Professions")
 
     private fun charSections(menu: AbstractContainerMenu): CharSections {
         val lines = readCharacterStats(menu)
-        if (lines.isEmpty()) return CharSections("--", emptyList(), emptyList(), emptyList())
+        if (lines.isEmpty()) return CharSections("--", emptyList(), emptyList(), emptyList(), emptyList())
         val first = lines.first().first
         val isName = !first.startsWith("  ") && first !in SECTION_MARKERS
         val name = if (isName) first else "--"
@@ -1987,7 +2048,8 @@ class WynnOverhaulInventoryScreen(
         val professions = sectionAfter("Professions")
             .map { (text, slot) -> text.trimStart(' ', '-', '–', '•') to slot }
             .filter { (text, _) -> LEVEL_LINE.containsMatchIn(text) }
-        return CharSections(name, identity, combat, professions)
+        val identifications = sectionAfter("Identifications")
+        return CharSections(name, identity, combat, professions, identifications)
     }
 
     private class CombatInfoPager {
@@ -1997,6 +2059,7 @@ class WynnOverhaulInventoryScreen(
             private set
         private val seenPages = HashSet<Int>()
         private val merged = LinkedHashSet<String>()
+        private val colors = HashMap<String, Int>()
         private var ticksUntilNext = 0
 
         fun forceDone() {
@@ -2007,11 +2070,28 @@ class WynnOverhaulInventoryScreen(
             slot = -1
             seenPages.clear()
             merged.clear()
+            colors.clear()
             ticksUntilNext = 0
             done = false
         }
 
         fun result(): List<String> = merged.toList()
+
+        fun colorOf(line: String): Int? = colors[line.trim()]
+
+        private fun valueColor(component: Component): Int? {
+            var color: Int? = null
+            component.visit(
+                FormattedText.StyledContentConsumer<Unit> { style, text ->
+                    if (text.any { !it.isWhitespace() && !it.isSurrogate() && it.code !in 0xE000..0xF8FF }) {
+                        color = style.color?.value?.let { 0xFF000000.toInt() or it }
+                    }
+                    Optional.empty()
+                },
+                Style.EMPTY,
+            )
+            return color
+        }
 
         fun tick(menu: AbstractContainerMenu, click: (Int) -> Unit) {
             if (slot < 0) {
@@ -2035,8 +2115,13 @@ class WynnOverhaulInventoryScreen(
                 done = true
                 return
             }
-            val content = lore.subList(contentStart, contentEnd).map { it.trim() }.filter { it.isNotEmpty() }
-            merged.addAll(content)
+            val components = stack.get(DataComponents.LORE)?.lines()
+            for (idx in contentStart until contentEnd) {
+                val text = lore[idx].trim()
+                if (text.isEmpty()) continue
+                merged.add(text)
+                components?.getOrNull(idx)?.let { valueColor(it) }?.let { colors.putIfAbsent(text, it) }
+            }
             if (pageNum == null || !seenPages.add(pageNum) || merged.size >= MAX_LINES || seenPages.size >= MAX_PAGES) {
                 done = true
                 return
@@ -2083,18 +2168,14 @@ class WynnOverhaulInventoryScreen(
             }
         }
 
+        var identity: List<Pair<String, Int>>? = null
+        val professions = ArrayList<Pair<String, Int>>()
         for (slot in 0 until ownSlots) {
             if (slot == combatInfoSlot) continue
             val stack = menu.slots[slot].item
-            if (stack.isEmpty) {
-                if (slot == combatInfoPager.slot) identityCache?.let { lines.addAll(it) }
-                continue
-            }
+            if (stack.isEmpty) continue
             val lore = WynnItemRarity.loreLines(stack)
-            if (lore.isEmpty()) {
-                if (slot == combatInfoPager.slot) identityCache?.let { lines.addAll(it) }
-                continue
-            }
+            if (lore.isEmpty()) continue
             when {
                 lore.any { it.startsWith("Total Lv:") } -> {
                     val identityLines = ArrayList<Pair<String, Int>>()
@@ -2103,37 +2184,40 @@ class WynnOverhaulInventoryScreen(
                         lore.firstOrNull { it.startsWith(key) }?.let { identityLines.add("  $it" to slot) }
                     }
                     identityCache = identityLines
-                    lines.addAll(identityLines)
-                    if (combatInfoLines != null) {
-                        lines.add("Combat" to combatInfoSlot)
-                        for (text in combatInfoLines) lines.add("  $text" to combatInfoSlot)
-                    } else if (combatInfoPager.done) {
-                        val combat = combatInfoPager.result()
-                        if (combat.isNotEmpty()) {
-                            lines.add("Combat" to slot)
-                            for (text in combat) lines.add("  $text" to slot)
-                        }
-                    } else {
-                        lines.add("Combat" to slot)
-                        lines.add("  Loading..." to slot)
-                    }
+                    identity = identityLines
                 }
                 lore.any { it.startsWith("Gathering Skills:") || it.startsWith("Crafting Skills:") } -> {
-                    val before = lines.size
-                    if (lines.none { it.first == "Professions" }) lines.add("Professions" to slot)
                     for (line in lore) {
                         val t = line.trim()
                         if (t.isEmpty()) continue
                         if (t.startsWith("Gathering Skills:") || t.startsWith("Crafting Skills:")) continue
-                        if (lines.size < 60) lines.add("  $t" to slot)
+                        professions.add("  $t" to slot)
                     }
-
-                    if (lines.size == before + 1) lines.removeAt(before)
                 }
             }
-            if (lines.size >= 60) break
         }
-        return lines.take(60)
+
+        val headSlot = combatInfoPager.slot
+        lines.addAll(identity ?: identityCache ?: emptyList())
+        if (combatInfoLines != null) {
+            lines.add("Combat" to combatInfoSlot)
+            for (text in combatInfoLines) lines.add("  $text" to combatInfoSlot)
+        }
+        if (combatInfoPager.done) {
+            val ids = combatInfoPager.result()
+            if (ids.isNotEmpty()) {
+                lines.add("Identifications" to headSlot)
+                for (text in ids) lines.add("  $text" to headSlot)
+            }
+        } else {
+            lines.add("Identifications" to headSlot)
+            lines.add("  Loading..." to headSlot)
+        }
+        if (professions.isNotEmpty()) {
+            lines.add("Professions" to professions.first().second)
+            lines.addAll(professions)
+        }
+        return lines.take(MAX_CHAR_LINES)
     }
 
     private fun stripCodes(text: String): String {
@@ -2612,14 +2696,22 @@ class WynnOverhaulInventoryScreen(
         const val OPENER_BTN_H = 20
         const val STAT_TAB_H = 16
         const val CHAR_SECTION_GAP = 6
-        const val FLOW_PAD = 12
+        const val CHAR_CARD_BG = 0x38000000
+        const val CHAR_STRIPE = 0x16FFFFFF
+        const val CARD_PAD = 6
+        const val CHAR_TAB_GAP = 5
+        const val CHAR_COL_GAP = 6
+        const val CHAR_ROW_H = 13
+        const val CHAR_HEADER_H = 15
+        const val CHAR_HEADER_GAP = 4
+        const val MAX_CHAR_LINES = 160
         const val CHAR_MENU_ROW_Y = 0
         const val OPENER_ROWS = 2
         const val OPENER_ROW_GAP = 2
         const val CHAR_STRIP_TEXT_Y = CHAR_MENU_ROW_Y + OPENER_ROWS * OPENER_BTN_H + (OPENER_ROWS - 1) * OPENER_ROW_GAP + 8
         const val CHAR_STRIP_TEXT_H = 40
         const val CHAR_STRIP_H = CHAR_STRIP_TEXT_Y + CHAR_STRIP_TEXT_H
-        const val CHARACTER_GRID_Y = CHAR_STRIP_H + 4
+        const val CHARACTER_GRID_Y = CHAR_STRIP_H + 4 + CARD_PAD
         const val MENU_BTN_GAP = 2
 
         const val CHAR_CARD_GAP = 8
