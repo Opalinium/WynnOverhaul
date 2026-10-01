@@ -52,8 +52,9 @@ class WynnOverhaulQuestWikiScreen(
             rows += OwLabel(left, 0, w, LINE_HEIGHT, text, color) to LINE_HEIGHT
         }
 
-        fun clickableLine(text: String, color: Int? = null, onClick: () -> Unit) {
-            rows += OwButton(left, 0, w, LINE_HEIGHT, Component.literal(text), textColor = color) { onClick() } to LINE_HEIGHT
+        fun clickableLine(text: String, color: Int = OwTheme.TEXT, header: Boolean = false, onClick: () -> Unit) {
+            val rowH = if (header) LINE_HEIGHT + 4 else LINE_HEIGHT
+            rows += OwLinkRow(left, 0, w, rowH, text, color, header) { onClick() } to rowH
         }
 
         val p = page
@@ -88,7 +89,7 @@ class WynnOverhaulQuestWikiScreen(
             for ((index, section) in p.sections.withIndex()) {
                 val collapsed = index in collapsedSections
                 val arrow = if (collapsed) "▶" else "▼"
-                clickableLine("$arrow ${section.title}", GOLD) { toggleSection(index) }
+                clickableLine("$arrow ${section.title}", GOLD, header = true) { toggleSection(index) }
                 if (!collapsed) {
                     for (line in section.lines) emit(line)
                     textLine("", GRAY)

@@ -41,8 +41,14 @@ class WynnOverhaulQuestBookScreen(parent: Screen) : OwScreen(Component.literal("
         y += 14
 
         val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        val playerLevel = WynnLevelTracker.level
         for (quest in results) {
-            rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("${quest.name}  (Lv. ${quest.combatLevel})")) {
+            val badgeColor = when {
+                playerLevel == null -> OwTheme.TEXT_DIM
+                playerLevel >= quest.combatLevel -> OwTheme.GOOD
+                else -> OwTheme.BAD
+            }
+            rows += OwListRow(left, 0, w, OwTheme.ROW_H - 2, quest.name, "Lv. ${quest.combatLevel}", badgeColor) {
                 Minecraft.getInstance().setScreenAndShow(WynnOverhaulQuestDetailScreen(quest, this))
             } to OwTheme.ROW_H
         }

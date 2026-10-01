@@ -15,6 +15,8 @@ abstract class OwScreen(
     title: Component,
     protected val parent: Screen?,
 ) : Screen(title) {
+    private val fade = OwFade()
+
     protected open val panelWidth: Int get() = (width * 0.7).toInt().coerceIn(320, 520)
     protected open val panelHeight: Int get() = (height * 0.82).toInt().coerceIn(240, 420)
     protected open val panelLeft: Int get() = (width - panelWidth) / 2
@@ -53,6 +55,7 @@ abstract class OwScreen(
         val mx = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseX
         val my = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseY
         super.extractRenderState(graphics, mx, my, partialTick)
+        fade.overlay(graphics, panelLeft, panelTop + OwTheme.TITLE_BAR_H, panelWidth, panelHeight - OwTheme.TITLE_BAR_H)
         OwDropdownOverlay.render(graphics, mouseX, mouseY, height)
     }
 

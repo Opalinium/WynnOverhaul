@@ -12,6 +12,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Character page stats sit in cards with aligned label and value columns. Combat stats are grouped under their headings, and quests moved up into the header line.
 - The Mount Settings screen shows each setting as a card with its options, with the active option highlighted.
 - The Journal detail pane is a card with aligned requirements and a clearer rewards list.
+- The Quest Book, quest detail and wiki screens use aligned rows and section headers.
+- Tabs and screens fade in, loading states show placeholders instead of plain text, and the Identifications tab shows which page it is reading.
 
 ## 1.3.0 - 2026-09-30
 

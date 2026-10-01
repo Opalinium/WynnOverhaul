@@ -18,6 +18,11 @@ class WynnOverhaulQuestDetailScreen(
             rows += OwLabel(left, 0, w, LINE_HEIGHT, text, color) to LINE_HEIGHT
         }
 
+        var statIndex = 0
+        fun stat(label: String, value: String, color: Int = OwTheme.TEXT) {
+            rows += OwStatRow(left, 0, w, STAT_HEIGHT, label, value, color, stripe = statIndex++ % 2 == 0) to STAT_HEIGHT
+        }
+
         fun heading(text: String) {
             rows += OwSectionHeader(left, 0, w, text) to (LINE_HEIGHT + 4)
         }
@@ -28,30 +33,38 @@ class WynnOverhaulQuestDetailScreen(
 
         val tracked = WynnScoreboardTracker.current
         if (tracked != null && WynncraftQuests.findTracked(tracked.name) === quest) {
-            line("Currently tracked", OwTheme.GOOD)
-            if (tracked.nextTask.isNotBlank()) {
-                line("Objective: ${tracked.nextTask}")
-            }
+            heading("Currently tracked")
+            if (tracked.nextTask.isNotBlank()) stat("Objective", tracked.nextTask, OwTheme.GOOD)
             gap(4)
+            statIndex = 0
         }
 
-        line("Level: ${levelRequirements()}")
-        line("Length: ${quest.length.ifBlank { "Unknown" }}")
-        if (quest.province.isNotBlank() || quest.location.isNotBlank()) {
-            line("Location: ${listOfNotNull(quest.location.ifBlank { null }, quest.province.ifBlank { null }).joinToString(", ")}")
+        val playerLevel = WynnLevelTracker.level
+        val levelColor = when {
+            playerLevel == null -> OwTheme.TEXT
+            playerLevel >= quest.combatLevel -> OwTheme.GOOD
+            else -> OwTheme.BAD
         }
-        if (quest.npc.isNotBlank()) line("Starter NPC: ${quest.npc}")
-        if (quest.requiredQuest.isNotBlank()) line("Requires quest: ${quest.requiredQuest}")
-        if (quest.requiredItem.isNotBlank()) line("Requires item: ${quest.requiredItem}")
-        if (quest.tags.isNotBlank()) line("Tags: ${quest.tags}")
-        gap(4)
+        heading("Requirements")
+        stat("Level", levelRequirements(), levelColor)
+        stat("Length", quest.length.ifBlank { "Unknown" })
+        if (quest.province.isNotBlank() || quest.location.isNotBlank()) {
+            stat("Location", listOfNotNull(quest.location.ifBlank { null }, quest.province.ifBlank { null }).joinToString(", "))
+        }
+        if (quest.npc.isNotBlank()) stat("Starter NPC", quest.npc)
+        if (quest.requiredQuest.isNotBlank()) stat("Requires quest", quest.requiredQuest)
+        if (quest.requiredItem.isNotBlank()) stat("Requires item", quest.requiredItem)
+        if (quest.tags.isNotBlank()) stat("Tags", quest.tags)
+        gap(6)
 
         heading("Rewards")
-        line("${quest.emeralds} emeralds, ${quest.experience} XP")
+        statIndex = 0
+        stat("Emeralds", "${quest.emeralds}", OwTheme.GOOD)
+        stat("Experience", "${quest.experience} XP")
         if (quest.rewards.isEmpty()) {
-            line("(no other listed rewards)")
+            line("(no other listed rewards)", OwTheme.TEXT_DIM)
         } else {
-            for (reward in quest.rewards) line("- $reward")
+            for (reward in quest.rewards) line("• $reward")
         }
         gap(8)
 
@@ -72,5 +85,6 @@ class WynnOverhaulQuestDetailScreen(
 
     private companion object {
         const val LINE_HEIGHT = 12
+        const val STAT_HEIGHT = 14
     }
 }
