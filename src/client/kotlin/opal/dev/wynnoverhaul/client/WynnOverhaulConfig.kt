@@ -86,6 +86,8 @@ data class WynnOverhaulConfig(
     var customPotionHudEnabled: Boolean = false,
     var abilityCooldownHudEnabled: Boolean = true,
     var totemHudEnabled: Boolean = true,
+    var dpsHudEnabled: Boolean = true,
+    var dpsWindowSeconds: Int = 5,
     var questLogHudEnabled: Boolean = true,
     var ultimateHudEnabled: Boolean = true,
     var powderSpecialHudEnabled: Boolean = true,
@@ -209,6 +211,7 @@ data class WynnOverhaulConfig(
 
     fun sanitize(): WynnOverhaulConfig {
         maxCps = maxCps.coerceIn(1.0, 12.0)
+        dpsWindowSeconds = dpsWindowSeconds.coerceIn(1, 30)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)
         trackerRange = trackerRange.coerceIn(8.0, 128.0)
         trackerDiscoveredChestRange = trackerDiscoveredChestRange.coerceIn(64.0, 4000.0)

@@ -6,6 +6,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ### Added
 - The Character page has an Identifications sub-tab that lists your total identifications across every page, colored positive or negative as in game.
+- A DPS meter HUD element shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.
 - The Journal shows your Content Book completion progress for quests, territorial, world and secret discoveries.
 
 ### Changed

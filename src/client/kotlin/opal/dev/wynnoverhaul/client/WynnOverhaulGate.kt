@@ -38,6 +38,7 @@ object WynnOverhaulGate {
             WynnSpellTracker.clear()
             WynnClassTracker.clear()
             WynnTotemTracker.clear()
+            WynnDamageTracker.clear()
             WynnUltimateTracker.clear()
             WynnPowderSpecialTracker.clear()
             PartyBuffTracker.clear()

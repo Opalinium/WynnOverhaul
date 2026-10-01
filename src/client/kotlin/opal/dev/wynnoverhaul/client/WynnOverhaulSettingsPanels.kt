@@ -970,6 +970,17 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.totemHudEnabled,
             ) { config.totemHudEnabled = it }
 
+            header("Damage")
+            checkbox(
+                "Show DPS meter",
+                "Shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.",
+                config.dpsHudEnabled,
+            ) { config.dpsHudEnabled = it }
+            slider(
+                "DPS averaging window (seconds)", 1.0, 30.0, 0, config.dpsWindowSeconds.toDouble(),
+                "How many seconds of recent damage the DPS figure averages over. Shorter reacts faster, longer is steadier.",
+            ) { config.dpsWindowSeconds = it.toInt() }
+
             header("Ultimates")
             checkbox(
                 "Show ultimate ready indicator",
