@@ -966,7 +966,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             ) { config.abilityCooldownHudEnabled = it }
             checkbox(
                 "Show totem timers",
-                "Shows your active shaman totems with remaining time, read from their floating timer labels.",
+                "Shows your own active shaman totems and any nearby mob and gathering totems with remaining time, read from their floating timer labels.",
                 config.totemHudEnabled,
             ) { config.totemHudEnabled = it }
 
