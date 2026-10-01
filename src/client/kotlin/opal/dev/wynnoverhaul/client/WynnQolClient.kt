@@ -30,6 +30,7 @@ class WynnQolClient : ClientModInitializer {
         WynnSpellTracker.register()
         WynnPowderSpecialTracker.register()
         WynnChatChannels.register()
+        WynnStateDump.register()
         WynnOverhaulInventory.register()
         CharacterInfo.register()
         MountSettingsInterceptor.register()

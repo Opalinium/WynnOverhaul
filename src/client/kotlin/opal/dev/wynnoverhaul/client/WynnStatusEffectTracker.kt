@@ -21,7 +21,12 @@ object WynnStatusEffectTracker {
 
     private val maxSecondsByName = HashMap<String, Int>()
 
+    @Volatile
+    var lastFooter: Component? = null
+        private set
+
     fun onFooterUpdate(footer: Component) {
+        lastFooter = footer
         val text = TextClean.clean(footer.string)
         if (!text.contains(STATUS_EFFECTS_TITLE)) {
             if (activeCooldowns.isNotEmpty()) activeCooldowns = emptyList()
