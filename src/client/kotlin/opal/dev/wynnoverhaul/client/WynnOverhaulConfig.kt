@@ -87,6 +87,7 @@ data class WynnOverhaulConfig(
     var abilityCooldownHudEnabled: Boolean = true,
     var totemHudEnabled: Boolean = true,
     var dpsHudEnabled: Boolean = true,
+    var classBuffHudEnabled: Boolean = true,
     var dpsWindowSeconds: Int = 5,
     var questLogHudEnabled: Boolean = true,
     var ultimateHudEnabled: Boolean = true,

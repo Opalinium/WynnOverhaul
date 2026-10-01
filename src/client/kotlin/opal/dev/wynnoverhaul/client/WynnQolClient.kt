@@ -139,6 +139,10 @@ class WynnQolClient : ClientModInitializer {
             Identifier.fromNamespaceAndPath("wynnoverhaul", "dps"),
             DpsHudElement(),
         )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "class_buffs"),
+            ClassBuffHudElement(),
+        )
     }
 
     private fun registerHudLayouts() {
@@ -161,6 +165,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("dialogue", "Dialogue", "BOTTOM_LEFT", defaultOffsetX = 40, defaultOffsetY = 60, fallbackW = 300, fallbackH = 48))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("totems", "Totems", "TOP_RIGHT", defaultOffsetY = 200, fallbackW = 140, fallbackH = 42))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("dps", "Damage", "TOP_RIGHT", defaultOffsetY = 260, fallbackW = 150, fallbackH = 64))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("class_buffs", "Class Buffs", "TOP_RIGHT", defaultOffsetY = 330, fallbackW = 150, fallbackH = 45))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("xp_bar", "Experience", "BOTTOM_LEFT", defaultOffsetY = 24, fallbackW = 200, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("resource_bar", "Class Resource", "TOP_LEFT", defaultOffsetY = 24, fallbackW = 170, fallbackH = 15, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("guild", "Guild", "TOP_LEFT", defaultOffsetY = 44, fallbackW = 160, fallbackH = 26))
@@ -199,6 +204,7 @@ class WynnQolClient : ClientModInitializer {
         WynnBuffTracker.tick(client)
         WynnTotemTracker.tick(client)
         WynnDamageTracker.tick(client)
+        WynnClassBuffTracker.tick(client)
         LootrunModel.tick(client)
         LootrunBeaconTracker.tick(client)
         LootrunRecorder.tick(client)

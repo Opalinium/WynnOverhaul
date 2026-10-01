@@ -970,6 +970,12 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.totemHudEnabled,
             ) { config.totemHudEnabled = it }
 
+            checkbox(
+                "Show class buffs",
+                "Shows your active class buffs: Mantle and Guardian Angels style shields with their charges, Arrow Shield, Judrajim, and your Crow, Hound, Snake and shaman puppet summons with their timers.",
+                config.classBuffHudEnabled,
+            ) { config.classBuffHudEnabled = it }
+
             header("Damage")
             checkbox(
                 "Show DPS meter",

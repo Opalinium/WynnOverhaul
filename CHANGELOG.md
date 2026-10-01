@@ -7,6 +7,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 ### Added
 - The Character page has an Identifications sub-tab that lists your total identifications across every page, colored positive or negative as in game.
 - A DPS meter HUD element shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.
+- A Class Buffs HUD element tracks your Mantle and Broken Mantle charges, Guardian Angels, Arrow Shield and Judrajim, plus your Crow, Hound, Snake and shaman puppet summons with their timers.
 - The /owdump command copies the tab footer, action bar, boss bars, potion effects and nearby floating labels to the clipboard, for reporting what the game shows.
 - The Journal shows your Content Book completion progress for quests, territorial, world and secret discoveries.
 
