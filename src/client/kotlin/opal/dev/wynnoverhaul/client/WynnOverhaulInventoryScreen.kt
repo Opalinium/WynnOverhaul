@@ -133,14 +133,17 @@ class WynnOverhaulInventoryScreen(
 
     private var pouchMenu: AbstractContainerMenu? = null
     private var pouchKind: PouchInterceptor.PouchKind? = null
+    private var pouchPendingKind: PouchInterceptor.PouchKind? = null
+    private var pouchPendingAtNanos = 0L
+    private val pouchFade = OwFade()
+    private val pouchCloseFade = OwFade()
+    private var pouchClosingKind: PouchInterceptor.PouchKind? = null
     private val pouchTiles = ArrayList<PlacedTile>()
     private var pouchHoverSlot = -1
     private var pouchPX = 0
     private var pouchPY = 0
     private var pouchPW = 0
     private var pouchPH = 0
-    private var pouchIngredientButton: OwButton? = null
-    private var pouchEmeraldButton: OwButton? = null
 
     fun pollPendingFire() {
         val pendingFire = pendingTabFire ?: return
@@ -231,13 +234,6 @@ class WynnOverhaulInventoryScreen(
         addClaimButtons(ox, pt)
         addShortcutDropdown(ox, pt)
         if (invTab == InvTab.INVENTORY) {
-            var pbx = ox + MARGIN + SHORTCUT_DROPDOWN_W + 4
-            pouchIngredientButton = OwButton(pbx, 0, font.width("Ingredients") + 14, CLAIM_BTN_H, Component.literal("Ingredients")) {
-                togglePouch(PouchInterceptor.PouchKind.INGREDIENT)
-            }.also { addRenderableWidget(it); pbx += it.width + 4 }
-            pouchEmeraldButton = OwButton(pbx, 0, font.width("Emeralds") + 14, CLAIM_BTN_H, Component.literal("Emeralds")) {
-                togglePouch(PouchInterceptor.PouchKind.EMERALD)
-            }.also { addRenderableWidget(it) }
             val fieldX = ox + MARGIN
             val fieldY = pt + SEARCH_Y_REL
             val sortW = font.width("Sort: Default") + 34
@@ -259,8 +255,6 @@ class WynnOverhaulInventoryScreen(
         } else {
             searchField = null
             inventorySortButton = null
-            pouchIngredientButton = null
-            pouchEmeraldButton = null
         }
         if (invTab == InvTab.JOURNAL) {
             val gx = ox + MARGIN
@@ -514,9 +508,6 @@ class WynnOverhaulInventoryScreen(
                 val pt = panelTopFor(it.panelH)
 
                 for (button in tabButtons) button.y = pt + TAB_Y_REL
-                val pouchBy = (pt - CLAIM_BTN_H - 2).coerceAtLeast(2)
-                pouchIngredientButton?.let { it.y = pouchBy }
-                pouchEmeraldButton?.let { it.y = pouchBy }
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
                 inventorySortButton?.let { button -> button.y = pt + SEARCH_Y_REL }
                 journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
@@ -605,9 +596,17 @@ class WynnOverhaulInventoryScreen(
         if (cached != null && cached.signature == signature && now - cached.builtAtNanos < INVENTORY_CACHE_NANOS) return cached
 
         val pouchSlot = findIngredientPouch()
-        val storage = if (WorldContext.isWynncraft(Minecraft.getInstance())) MAIN_SLOTS.drop(4) else MAIN_SLOTS
+        val storage = if (onWynncraft()) MAIN_SLOTS.drop(4) else MAIN_SLOTS
+        val dockReserved = emeraldDockReserved()
         val filtered = InventorySort.parse(sortName)
-            .apply(storage.filter { slotVisible(it, query) && !isExcluded(slotStack(it)) }, ::slotStack)
+            .apply(
+                storage.filter {
+                    val stack = slotStack(it)
+                    slotVisible(it, query) && !(it == EMERALD_POUCH_SLOT && dockReserved) &&
+                        (!isExcluded(stack) || WynnPouches.isEmeraldPouch(stack))
+                },
+                ::slotStack,
+            )
         val entries = if (pouchSlot >= 0) WynnPouches.ingredientEntries(slotStack(pouchSlot)) else emptyList()
         return InventoryLayoutData(signature, now, filtered, pouchSlot, entries).also { inventoryCache = it }
     }
@@ -637,10 +636,10 @@ class WynnOverhaulInventoryScreen(
             labels.add(PlacedLabel("Hotbar", x, y, color = OwTheme.ACCENT))
             y += CAPTION_H
             var hx = x
-            val emeraldSlot = findEmeraldPouch()
             for (slot in HOTBAR_SLOTS) {
                 val stack = slotStack(slot)
-                val show = slot != emeraldSlot && !isExcluded(stack) && (query.isEmpty() || stack.isEmpty || matchesQuery(stack, query))
+                val show = (!isExcluded(stack) || WynnPouches.isEmeraldPouch(stack)) &&
+                    (query.isEmpty() || stack.isEmpty || matchesQuery(stack, query))
                 tiles.add(PlacedTile(if (show) slot else -1, hx, y))
                 hx += TILE_STEP
             }
@@ -648,7 +647,7 @@ class WynnOverhaulInventoryScreen(
 
             val inv = inventoryLayoutData(query)
             val pouchSlot = inv.pouchSlot
-            val filtered = inv.filtered.filter { it != emeraldSlot }
+            val filtered = inv.filtered
             labels.add(PlacedLabel("Inventory", x, y, color = OwTheme.ACCENT))
             y += CAPTION_H
             val gridTop = y
@@ -690,18 +689,22 @@ class WynnOverhaulInventoryScreen(
             pouchSlotOut = pouchSlot
             pouchXOut = pouchX
             pouchYOut = pouchY
-            if (emeraldSlot >= 0) {
-                emeraldSlotOut = emeraldSlot
-                emeraldXOut = pouchX + TILE_STEP
-                emeraldYOut = pouchY
-            }
-            if (pouchSlot < 0 && emeraldSlot >= 0) {
-                val px = x + 3 * TILE_STEP + GAP
-                var py = gridTop - CAPTION_H
-                labels.add(PlacedLabel("EMERALD POUCH", px, py, color = OwTheme.ACCENT))
-                py += CAPTION_H
-                emeraldXOut = px
-                emeraldYOut = py
+            if (emeraldDockReserved()) {
+                emeraldSlotOut = EMERALD_POUCH_SLOT
+                if (pouchSlot >= 0) {
+                    emeraldXOut = pouchX + TILE_STEP
+                    emeraldYOut = pouchY
+                } else {
+                    val px = x + 3 * TILE_STEP + GAP
+                    var py = gridTop - CAPTION_H
+                    labels.add(PlacedLabel("EMERALD POUCH", px, py, color = OwTheme.ACCENT))
+                    py += CAPTION_H
+                    emeraldXOut = px
+                    emeraldYOut = py
+                    val dockStack = slotStack(EMERALD_POUCH_SLOT)
+                    val hint = if (WynnPouches.isEmeraldPouch(dockStack)) "Right-click: view contents" else "Reserved for an Emerald Pouch"
+                    labels.add(PlacedLabel(hint, px + 2, py + TILE_STEP + 1, color = OwTheme.TEXT_DIM))
+                }
             }
         }
         val journalSlotsOut = ArrayList<JournalSlot>()
@@ -865,7 +868,44 @@ class WynnOverhaulInventoryScreen(
 
     private fun findIngredientPouch(): Int = findPouch(INGREDIENT_POUCH_SLOT, WynnPouches::isIngredientPouch)
 
-    private fun findEmeraldPouch(): Int = findPouch(EMERALD_POUCH_SLOT, WynnPouches::isEmeraldPouch)
+    private fun onWynncraft(): Boolean = WorldContext.isWynncraft(Minecraft.getInstance())
+
+    private fun emeraldDockReserved(): Boolean {
+        if (!onWynncraft()) return false
+        val stack = slotStack(EMERALD_POUCH_SLOT)
+        return stack.isEmpty || WynnPouches.isEmeraldPouch(stack)
+    }
+
+    private fun rejectsReservedPlacement(slot: Int, button: Int, kind: ContainerInput, carried: ItemStack): Boolean {
+        if (slot != EMERALD_POUCH_SLOT || !onWynncraft()) return false
+        val incoming = when (kind) {
+            ContainerInput.PICKUP, ContainerInput.QUICK_CRAFT -> carried
+            ContainerInput.SWAP -> when (button) {
+                in 0 until HOTBAR_SLOTS.size -> menu.slots.getOrNull(HOTBAR_SLOTS.first() + button)?.item
+                OFFHAND_BUTTON -> menu.slots.getOrNull(OFFHAND_SLOT)?.item
+                else -> null
+            } ?: ItemStack.EMPTY
+            else -> ItemStack.EMPTY
+        }
+        return !incoming.isEmpty && !WynnPouches.isEmeraldPouch(incoming)
+    }
+
+    private fun pouchKindOf(stack: ItemStack): PouchInterceptor.PouchKind? = when {
+        stack.isEmpty -> null
+        WynnPouches.isEmeraldPouch(stack) -> PouchInterceptor.PouchKind.EMERALD
+        WynnPouches.isSellConfirm(stack) || WynnPouches.isConfirmMorph(stack) -> null
+        WynnPouches.isIngredientPouch(stack) -> PouchInterceptor.PouchKind.INGREDIENT
+        else -> null
+    }
+
+    private fun tryOpenPouch(slot: Int, button: Int, shift: Boolean): Boolean {
+        if (shift || (button != 0 && button != 1)) return false
+        if (!activeCarried().isEmpty) return false
+        val kind = pouchKindOf(slotStack(slot)) ?: return false
+        if (kind == PouchInterceptor.PouchKind.EMERALD && button != 1) return false
+        togglePouch(kind, slot)
+        return true
+    }
 
     private fun trimToWidth(text: String, maxW: Int): String {
         if (font.width(text) <= maxW) return text
@@ -1023,7 +1063,7 @@ class WynnOverhaulInventoryScreen(
         if (layout.emeraldPouchSlot >= 0) {
             val ey = layout.emeraldPouchY - scrollY + layout.scrollTop
             if (ey + TILE > layout.scrollTop && ey < layout.scrollBottom) {
-                drawLooseItem(graphics, PlacedTile(layout.emeraldPouchSlot, layout.emeraldPouchX, ey), layout.emeraldPouchSlot == hoveredSlot)
+                drawTile(graphics, PlacedTile(layout.emeraldPouchSlot, layout.emeraldPouchX, ey), layout.emeraldPouchSlot == hoveredSlot)
             }
         }
         graphics.disableScissor()
@@ -1053,6 +1093,25 @@ class WynnOverhaulInventoryScreen(
         pouchHoverSlot = -1
         pouchPW = 0
         pouchPH = 0
+        val closing = pouchClosingKind
+        if (closing != null && pouchMenu == null && pouchPendingKind == null) {
+            val remaining = 1f - pouchCloseFade.progress()
+            if (remaining <= 0f) {
+                pouchClosingKind = null
+            } else {
+                drawPouchSkeleton(graphics, pt, closing, remaining * remaining)
+                return
+            }
+        }
+        val pending = pouchPendingKind
+        if (pending != null && pouchMenu == null) {
+            if (System.nanoTime() - pouchPendingAtNanos > POUCH_PENDING_NANOS) {
+                pouchPendingKind = null
+            } else {
+                drawPouchSkeleton(graphics, pt, pending)
+                return
+            }
+        }
         val pouch = pouchMenu ?: return
         val player = Minecraft.getInstance().player
         if (player == null || player.containerMenu !== pouch) {
@@ -1092,6 +1151,34 @@ class WynnOverhaulInventoryScreen(
         }
         for (tile in pouchTiles) drawTile(graphics, tile, tile.menuSlot == pouchHoverSlot) { pouchStack(it.menuSlot) }
         pouchHoverSlot = pouchTiles.firstOrNull { mouseX in it.x until it.x + TILE && mouseY in it.y until it.y + TILE }?.menuSlot ?: -1
+        pouchFade.overlay(graphics, pouchPX, pouchPY, pouchPW, pouchPH, GLASS_BG)
+    }
+
+    private fun withAlpha(color: Int, strength: Float): Int {
+        val a = ((color ushr 24) * strength).toInt().coerceIn(0, 255)
+        return (a shl 24) or (color and 0xFFFFFF)
+    }
+
+    private fun drawPouchSkeleton(graphics: GuiGraphicsExtractor, pt: Int, kind: PouchInterceptor.PouchKind, strength: Float = 1f) {
+        val cols = 9
+        val rows = POUCH_SKELETON_ROWS
+        val px = panelLeft() + panelWidth() + 4 + GAP
+        val left = px - 4
+        val w = cols * TILE_STEP + 8
+        val h = 4 + CAPTION_H + rows * TILE_STEP + 4
+        val line = withAlpha(OwTheme.HAIRLINE, strength)
+        graphics.fill(left, pt, left + w, pt + h, withAlpha(GLASS_BG, strength))
+        graphics.fill(left, pt, left + w, pt + 1, line)
+        graphics.fill(left, pt + h - 1, left + w, pt + h, line)
+        graphics.fill(left, pt, left + 1, pt + h, line)
+        graphics.fill(left + w - 1, pt, left + w, pt + h, line)
+        val label = if (kind == PouchInterceptor.PouchKind.EMERALD) "EMERALD POUCH" else "INGREDIENT POUCH"
+        graphics.text(font, label, px, pt + 4, withAlpha(OwTheme.ACCENT, strength))
+        OwSkeleton.bars(graphics, px, pt + 4 + CAPTION_H, cols * TILE_STEP - 2, rows, TILE, TILE_STEP - TILE, strength)
+        if (strength >= 1f) {
+            pouchPX = left
+            pouchPY = pt
+        }
     }
 
     private fun findPouchTile(x: Int, y: Int): Int? {
@@ -1103,6 +1190,11 @@ class WynnOverhaulInventoryScreen(
     private fun drawFooter(graphics: GuiGraphicsExtractor, panelTop: Int, panelH: Int) {
         val cx = panelLeft() + panelWidth() / 2
         val fy = panelTop + panelH - 4 - FOOTER_H + 3
+        val warning = warnText
+        if (warning != null && System.nanoTime() < warnUntilNanos) {
+            graphics.text(font, warning, cx - font.width(warning) / 2, fy, OwTheme.BAD)
+            return
+        }
         val left = "${storedCount()} items \u00B7 "
         val free = freeSlotCount()
         val mid = if (free > 0) "$free free \u00B7 " else "Full \u00B7 "
@@ -1320,13 +1412,13 @@ class WynnOverhaulInventoryScreen(
         if (invTab == InvTab.CHARACTER) rebuildWidgets()
     }
 
-    private fun togglePouch(kind: PouchInterceptor.PouchKind) {
+    private fun togglePouch(kind: PouchInterceptor.PouchKind, slot: Int) {
         val open = pouchKind
         if (open != null) leavePouch()
-        if (open != kind) firePouchTrigger(kind)
+        if (open != kind) firePouchTrigger(kind, slot)
     }
 
-    private fun firePouchTrigger(kind: PouchInterceptor.PouchKind) {
+    private fun firePouchTrigger(kind: PouchInterceptor.PouchKind, clicked: Int) {
         val client = Minecraft.getInstance()
         val player = client.player ?: return
         if (pouchMenu != null) return
@@ -1339,7 +1431,7 @@ class WynnOverhaulInventoryScreen(
             blockReason("Place the held item first")
             return
         }
-        val slot = findPouchSlot(kind)
+        val slot = clicked.takeIf { pouchKindOf(menu.slots.getOrNull(it)?.item ?: ItemStack.EMPTY) == kind } ?: findPouchSlot(kind)
         if (slot == null) {
             blockReason(if (kind == PouchInterceptor.PouchKind.INGREDIENT) "Ingredient Pouch not found in your inventory" else "Emerald Pouch not found in your inventory")
             return
@@ -1352,6 +1444,8 @@ class WynnOverhaulInventoryScreen(
             return
         }
         PouchInterceptor.arm(this, kind)
+        pouchPendingKind = kind
+        pouchPendingAtNanos = System.nanoTime()
     }
 
     private fun findPouchSlot(kind: PouchInterceptor.PouchKind): Int? {
@@ -1366,7 +1460,10 @@ class WynnOverhaulInventoryScreen(
 
     private fun leavePouch(): Boolean {
         PouchInterceptor.clear(this)
+        pouchPendingKind = null
         if (pouchMenu == null) return false
+        pouchClosingKind = pouchKind
+        pouchCloseFade.restart()
         pouchMenu = null
         pouchKind = null
         pouchTiles.clear()
@@ -1385,6 +1482,8 @@ class WynnOverhaulInventoryScreen(
     fun attachPouchMenu(menu: AbstractContainerMenu, kind: PouchInterceptor.PouchKind) {
         pouchMenu = menu
         pouchKind = kind
+        pouchPendingKind = null
+        pouchFade.restart()
         rebuildWidgets()
     }
 
@@ -1467,7 +1566,12 @@ class WynnOverhaulInventoryScreen(
         refreshJournalView()
     }
 
+    private var warnText: String? = null
+    private var warnUntilNanos = 0L
+
     private fun blockReason(message: String) {
+        warnText = message
+        warnUntilNanos = System.nanoTime() + WARN_NANOS
         Minecraft.getInstance().gui.hud.setOverlayMessage(Component.literal(message), false)
         journal.actionMessage = message
         if (invTab == InvTab.JOURNAL) rebuildWidgets()
@@ -1553,7 +1657,12 @@ class WynnOverhaulInventoryScreen(
 
     private fun drawHoverAndTooltip(graphics: GuiGraphicsExtractor, layout: Layout) {        if (hoveredSlot < 0) return
         val stack = slotStack(hoveredSlot)
-        if (stack.isEmpty) return
+        if (stack.isEmpty) {
+            if (hoveredSlot == EMERALD_POUCH_SLOT && emeraldDockReserved() && activeCarried().isEmpty) {
+                graphics.setTooltipForNextFrame(font, Component.literal("Emerald Pouch slot: only an Emerald Pouch fits here"), mouseX, mouseY)
+            }
+            return
+        }
         if (!menu.carried.isEmpty) return
         graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
         EquipCompareTooltip.draw(graphics, font, stack, mouseX, mouseY)
@@ -2396,6 +2505,11 @@ class WynnOverhaulInventoryScreen(
         if (button != 0 && button != 1) return true
         val slot = findTile(layout, x, y)
         if (slot < 0) return true
+        if (tryOpenPouch(slot, button, event.hasShiftDown())) return true
+        if (rejectsReservedPlacement(slot, button, ContainerInput.PICKUP, activeCarried())) {
+            blockReason(RESERVED_SLOT_MESSAGE)
+            return true
+        }
         val mirror = mirrorSlot(slot) ?: run {
             blockReason("Close the pouch first")
             return true
@@ -2420,6 +2534,11 @@ class WynnOverhaulInventoryScreen(
         layout: Layout,
         player: net.minecraft.world.entity.player.Player
     ): Boolean {
+        if (tryOpenPouch(slot, button, event.hasShiftDown())) return true
+        if ((button == 0 || button == 1) && rejectsReservedPlacement(slot, button, ContainerInput.PICKUP, menu.carried)) {
+            blockReason(RESERVED_SLOT_MESSAGE)
+            return true
+        }
         val stack = slotStack(slot)
         val isIngredientPouch = WynnPouches.isIngredientPouch(stack)
         val isSellConfirm = WynnPouches.isSellConfirm(stack) || WynnPouches.isConfirmMorph(stack)
@@ -2527,8 +2646,12 @@ class WynnOverhaulInventoryScreen(
         var merge = -1
         var empty = -1
 
+        val reserved = onWynncraft()
+        if (reserved && WynnPouches.isEmeraldPouch(stack) && menu.slots.getOrNull(EMERALD_POUCH_SLOT)?.item?.isEmpty == true) {
+            return EMERALD_POUCH_SLOT
+        }
         for (slot in MAIN_SLOTS) {
-            if (slot == EMERALD_POUCH_SLOT) continue
+            if (reserved && slot == EMERALD_POUCH_SLOT) continue
             val s = menu.slots.getOrNull(slot)?.item ?: continue
             if (!s.isEmpty && !isExcluded(s) && s.isStackable && ItemStack.isSameItemSameComponents(s, stack) && s.count < s.maxStackSize) {
                 if (merge < 0 || s.count < menu.slots[merge].item.count) merge = slot
@@ -2732,6 +2855,10 @@ class WynnOverhaulInventoryScreen(
             WynnOverhaul.LOGGER.warn("WynnOverhaul inventory: menu no longer current, dropping {} input", kind)
             return
         }
+        if (rejectsReservedPlacement(slot, button, kind, menu.carried)) {
+            blockReason(RESERVED_SLOT_MESSAGE)
+            return
+        }
         try {
             client.gameMode?.handleContainerInput(menu.containerId, slot, button, kind, player)
         } catch (t: Throwable) {
@@ -2829,9 +2956,13 @@ class WynnOverhaulInventoryScreen(
 
         const val INGREDIENT_POUCH_SLOT = 13
         const val EMERALD_POUCH_SLOT = 14
+        const val RESERVED_SLOT_MESSAGE = "Only an Emerald Pouch fits in this slot"
         private const val INVENTORY_CACHE_NANOS = 1_000_000_000L
         const val SHIFT_DRAG_STEP = 4
         const val POUCH_LINES = 12
+        const val WARN_NANOS = 2_500_000_000L
+        const val POUCH_SKELETON_ROWS = 4
+        const val POUCH_PENDING_NANOS = 3_000_000_000L
 
         const val PLAYER_INV_SIZE = 36
 

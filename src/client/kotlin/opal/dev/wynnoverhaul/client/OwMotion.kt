@@ -10,6 +10,8 @@ class OwFade(private val durationNanos: Long = DEFAULT_NANOS) {
         start = System.nanoTime()
     }
 
+    fun progress(): Float = ((System.nanoTime() - start).toFloat() / durationNanos).coerceIn(0f, 1f)
+
     fun overlay(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, color: Int = OwTheme.PANEL) {
         val t = ((System.nanoTime() - start).toFloat() / durationNanos).coerceIn(0f, 1f)
         if (t >= 1f) return
@@ -28,8 +30,8 @@ object OwSkeleton {
 
     private fun pulse(): Float = 0.5f + 0.5f * sin(System.nanoTime() / 220_000_000.0).toFloat()
 
-    fun bars(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, rows: Int, rowH: Int, gap: Int = 3) {
-        val alpha = (0x12 + pulse() * 0x16).toInt()
+    fun bars(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, rows: Int, rowH: Int, gap: Int = 3, strength: Float = 1f) {
+        val alpha = ((0x12 + pulse() * 0x16) * strength).toInt()
         val color = (alpha shl 24) or 0xFFFFFF
         for (i in 0 until rows) {
             val rowW = (w * WIDTHS[i % WIDTHS.size]).toInt()
