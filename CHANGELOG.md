@@ -10,6 +10,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ### Changed
 - The Ingredients and Emeralds buttons are gone. Click the ingredient pouch or right-click the emerald pouch in the inventory to open its contents in the side panel, which fades in behind a loading placeholder.
+- The inventory page stays on screen while pouches, the Journal and Character Info open and close, instead of flashing the vanilla container or the game view in between.
 - The emerald pouch slot only accepts an Emerald Pouch, and a pouch sitting in the hotbar no longer blocks its slot.
 - The Character page stats sit in cards with aligned label and value columns. Combat stats are grouped under their headings, and quests moved up into the header line.
 - The Mount Settings screen shows each setting as a card with its options, with the active option highlighted.

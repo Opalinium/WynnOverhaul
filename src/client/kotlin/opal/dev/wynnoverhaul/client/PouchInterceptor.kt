@@ -17,6 +17,8 @@ object PouchInterceptor {
         }
     }
 
+    fun heldHost(menu: AbstractContainerMenu): WynnOverhaulInventoryScreen? = if (pendingMenu === menu) pendingHost else null
+
     fun arm(host: WynnOverhaulInventoryScreen, kind: PouchKind) {
         pendingHost = host
         pendingKind = kind

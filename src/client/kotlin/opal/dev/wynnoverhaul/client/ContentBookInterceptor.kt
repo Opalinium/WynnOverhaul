@@ -33,6 +33,8 @@ class ContentBookInterceptor : ClientModInitializer {
 
         private var hostSetAtNanos = 0L
 
+        fun heldHost(menu: AbstractContainerMenu): WynnOverhaulInventoryScreen? = if (pendingMenu === menu) pendingJournalHost ?: WynnOverhaulInventoryScreen.recent() else null
+
         fun tick(client: Minecraft) {
             if (pendingJournalHost != null && System.nanoTime() - hostSetAtNanos > HOST_TIMEOUT_NANOS) pendingJournalHost = null
             val menu = pendingMenu ?: return

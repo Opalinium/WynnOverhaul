@@ -2,6 +2,7 @@ package opal.dev.wynnoverhaul.client
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.world.inventory.InventoryMenu
 
@@ -31,6 +32,8 @@ object WynnOverhaulInventory {
         if (client.player?.inventoryMenu !== menu) return
         client.setScreenAndShow(WynnOverhaulInventoryScreen(menu, targetTab ?: WynnOverhaulInventoryScreen.InvTab.INVENTORY))
     }
+
+    fun capturing(screen: Screen): Boolean = screen is InventoryScreen && pendingCapture?.first === screen.menu
 
     private var pendingCapture: Pair<InventoryMenu, WynnOverhaulInventoryScreen.InvTab?>? = null
 

@@ -470,6 +470,8 @@ class WynnOverhaulInventoryScreen(
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+        lastShown = this
+        lastShownNanos = System.nanoTime()
         val covered = OwDropdownOverlay.covers(mouseX, mouseY, height)
         val mx = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseX
         val my = if (covered) OwDropdownOverlay.HIDDEN_MOUSE else mouseY
@@ -1277,7 +1279,7 @@ class WynnOverhaulInventoryScreen(
         if (ContentBookInterceptor.pendingJournalHost != null || CharacterInfo.pendingCharacterHost != null) return false
 
         try {
-            player.closeContainer()
+            ScreenHold.keepOpen { player.closeContainer() }
         } catch (t: Throwable) {
             WynnOverhaul.LOGGER.warn("ensureInventoryMenu: closeContainer threw", t)
         }
@@ -1356,6 +1358,10 @@ class WynnOverhaulInventoryScreen(
         val client = Minecraft.getInstance()
         val player = client.player ?: return
         if (player.containerMenu !== player.inventoryMenu) player.containerMenu = player.inventoryMenu
+        if (client.gui.screen() === this) {
+            WynnOverhaulInventory.pendingTransitionTab = null
+            return
+        }
         client.gui.setScreen(InventoryScreen(player))
     }
 
@@ -1372,7 +1378,7 @@ class WynnOverhaulInventoryScreen(
         ContentBookQuery.cancel()
         journalBusy = false
         try {
-            player?.closeContainer()
+            ScreenHold.keepOpen { player?.closeContainer() }
         } catch (t: Throwable) {
             WynnOverhaul.LOGGER.warn("leaveContainers: closeContainer threw", t)
         }
@@ -1469,7 +1475,7 @@ class WynnOverhaulInventoryScreen(
         pouchTiles.clear()
         pouchHoverSlot = -1
         try {
-            Minecraft.getInstance().player?.closeContainer()
+            ScreenHold.keepOpen { Minecraft.getInstance().player?.closeContainer() }
         } catch (t: Throwable) {
             WynnOverhaul.LOGGER.warn("leavePouch: closeContainer threw", t)
         }
@@ -2887,6 +2893,13 @@ class WynnOverhaulInventoryScreen(
     override fun panelContentBottom(): Int = if (invTab == InvTab.SETTINGS) settingsPanelBottom else height - MARGIN
 
     companion object {
+        private var lastShown: WynnOverhaulInventoryScreen? = null
+        private var lastShownNanos = 0L
+        private const val RECENT_NANOS = 400_000_000L
+
+        fun recent(): WynnOverhaulInventoryScreen? =
+            lastShown?.takeIf { System.nanoTime() - lastShownNanos < RECENT_NANOS }
+
         private val dockedStackCache = HashMap<Int, ItemStack>()
         fun clearDockedCache() = dockedStackCache.clear()
         const val MARGIN = 10

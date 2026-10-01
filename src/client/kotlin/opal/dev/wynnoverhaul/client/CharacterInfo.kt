@@ -30,6 +30,8 @@ object CharacterInfo {
 
     private var foreignActive = false
 
+    fun heldHost(menu: AbstractContainerMenu): WynnOverhaulInventoryScreen? = if (pendingMenu === menu) pendingCharacterHost ?: WynnOverhaulInventoryScreen.recent() else null
+
     fun tick(client: Minecraft) {
         if (pendingCharacterHost != null && System.nanoTime() - hostSetAtNanos > HOST_TIMEOUT_NANOS) pendingCharacterHost = null
         if (foreignActive && client.gui.screen() == null) foreignActive = false
