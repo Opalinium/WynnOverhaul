@@ -9,7 +9,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Totem tracker also tracks nearby mob and gathering totems from any player, labeled by owner, with timers over a minute shown as minutes and seconds. Class totems stay limited to your own.
 - A DPS meter HUD element shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.
 - A Class Buffs HUD element tracks your Mantle and Broken Mantle charges, Guardian Angels, Arrow Shield and Judrajim, plus your Crow, Hound, Snake and shaman puppet summons with their timers.
-- The /owdump command copies the tab footer, action bar, boss bars, potion effects and nearby floating labels to the clipboard, for reporting what the game shows.
+- The /owdump command copies the tab footer, action bar, boss bars, potion effects, the last opened container and nearby floating labels to the clipboard, for reporting what the game shows.
 - The Journal shows your Content Book completion progress for quests, territorial, world and secret discoveries.
 
 ### Changed

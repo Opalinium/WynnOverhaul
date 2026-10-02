@@ -4,8 +4,12 @@ import com.mojang.brigadier.arguments.DoubleArgumentType
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.client.gui.screens.inventory.InventoryScreen
+import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.FormattedText
@@ -19,8 +23,16 @@ object WynnStateDump {
     @Volatile
     private var lastActionBar: Component? = null
 
+    @Volatile
+    private var lastContainer: String? = null
+
     fun register() {
         ClientReceiveMessageEvents.GAME.register { message, overlay -> if (overlay) lastActionBar = message }
+        ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
+            if (screen is AbstractContainerScreen<*> && screen !is InventoryScreen) {
+                ScreenEvents.remove(screen).register { lastContainer = describeContainer(it as AbstractContainerScreen<*>) }
+            }
+        }
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             dispatcher.register(
                 ClientCommands.literal("owdump")
@@ -48,8 +60,26 @@ object WynnStateDump {
         )
     }
 
+    private fun describeContainer(screen: AbstractContainerScreen<*>): String = buildString {
+        val slots = screen.menu.slots
+        val containerSize = (slots.size - PLAYER_SLOTS).coerceAtLeast(0)
+        appendLine("title=${describe(screen.title)} screen=${screen.javaClass.simpleName} menuSlots=${slots.size} containerSlots=$containerSize")
+        for (i in 0 until containerSize) {
+            val stack = slots[i].item
+            if (stack.isEmpty) continue
+            val models = stack.get(DataComponents.CUSTOM_MODEL_DATA)?.floats().orEmpty()
+            val name = stack.get(DataComponents.CUSTOM_NAME)?.let(::describe) ?: stack.hoverName.string
+            appendLine("slot=$i ${BuiltInRegistries.ITEM.getKey(stack.item)} x${stack.count} cmd=$models name=$name")
+            if (models.isNotEmpty() && stack.count == 1 && BuiltInRegistries.ITEM.getKey(stack.item).path == "potion") {
+                stack.get(DataComponents.LORE)?.lines()?.forEach { appendLine("    lore: ${describe(it)}") }
+            }
+        }
+    }
+
     private fun build(client: Minecraft, radius: Double): String = buildString {
         val player = client.player
+        appendLine("== Last container screen")
+        appendLine(lastContainer ?: "(none)")
         appendLine("== Tab footer")
         appendLine(WynnStatusEffectTracker.lastFooter?.let(::describe) ?: "(none)")
         appendLine("== Action bar")
@@ -110,4 +140,5 @@ object WynnStateDump {
     }
 
     private const val DEFAULT_RADIUS = 16.0
+    private const val PLAYER_SLOTS = 36
 }
