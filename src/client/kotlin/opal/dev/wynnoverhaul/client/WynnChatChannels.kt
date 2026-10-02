@@ -152,7 +152,7 @@ object WynnChatChannels {
 
     private fun matchIncoming(message: Component) {
         if (!WynnOverhaulGate.onWynncraft) return
-        val text = CLEAN_CODES.replace(message.string, "")
+        val text = SPACING.replace(NON_ASCII.replace(CLEAN_CODES.replace(message.string, ""), " "), " ")
         for ((pattern, channelId) in OVERRIDE_PATTERNS) {
             if (!pattern.containsMatchIn(text)) continue
             override = channelId?.let { id -> Channel.entries.firstOrNull { it.id == id } }
@@ -169,13 +169,15 @@ object WynnChatChannels {
     }
 
     private val CLEAN_CODES = Regex("(?i)§[0-9A-FK-OR]")
+    private val NON_ASCII = Regex("""[^\x20-\x7E]+""")
+    private val SPACING = Regex(" {2,}")
 
     private val OVERRIDE_PATTERNS: List<Pair<Regex, String?>> = listOf(
 
-        Regex("""(?s). Type the item name or type 'cancel' to.+cancel:.""") to "all",
-        Regex("""(?s). Type the price in emeralds or formatted .+ \(e\.g '10eb', '10stx 5eb'\) or type .+ 'cancel' to cancel:.""") to "all",
+        Regex("""(?s)Type the item name or type\s*'cancel'\s*to\s*cancel:""") to "all",
+        Regex("""(?s)Type the price in emeralds or formatted\s*\(e\.g\s*'10eb',\s*'10stx\s*5eb'\)\s*or type\s*'cancel'\s*to cancel:""") to "all",
         Regex("""Party Finder: Type in chat the description you want to use for your party \(max 140 characters or cancel\):""") to "all",
-        Regex("""(?s). You moved and your chat input was canceled\.""") to null,
+        Regex("""You moved and your chat input was canceled\.""") to null,
     )
 
     private const val CHAIN_WINDOW_MS = 100L

@@ -22,6 +22,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Quest Book, quest detail and wiki screens use aligned rows and section headers.
 - Tabs and screens fade in, loading states show placeholders instead of plain text, and the Identifications tab shows which page it is reading.
 
+### Fixed
+- The emerald price prompt in the trade market is now recognized, so the chat channel no longer sends your price as a party or guild command.
+
 ## 1.3.0 - 2026-09-30
 
 ### Added
