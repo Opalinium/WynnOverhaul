@@ -4,6 +4,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.4.0 - 2026-10-01
+
 ### Added
 - The Character page has an Identifications sub-tab that lists your total identifications across every page, colored positive or negative as in game.
 - The Totem tracker also tracks nearby mob and gathering totems from any player, labeled by owner, with timers over a minute shown as minutes and seconds. Class totems stay limited to your own.
