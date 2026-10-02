@@ -14,9 +14,15 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Your weapon arm and body flinch when you take damage.
 - Attacking while walking or sprinting uses a movement variant: legs stay on the stride and brace on the strike, the torso twist is reduced, and the body drives forward into the hit, more so when sprinting.
 - Town NPC markers include the Trade Market.
+- Loot chests open in a custom screen styled like the inventory, with the chest contents as sorted tiles beside your inventory, a Take all button, and the chest tier.
+- The Item Upgrader menu opens in a custom screen with a card for each upgrade option showing its description, and the unavailable options grouped as coming later.
+- The Upgrade Powders, Remove Powders and Ascend Equipment menus open in a custom screen with the input slots, the result, the status text and the action button beside your inventory, and clicking an inventory item adds it.
+- The Item Identifier, item selling and item repair menus use the same custom screen, with the Corkian Augments and Repair Items buttons in the corner.
+- Merchant shops open in a custom screen that lists each offer with its price, level requirement and main effect, colors prices you can't afford, and has search and sorting by price, level or name. Any merchant works, whatever it stocks.
 
 ### Changed
 - Combat settings moved from the HUD and QoL tabs into their own Combat tab.
+- Custom menu settings moved from the QoL and Advanced tabs into a new Menus tab, and the bank, loot chest, Item Upgrader, identifier, selling and repair, merchant and mount menus each have their own toggle.
 - Weapon afterimages default to the lowest opacity and swing sounds to 0.45 volume.
 - Depositing an item into the bank first tops up an existing stack of the same item, on any page, before using an empty slot.
 

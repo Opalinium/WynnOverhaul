@@ -18,7 +18,7 @@ object MountSettingsInterceptor {
             pendingMenu = screen.menu
             pendingScreen = screen
             pendingTicks = 0
-            held = if (screen.title.string == MOUNT_TITLE_MARKER) {
+            held = if (WynnOverhaulConfig.current.customMountMenuEnabled && screen.title.string == MOUNT_TITLE_MARKER) {
                 WynnOverhaulMountSettingsScreen(screen.menu).also { it.init(width, height) }
             } else {
                 null

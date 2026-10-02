@@ -32,26 +32,8 @@ import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.TILE_B
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.TILE_STEP
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.TILE_TINT_ALPHA
 
-class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(Component.literal("Bank")) {
-    private class Rect(val x: Int, val y: Int, val w: Int, val h: Int) {
-        fun contains(px: Int, py: Int): Boolean = px >= x && px < x + w && py >= y && py < y + h
-    }
-
-    private class Tile(val rect: Rect, val slot: Int)
-
-    private class DockTile(val rect: Rect, val stack: ItemStack)
-
+class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScreen(menu, "Bank", INVENTORY_START) {
     private class Entry(val page: Int, val slot: Int, val stack: ItemStack)
-
-    private class Control(
-        val rect: Rect,
-        val label: String,
-        val enabled: Boolean,
-        val accent: Boolean,
-        val tint: Int,
-        val tipSlot: Int,
-        val action: () -> Unit,
-    )
 
     private class Frame(
         val invX: Int,
@@ -85,17 +67,12 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
     private var recordedSignature = 0
     private var lastHash = 0
     private var stableTicks = 0
-    private var dock: List<DockTile> = emptyList()
-    private var dockLabels: List<Triple<String, Int, Int>> = emptyList()
-    private var doll: Rect? = null
     private var frame: Frame? = null
     private var entries: List<Entry> = emptyList()
     private var entriesKey = 0
     private var entriesBuilt = false
     private var entryOrder: List<Int> = emptyList()
     private var bankTiles: List<Pair<Rect, Int>> = emptyList()
-
-    private fun stackAt(slot: Int): ItemStack = menu.slots.getOrNull(slot)?.item ?: ItemStack.EMPTY
 
     private fun pageNumber(slot: Int): Int? {
         val stack = stackAt(slot)
@@ -129,50 +106,12 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         return TextClean.clean(active).removePrefix("-").trim().removeSuffix("Storage").trim().ifEmpty { "Character" }
     }
 
-    private fun plainName(stack: ItemStack): String = TextClean.clean(stack.hoverName.string)
-
-    private fun matches(stack: ItemStack, query: String): Boolean {
-        if (query.isEmpty()) return true
-        if (stack.isEmpty) return false
-        if (plainName(stack).lowercase().contains(query)) return true
-        return WynnItemRarity.loreLines(stack).any { it.lowercase().contains(query) }
-    }
-
-    private fun inventoryHidden(slot: Int): Boolean {
-        val offset = slot - INVENTORY_START
-        if (offset in 0 until ACCESSORY_COUNT) return true
-        if (offset == EMERALD_POUCH_OFFSET) return true
-        val stack = stackAt(slot)
-        return HotbarHudElement.isHidden(stack) && !WynnPouches.isEmeraldPouch(stack)
-    }
-
-    private fun depositable(slot: Int): Boolean = slot >= INVENTORY_START + ACCESSORY_COUNT && slot != INVENTORY_START + EMERALD_POUCH_OFFSET
-
-    private fun availableWidth(): Int = width - MARGIN * 2
-
-    private fun dockW(): Int = TILE + GAP + PREVIEW_W + GAP + TILE
-
-    private fun showDock(): Boolean = availableWidth() >= dockW() + GAP + invPanelW() + GAP + bankPanelW()
-
-    private fun invPanelW(): Int = INV_COLS * TILE_STEP + 2 * MARGIN
-
-    private fun bankPanelW(): Int = BANK_COLS * TILE_STEP + 2 * MARGIN
-
-    private fun startX(): Int {
-        val total = (if (showDock()) dockW() + GAP else 0) + invPanelW() + GAP + bankPanelW()
-        return ((width - total) / 2).coerceAtLeast(MARGIN)
-    }
-
-    private fun dockX(): Int = startX()
-
-    private fun invPanelX(): Int = startX() + (if (showDock()) dockW() + GAP else 0)
-
-    private fun bankPanelX(): Int = invPanelX() + invPanelW() + GAP
+    override fun sidePanelW(): Int = BANK_COLS * TILE_STEP + 2 * MARGIN
 
     override fun init() {
         OwDropdownOverlay.close()
-        val x0 = bankPanelX() + MARGIN
-        val inner = bankPanelW() - MARGIN * 2
+        val x0 = sidePanelX() + MARGIN
+        val inner = sidePanelW() - MARGIN * 2
         storageDropdown = OwDropdown(
             x0, 0, STORAGE_DROPDOWN_W, SEARCH_H,
             "",
@@ -395,17 +334,16 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         val storage = storageName()
         refreshEntries(storage, query)
         val invX = invPanelX()
-        val bankX = bankPanelX()
+        val bankX = sidePanelX()
         val invW = invPanelW()
-        val bankW = bankPanelW()
+        val bankW = sidePanelW()
         val invGridX = invX + MARGIN
         val bankGridX = bankX + MARGIN
         val invCols = INV_COLS
         val bankCols = BANK_COLS
 
-        val invOrder = (INVENTORY_START until INVENTORY_START + 27).filter { !inventoryHidden(it) && !stackAt(it).isEmpty }
-        val invRows = ((invOrder.size + invCols - 1) / invCols).coerceAtLeast(1)
-        val invH = CAPTION_H + TILE_STEP + SECTION_GAP + CAPTION_H + invRows * TILE_STEP
+        val invOrder = inventoryOrder()
+        val invH = inventoryNaturalH(invOrder)
         val bankRows = ((entryOrder.size + bankCols - 1) / bankCols).coerceAtLeast(1)
         val bankContentH = bankRows * TILE_STEP
 
@@ -422,20 +360,7 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         val maxScroll = (bankContentH - (bankBottom - bankTop)).coerceAtLeast(0)
         bankScroll = bankScroll.coerceIn(0, maxScroll)
 
-        val hotbarY = pt + LEFT_TOP + CAPTION_H
-        val hotbar = ArrayList<Tile>()
-        for (i in 0 until INV_COLS) {
-            val slot = INVENTORY_START + 27 + i
-            val stack = stackAt(slot)
-            val show = !HotbarHudElement.isHidden(stack) || WynnPouches.isEmeraldPouch(stack)
-            val visible = show
-            hotbar.add(Tile(Rect(invGridX + i * TILE_STEP, hotbarY, TILE, TILE), if (visible) slot else -1))
-        }
-        val invGridTop = hotbarY + TILE_STEP + SECTION_GAP + CAPTION_H
-        val inventory = ArrayList<Tile>()
-        for ((i, slot) in invOrder.withIndex()) {
-            inventory.add(Tile(Rect(invGridX + (i % invCols) * TILE_STEP, invGridTop + (i / invCols) * TILE_STEP, TILE, TILE), slot))
-        }
+        val layout = layoutInventory(pt + LEFT_TOP, invGridX, invOrder)
 
         val controls = ArrayList<Control>()
         val quickReady = !stackAt(QUICK_SLOT).isEmpty
@@ -490,18 +415,13 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
             },
         )
 
-        return Frame(invX, invW, bankX, bankW, pt, panelH, invPanelH, invGridX, invCols, bankGridX, bankCols, bankTop, bankBottom, bankContentH, hotbarY, hotbar, inventory, controls)
+        return Frame(invX, invW, bankX, bankW, pt, panelH, invPanelH, invGridX, invCols, bankGridX, bankCols, bankTop, bankBottom, bankContentH, layout.hotbarY, layout.hotbar, layout.inventory, controls)
     }
 
     private fun switchStorage() {
         BankSession.cancel()
         recordedSignature = 0
         send(STORAGE_SLOT, 0, ContainerInput.PICKUP)
-    }
-
-    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        extractBlurredBackground(graphics)
-        graphics.fill(0, 0, width, height, OwTheme.BG_DIM)
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
@@ -559,17 +479,11 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         graphics.disableScissor()
         drawScrollbar(graphics, f)
 
-        graphics.text(font, "Hotbar", f.invGridX, f.hotbarY - CAPTION_H + 2, OwTheme.TEXT_DIM)
-        for (tile in f.hotbar) if (tile.slot >= 0) drawTile(graphics, tile.rect, stackAt(tile.slot), tile === hoverHotbar)
-        graphics.text(font, "Inventory", f.invGridX, f.hotbarY + TILE_STEP + SECTION_GAP + 2, OwTheme.TEXT_DIM)
-        for (tile in f.inventory) drawLoose(graphics, tile.rect, stackAt(tile.slot), tile === hoverInv)
+        drawInventory(graphics, InventoryLayout(f.hotbarY, f.hotbar, f.inventory), f.invGridX, hoverHotbar, hoverInv)
         drawFooters(graphics, f, hoverEntry, storage)
-        val hoverDock = drawDock(graphics, f, mouseX, mouseY)
+        val hoverDock = drawDock(graphics, mouseX, mouseY)
 
-        if (!menu.carried.isEmpty && !BankSession.navigating()) {
-            graphics.item(menu.carried, mouseX - 8, mouseY - 8)
-            graphics.itemDecorations(font, menu.carried, mouseX - 8, mouseY - 8)
-        }
+        if (!BankSession.navigating()) drawCarried(graphics, mouseX, mouseY)
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick)
 
@@ -587,44 +501,6 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         }
     }
 
-    private fun drawDock(graphics: GuiGraphicsExtractor, f: Frame, mouseX: Int, mouseY: Int): ItemStack? {
-        if (!showDock()) return null
-        val player = Minecraft.getInstance().player ?: return null
-        val dockX = dockX()
-        val dollX = dockX + TILE + GAP
-        val dollTop = ((height - PREVIEW_H) / 2).coerceAtLeast(MARGIN)
-        val armorX = dollX - GAP - TILE
-        val armorTop = dollTop + (PREVIEW_H - 4 * TILE_STEP) / 2
-        val tiles = ArrayList<DockTile>()
-        for (i in 0 until 4) {
-            tiles.add(DockTile(Rect(armorX, armorTop + i * TILE_STEP, TILE, TILE), player.inventoryMenu.slots.getOrNull(ARMOR_FIRST_SLOT + i)?.item ?: ItemStack.EMPTY))
-        }
-        val rightX = dollX + PREVIEW_W + GAP
-        tiles.add(DockTile(Rect(rightX, dollTop, TILE, TILE), player.inventoryMenu.slots.getOrNull(OFFHAND_MENU_SLOT)?.item ?: ItemStack.EMPTY))
-        val jx = maxOf(dockX, armorX - TILE_STEP)
-        val jy = armorTop + 4 * TILE_STEP + 12
-        for (i in 0 until ACCESSORY_COUNT) {
-            tiles.add(DockTile(Rect(jx + (i % 2) * TILE_STEP, jy + CAPTION_H + (i / 2) * TILE_STEP, TILE, TILE), stackAt(INVENTORY_START + i)))
-        }
-        graphics.text(font, "Accessories", jx, jy + 2, OwTheme.TEXT_DIM)
-        val level = WynnLevelTracker.level
-        if (level != null) {
-            val text = "Lv $level"
-            graphics.text(font, text, dollX + (PREVIEW_W - font.width(text)) / 2, maxOf(2, dollTop - 14), OwTheme.TEXT_DIM)
-        }
-        InventoryScreen.extractEntityInInventoryFollowsMouse(
-            graphics, dollX, dollTop, dollX + PREVIEW_W, dollTop + PREVIEW_H, PREVIEW_ENTITY_SIZE, 0.0625f,
-            mouseX.toFloat(), mouseY.toFloat(), player,
-        )
-        var hovered: ItemStack? = null
-        for (tile in tiles) {
-            val over = tile.rect.contains(mouseX, mouseY)
-            drawTile(graphics, tile.rect, tile.stack, over)
-            if (over && !tile.stack.isEmpty) hovered = tile.stack
-        }
-        return hovered
-    }
-
     private fun drawScrollbar(graphics: GuiGraphicsExtractor, f: Frame) {
         val viewH = f.bankBottom - f.bankTop
         if (f.bankContentH <= viewH) return
@@ -636,59 +512,9 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         graphics.fill(x, thumbY, x + 2, thumbY + thumbH, OwTheme.HAIRLINE)
     }
 
-    private fun panel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
-        graphics.fill(x, y, x + w, y + h, GLASS_BG)
-        graphics.fill(x, y, x + w, y + 1, OwTheme.HAIRLINE)
-        graphics.fill(x, y + h - 1, x + w, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x, y, x + 1, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x + w - 1, y, x + w, y + h, OwTheme.HAIRLINE)
-    }
-
-    private fun drawTile(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean) {
-        val rarityRgb = if (stack.isEmpty) null else WynnItemRarity.of(stack)?.colorRgb
-        graphics.fill(r.x, r.y, r.x + TILE, r.y + TILE, rarityRgb?.let { TILE_TINT_ALPHA or it } ?: TILE_BG_EMPTY)
-        if (!stack.isEmpty) {
-            graphics.item(stack, r.x + 2, r.y + 2)
-            graphics.itemDecorations(font, stack, r.x + 2, r.y + 2)
-        }
-        val border = if (stack.isEmpty) OwTheme.TILE_BORDER else (rarityRgb?.let { 0xFF000000.toInt() or it } ?: OwTheme.TILE_BORDER)
-        graphics.outline(r.x, r.y, TILE, TILE, border)
-        if (hovered) graphics.outline(r.x - 1, r.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
-    }
-
-    private fun drawLoose(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean) {
-        if (stack.isEmpty) return
-        graphics.item(stack, r.x + 2, r.y + 2)
-        graphics.itemDecorations(font, stack, r.x + 2, r.y + 2)
-        if (hovered) graphics.outline(r.x - 1, r.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
-    }
-
-    private fun drawControl(graphics: GuiGraphicsExtractor, c: Control, hovered: Boolean) {
-        val r = c.rect
-        val active = hovered && c.enabled
-        graphics.fill(r.x, r.y, r.x + r.w, r.y + r.h, if (c.accent && c.enabled) OwTheme.ACCENT_DIM else if (active) OwTheme.TILE_HOVER else TILE_BG)
-        val border = when {
-            !c.enabled -> OwTheme.TILE_BORDER
-            active -> OwTheme.BORDER_BRIGHT
-            c.accent -> OwTheme.ACCENT
-            else -> OwTheme.HAIRLINE
-        }
-        graphics.outline(r.x, r.y, r.w, r.h, border)
-        val color = if (c.enabled) c.tint else OwTheme.TEXT_FAINT
-        graphics.centeredText(font, truncateToWidth(font, c.label, r.w - 4), r.x + r.w / 2, r.y + (r.h - 8) / 2, color)
-    }
-
     private fun drawFooters(graphics: GuiGraphicsExtractor, f: Frame, hover: Entry?, storage: String) {
-        val fy = f.pt + f.panelH - 4 - FOOTER_H + 3
-        val free = (INVENTORY_START + ACCESSORY_COUNT until INVENTORY_START + 36).count { depositable(it) && stackAt(it).isEmpty }
-        val freeText = if (free > 0) "$free free" else "Full"
-        val emeralds = "%,d emeralds".format(WynnPouches.totalEmeralds((INVENTORY_START until menu.slots.size).map { stackAt(it) }))
-        val sep = " · "
-        val invX = f.invX + f.invW / 2 - (font.width(freeText) + font.width(sep) + font.width(emeralds)) / 2
-        val invFy = f.pt + f.invPanelH - 4 - FOOTER_H + 3
-        graphics.text(font, freeText, invX, invFy, if (free > 0) OwTheme.TEXT_DIM else OwTheme.BAD)
-        graphics.text(font, sep, invX + font.width(freeText), invFy, OwTheme.TEXT_DIM)
-        graphics.text(font, emeralds, invX + font.width(freeText) + font.width(sep), invFy, OwTheme.GOOD)
+        val fy = footerY(f.pt, f.panelH)
+        drawInventoryFooter(graphics, f.invX, f.invW, footerY(f.pt, f.invPanelH))
 
         val cx = f.bankX + f.bankW / 2
         val warning = warnText
@@ -748,7 +574,7 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
             when {
                 inBankPanel -> depositCursor()
                 inInvPanel -> {
-                    val slot = (INVENTORY_START + ACCESSORY_COUNT until INVENTORY_START + 36).firstOrNull { depositable(it) && stackAt(it).isEmpty }
+                    val slot = firstFreeInventorySlot()
                     if (slot != null) send(slot, 0, ContainerInput.PICKUP) else warn("Inventory is full")
                 }
                 else -> send(OUTSIDE_SLOT, button, ContainerInput.PICKUP)
@@ -828,35 +654,13 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
             OwDropdownOverlay.close()
             return true
         }
-        if (!isTextInputFocused() && Minecraft.getInstance().options.keyInventory.matches(event)) {
-            onClose()
-            return true
-        }
         return super.keyPressed(event)
-    }
-
-    private fun send(slot: Int, button: Int, kind: ContainerInput) {
-        val client = Minecraft.getInstance()
-        val player = client.player ?: return
-        if (player.containerMenu !== menu) return
-        try {
-            client.gameMode?.handleContainerInput(menu.containerId, slot, button, kind, player)
-        } catch (t: Throwable) {
-            WynnOverhaul.LOGGER.error("WynnOverhaul bank input failed", t)
-        }
     }
 
     override fun onClose() {
         BankSession.cancel()
-        try {
-            Minecraft.getInstance().player?.closeContainer()
-        } catch (t: Throwable) {
-            WynnOverhaul.LOGGER.warn("WynnOverhaul bank close threw", t)
-        }
-        Minecraft.getInstance().gui.setScreen(null)
+        super.onClose()
     }
-
-    override fun isPauseScreen(): Boolean = false
 
     companion object {
         private const val KEY_ESCAPE = 256
@@ -866,13 +670,7 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         private const val PREV_SLOT = 51
         private const val NEXT_SLOT = 52
         private const val INVENTORY_START = 54
-        private const val ACCESSORY_COUNT = 4
-        private const val ARMOR_FIRST_SLOT = 5
-        private const val OFFHAND_MENU_SLOT = 45
-        private const val EMERALD_POUCH_OFFSET = 5
-        private const val ACTION_H = 16
         private const val BANK_COLS = 9
-        private const val INV_COLS = 7
         private const val STABLE_TICKS_REQUIRED = 2
         private const val RESCAN_W = 44
         private const val TOP_ROW_Y = 7

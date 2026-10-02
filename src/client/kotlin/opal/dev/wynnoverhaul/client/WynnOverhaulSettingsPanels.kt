@@ -21,6 +21,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
     enum class Group(val label: String) {
         HUD("HUD"),
         COMBAT("Combat"),
+        MENUS("Menus"),
         NOTIFICATIONS("Notifications"),
         TRACKER("Tracker"),
         ANIMATIONS("Animations"),
@@ -107,6 +108,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             Group.CAMERA -> buildCameraTab(contentLeft, contentW, cy)
             Group.HUD -> buildHudTab(contentLeft, contentW, cy)
             Group.COMBAT -> buildCombatTab(contentLeft, contentW, cy)
+            Group.MENUS -> buildMenusTab(contentLeft, contentW, cy)
             Group.LOOTRUN -> buildLootrunTab(contentLeft, contentW, cy)
             Group.DISCORD -> buildDiscordTab(contentLeft, contentW, cy)
             Group.OVERRIDES -> buildOverridesTab(contentLeft, contentW, cy)
@@ -703,6 +705,47 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         }
     }
 
+    private fun buildMenusTab(left: Int, w: Int, top: Int) {
+        panel(left, w, top) {
+            header("Inventory")
+            checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory, including the character page and emerald pouch.", config.customInventoryEnabled) {
+                config.customInventoryEnabled = it
+            }
+            checkbox("Custom journal", "Right-clicking the Content Book item opens WynnOverhaul's own journal instead of Wynncraft's menu.", config.contentBookOverrideEnabled) {
+                config.contentBookOverrideEnabled = it
+            }
+            checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks).", config.shiftDragQuickMove) {
+                config.shiftDragQuickMove = it
+            }
+
+            header("Storage")
+            checkbox("Custom bank", "Opens the character and account bank as one scrollable list of every page with search, sorting and quick deposit.", config.customBankEnabled) {
+                config.customBankEnabled = it
+            }
+            checkbox("Custom loot chest", "Opens loot chests as sorted item tiles beside your inventory with a Take all button.", config.customLootChestEnabled) {
+                config.customLootChestEnabled = it
+            }
+
+            header("Crafting and items")
+            checkbox("Custom Item Upgrader", "Opens the Item Upgrader menu and its powder upgrade, powder removal and ascension screens in the WynnOverhaul layout.", config.customUpgraderEnabled) {
+                config.customUpgraderEnabled = it
+            }
+            checkbox("Custom identifier, selling and repair", "Opens the Item Identifier, item selling and item repair menus in the WynnOverhaul layout.", config.customStationEnabled) {
+                config.customStationEnabled = it
+            }
+
+            header("Shops")
+            checkbox("Custom merchants", "Opens merchant shops as a searchable, sortable list showing each offer's price, level requirement and effect.", config.customMerchantEnabled) {
+                config.customMerchantEnabled = it
+            }
+
+            header("Mounts")
+            checkbox("Custom mount menu", "Opens the mount settings menu in the WynnOverhaul layout.", config.customMountMenuEnabled) {
+                config.customMountMenuEnabled = it
+            }
+        }
+    }
+
     private fun buildQolTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             header("General")
@@ -787,14 +830,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Shows a full feeding breakdown panel while the Mount Feeder menu is open and a mount is hovered.",
                 config.mountFeederHudEnabled,
             ) { config.mountFeederHudEnabled = it }
-
-            header("Inventory")
-            checkbox("Custom inventory screen", "New World-styled categorized inventory replacing the vanilla survival inventory.", config.customInventoryEnabled) {
-                config.customInventoryEnabled = it
-            }
-            checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks).", config.shiftDragQuickMove) {
-                config.shiftDragQuickMove = it
-            }
 
             header("Tools")
             rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal("Quest Reference (wiki)")) {
@@ -1229,12 +1264,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
     private fun buildOverridesTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             rows += OwSectionHeader(left, 0, w, "Wynncraft Overrides") to 18
-            val contentBookCheckbox = OwCheckbox(left, 0, w, Component.literal("Override Wynncraft's Content Book"), config.contentBookOverrideEnabled) {
-                config.contentBookOverrideEnabled = it
-            }
-            contentBookCheckbox.setTooltip(Tooltip.create(Component.literal("Right-clicking the Content Book item opens WynnOverhaul's own menu instead of Wynncraft's.")))
-            rows += contentBookCheckbox to OwTheme.ROW_H
-
             val waypointCheckbox = OwCheckbox(left, 0, w, Component.literal("Override quest waypoints"), config.questWaypointOverrideEnabled) {
                 config.questWaypointOverrideEnabled = it
             }

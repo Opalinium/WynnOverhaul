@@ -165,6 +165,12 @@ data class WynnOverhaulConfig(
     var hudLayoutPreset: String = "DEFAULT",
     var hudLayoutSlots: MutableMap<String, MutableMap<String, HudElementLayout>> = mutableMapOf(),
     var customInventoryEnabled: Boolean = true,
+    var customBankEnabled: Boolean = true,
+    var customLootChestEnabled: Boolean = true,
+    var customUpgraderEnabled: Boolean = true,
+    var customStationEnabled: Boolean = true,
+    var customMerchantEnabled: Boolean = true,
+    var customMountMenuEnabled: Boolean = true,
 
     var customHudEnabled: Boolean = false,
 
