@@ -34,6 +34,7 @@ class WynnQolClient : ClientModInitializer {
         WynnOverhaulInventory.register()
         CharacterInfo.register()
         MountSettingsInterceptor.register()
+        BankInterceptor.register()
         WynnQuestCompletionTracker.register()
         WynnLevelUpToastOverride.register()
         WynnLocationToasts.register()
@@ -189,6 +190,7 @@ class WynnQolClient : ClientModInitializer {
         ActiveWeapon.tick(client)
         CharacterInfo.tick(client)
         MountSettingsInterceptor.tick(client)
+        BankInterceptor.tick(client)
         (client.gui.screen() as? WynnOverhaulInventoryScreen)?.pollPendingFire()
         ContentBookCache.attach(client)
         WynnScoreboardTracker.current?.let { tracked ->

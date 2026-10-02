@@ -24,6 +24,7 @@ object ScreenHold {
     private fun hostFor(screen: AbstractContainerScreen<*>): Screen? {
         val menu = screen.menu
         return MountSettingsInterceptor.heldScreen(menu)
+            ?: BankInterceptor.heldScreen(menu)
             ?: PouchInterceptor.heldHost(menu)
             ?: ContentBookInterceptor.heldHost(menu)
             ?: CharacterInfo.heldHost(menu)

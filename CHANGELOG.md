@@ -9,6 +9,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Totem tracker also tracks nearby mob and gathering totems from any player, labeled by owner, with timers over a minute shown as minutes and seconds. Class totems stay limited to your own.
 - A DPS meter HUD element shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.
 - A Class Buffs HUD element tracks your Mantle and Broken Mantle charges, Guardian Angels, Arrow Shield and Judrajim, plus your Crow, Hound, Snake and shaman puppet summons with their timers.
+- The Character Bank opens in a custom screen with your inventory and paper doll on the left and the bank in a side panel. It scans every page when opened and shows them as one scrollable list with its own search and sort. Clicking a bank item takes it out, clicking an inventory item deposits it into the first open slot on any page, and a storage dropdown switches between Character and Account, with Stash, Dump, a rescan and a Buy page button.
 - The /owdump command copies the tab footer, action bar, boss bars, potion effects, the last opened container and nearby floating labels to the clipboard, for reporting what the game shows.
 - The Journal shows your Content Book completion progress for quests, territorial, world and secret discoveries.
 
