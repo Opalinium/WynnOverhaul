@@ -49,6 +49,7 @@
     "WeaponAnimationSwingMixin",
     "WeaponAnimationStateMixin",
     "SoulsCameraMixin",
+    "DamageLabelHideMixin",
     "SoulsCameraMouseMixin",
     "SoulsCameraInputMixin",
     "SoulsCameraActionMixin",

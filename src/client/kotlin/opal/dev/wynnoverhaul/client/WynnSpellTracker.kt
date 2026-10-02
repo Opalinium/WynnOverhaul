@@ -92,6 +92,7 @@ object WynnSpellTracker {
             if (!repeat) {
                 lastCast = Cast(cast.name, cast.costs, now)
                 WeaponAnimations.onSpellCast(cast.name)
+                WynnHitFeedback.noteSpellCast()
             }
             castDisplayed = true
             displayedName = cast.name

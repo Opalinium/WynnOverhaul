@@ -2,6 +2,7 @@ package opal.dev.wynnoverhaul.client
 
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
@@ -47,6 +48,13 @@ class WynnQolClient : ClientModInitializer {
         QuickCast.init()
         PouchInterceptor.init()
         registerHudLayouts()
+        HudElementRegistry.addFirst(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "damage_numbers"),
+            HudElement { graphics, _ ->
+                ImpactSparks.draw(graphics)
+                DamageNumbers.draw(graphics)
+            },
+        )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_feeder"),
             MountFeederHudElement(),

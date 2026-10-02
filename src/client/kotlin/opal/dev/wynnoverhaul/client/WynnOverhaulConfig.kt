@@ -26,11 +26,14 @@ data class WynnOverhaulConfig(
     var weaponSprintEnabled: Boolean = true,
     var weaponWalkEnabled: Boolean = true,
     var weaponAnimationCombo: Boolean = true,
+    var weaponAnimationLunge: Boolean = true,
+    var weaponAnimationAnticipation: Boolean = true,
+    var weaponAnimationFlinch: Boolean = true,
     var weaponAnimationSpells: Boolean = true,
     var weaponAnimationSfx: Boolean = true,
-    var weaponAnimationSfxVolume: Double = 0.6,
+    var weaponAnimationSfxVolume: Double = 0.45,
     var weaponAnimationTrail: Boolean = true,
-    var weaponAnimationTrailIntensity: Double = 1.0,
+    var weaponAnimationTrailIntensity: Double = 0.2,
     var weaponAnimationPreview: Boolean = false,
     var weaponAnimationPreviewT: Double = 0.5,
     var weaponAnimationEntries: MutableList<WeaponAnimationEntry>? = null,
@@ -89,6 +92,16 @@ data class WynnOverhaulConfig(
     var dpsHudEnabled: Boolean = true,
     var classBuffHudEnabled: Boolean = true,
     var dpsWindowSeconds: Int = 5,
+    var hitFeedbackEnabled: Boolean = true,
+    var hitFeedbackIntensity: Int = 60,
+    var hitFeedbackStop: Boolean = true,
+    var hitFeedbackSparks: Boolean = true,
+    var hitFeedbackSound: Boolean = true,
+    var hitFeedbackNumbers: Boolean = true,
+    var hitFeedbackArcs: Boolean = true,
+    var damageNumberStyle: String = "POP",
+    var damageNumberCompact: Boolean = true,
+    var damageNumberScale: Int = 100,
     var questLogHudEnabled: Boolean = true,
     var ultimateHudEnabled: Boolean = true,
     var powderSpecialHudEnabled: Boolean = true,
@@ -213,6 +226,8 @@ data class WynnOverhaulConfig(
     fun sanitize(): WynnOverhaulConfig {
         maxCps = maxCps.coerceIn(1.0, 12.0)
         dpsWindowSeconds = dpsWindowSeconds.coerceIn(1, 30)
+        hitFeedbackIntensity = hitFeedbackIntensity.coerceIn(0, 200)
+        damageNumberScale = damageNumberScale.coerceIn(50, 200)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)
         trackerRange = trackerRange.coerceIn(8.0, 128.0)
         trackerDiscoveredChestRange = trackerDiscoveredChestRange.coerceIn(64.0, 4000.0)

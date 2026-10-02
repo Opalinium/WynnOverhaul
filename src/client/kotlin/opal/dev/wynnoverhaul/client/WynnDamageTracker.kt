@@ -5,7 +5,9 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.FormattedText
 import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.Display
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import java.util.Optional
 
 object WynnDamageTracker {
@@ -35,6 +37,7 @@ object WynnDamageTracker {
 
     private val hits = ArrayDeque<Hit>()
     private val lastLabel = HashMap<Int, Component>()
+    private val labelKinds = HashMap<Component, Boolean>()
     private val lastValues = HashMap<Int, Map<Element, Long>>()
     private val fightElements = newElementMap()
     private var fightStart = 0L
@@ -43,8 +46,9 @@ object WynnDamageTracker {
     private var peak = 0.0
 
     fun tick(client: Minecraft) {
-        if (!WynnOverhaulConfig.current.dpsHudEnabled) {
-            if (stats != null) clear()
+        val config = WynnOverhaulConfig.current
+        if (!config.dpsHudEnabled && !config.hitFeedbackEnabled && !config.hitFeedbackNumbers) {
+            if (stats != null || lastLabel.isNotEmpty()) clear()
             return
         }
         val player = client.player ?: return
@@ -72,11 +76,19 @@ object WynnDamageTracker {
                 val gained = if (before != null && value >= before) value - before else value
                 if (gained > 0) delta[element] = gained
             }
-            if (delta.isNotEmpty()) record(now, delta)
+            if (delta.isNotEmpty()) record(now, delta, entity.position())
         }
         lastLabel.keys.retainAll(seen)
         lastValues.keys.retainAll(seen)
-        publish(now)
+        if (config.dpsHudEnabled) publish(now) else if (stats != null) stats = null
+    }
+
+    @JvmStatic
+    fun hidesLabel(entity: Entity): Boolean {
+        if (entity !is Display.TextDisplay) return false
+        if (!WynnOverhaulConfig.current.hitFeedbackNumbers || !WynnOverhaulGate.inGame) return false
+        if (labelKinds.size > LABEL_CACHE_LIMIT) labelKinds.clear()
+        return labelKinds.getOrPut(entity.text) { parse(entity.text) != null }
     }
 
     fun clear() {
@@ -91,7 +103,7 @@ object WynnDamageTracker {
         stats = null
     }
 
-    private fun record(now: Long, delta: Map<Element, Long>) {
+    private fun record(now: Long, delta: Map<Element, Long>, at: Vec3) {
         if (lastHitAt == 0L || now - lastHitAt > FIGHT_GAP_MILLIS) {
             fightStart = now
             fightTotal = 0L
@@ -100,9 +112,12 @@ object WynnDamageTracker {
         }
         lastHitAt = now
         val sum = delta.values.sum()
+        val weight = WynnHitFeedback.observe(sum)
         fightTotal += sum
         for ((element, value) in delta) fightElements.merge(element, value, Long::plus)
         hits.addLast(Hit(now, sum))
+        DamageNumbers.spawn(at, delta, weight)
+        WynnHitFeedback.onHit(at, delta, weight)
     }
 
     private fun publish(now: Long) {
@@ -166,6 +181,7 @@ object WynnDamageTracker {
     private val NUMBER = Regex("""(\d+(?:\.\d+)?)([kKmMbB]?)""")
     private const val SEPARATOR = "󐀊"
     private const val SCAN_RADIUS = 64.0
+    private const val LABEL_CACHE_LIMIT = 512
     private const val FIGHT_GAP_MILLIS = 6_000L
     private const val LINGER_MILLIS = 10_000L
     private const val RETENTION_MILLIS = 60_000L

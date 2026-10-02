@@ -20,6 +20,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
 
     enum class Group(val label: String) {
         HUD("HUD"),
+        COMBAT("Combat"),
         NOTIFICATIONS("Notifications"),
         TRACKER("Tracker"),
         ANIMATIONS("Animations"),
@@ -105,6 +106,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             Group.ANIMATIONS -> buildAnimationsTab(contentLeft, contentW, cy)
             Group.CAMERA -> buildCameraTab(contentLeft, contentW, cy)
             Group.HUD -> buildHudTab(contentLeft, contentW, cy)
+            Group.COMBAT -> buildCombatTab(contentLeft, contentW, cy)
             Group.LOOTRUN -> buildLootrunTab(contentLeft, contentW, cy)
             Group.DISCORD -> buildDiscordTab(contentLeft, contentW, cy)
             Group.OVERRIDES -> buildOverridesTab(contentLeft, contentW, cy)
@@ -655,6 +657,21 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.weaponAnimationCombo,
             ) { config.weaponAnimationCombo = it }
             checkbox(
+                "Attack lunge",
+                "Spear and dagger attacks step your body forward into the swing and ease back out of it.",
+                config.weaponAnimationLunge,
+            ) { config.weaponAnimationLunge = it }
+            checkbox(
+                "Anticipation and follow-through",
+                "Swings linger in the wind-up before accelerating into the strike and ease out after it. The effect is strongest on slow weapons and fades out as attack speed rises.",
+                config.weaponAnimationAnticipation,
+            ) { config.weaponAnimationAnticipation = it }
+            checkbox(
+                "Hit reaction",
+                "Your weapon arm and body flinch when you take damage.",
+                config.weaponAnimationFlinch,
+            ) { config.weaponAnimationFlinch = it }
+            checkbox(
                 "Spell animations",
                 "Plays a unique animation for each class spell (Bash, Heal, Arrow Storm, Spin Attack, Totem and the rest, including archetype variants) the moment Wynncraft announces the cast. Spells without a dedicated animation use a generic cast. Needs weapon attack animations on.",
                 config.weaponAnimationSpells,
@@ -688,13 +705,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
 
     private fun buildQolTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
-            header("Combat")
-            checkbox(
-                "Hold to attack",
-                "Keeps swinging while attack is held, paced to your weapon's attack speed. The 'Toggle Hold-to-Attack' keybind flips this too.",
-                config.enabled,
-            ) { config.enabled = it }
-
+            header("General")
             checkbox(
                 "Prevent hotbar overscroll",
                 "Scrolling the hotbar past slot 9 or slot 1 stops there instead of looping around to the other end.",
@@ -705,11 +716,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Restores your last camera mode (first person, third person back or front) when you join a world or server.",
                 config.rememberCameraMode,
             ) { config.rememberCameraMode = it }
-            checkbox(
-                "Quick spell casting",
-                "Adds bindable keys (Controls) that cast each of the four spell slots by replaying its click combo. Keys are unbound by default.",
-                config.quickCastEnabled,
-            ) { config.quickCastEnabled = it }
 
             header("Town")
             checkbox(
@@ -921,6 +927,114 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         }
     }
 
+    private fun buildCombatTab(left: Int, w: Int, top: Int) {
+        panel(left, w, top) {
+            header("Attacking")
+            checkbox(
+                "Hold to attack",
+                "Keeps swinging while attack is held, paced to your weapon's attack speed. The 'Toggle Hold-to-Attack' keybind flips this too.",
+                config.enabled,
+            ) { config.enabled = it }
+            checkbox(
+                "Quick spell casting",
+                "Adds bindable keys (Controls) that cast each of the four spell slots by replaying its click combo. Keys are unbound by default.",
+                config.quickCastEnabled,
+            ) { config.quickCastEnabled = it }
+
+            header("Ability Cooldowns")
+            checkbox(
+                "Show ability cooldown HUD",
+                "Shows active class/archetype ability cooldowns (read from the tab-list \"Status Effects\" listing) as a name + timer + bar per ability.",
+                config.abilityCooldownHudEnabled,
+            ) { config.abilityCooldownHudEnabled = it }
+            checkbox(
+                "Show totem timers",
+                "Shows your own active shaman totems and any nearby mob and gathering totems with remaining time, read from their floating timer labels.",
+                config.totemHudEnabled,
+            ) { config.totemHudEnabled = it }
+
+            checkbox(
+                "Show class buffs",
+                "Shows your active class buffs: Mantle and Guardian Angels style shields with their charges, Arrow Shield, Judrajim, and your Crow, Hound, Snake and shaman puppet summons with their timers.",
+                config.classBuffHudEnabled,
+            ) { config.classBuffHudEnabled = it }
+
+            header("Damage")
+            checkbox(
+                "Show DPS meter",
+                "Shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.",
+                config.dpsHudEnabled,
+            ) { config.dpsHudEnabled = it }
+            slider(
+                "DPS averaging window (seconds)", 1.0, 30.0, 0, config.dpsWindowSeconds.toDouble(),
+                "How many seconds of recent damage the DPS figure averages over. Shorter reacts faster, longer is steadier.",
+            ) { config.dpsWindowSeconds = it.toInt() }
+
+            header("Combat feel")
+            checkbox(
+                "Hit feedback",
+                "Makes your hits read as impacts: the weapon swing holds for a moment on contact, sparks burst from the target. Heavier hits compared with your recent hits get a stronger response.",
+                config.hitFeedbackEnabled,
+            ) { config.hitFeedbackEnabled = it }
+            slider(
+                "Hit feedback strength (%)", 0.0, 200.0, 0, config.hitFeedbackIntensity.toDouble(),
+                "How long the weapon holds on contact and how many sparks burst out.",
+            ) { config.hitFeedbackIntensity = it.toInt() }
+            checkbox(
+                "Weapon hit-stop",
+                "Holds the weapon swing for a fraction of a second when a hit lands.",
+                config.hitFeedbackStop,
+            ) { config.hitFeedbackStop = it }
+            checkbox(
+                "Impact sparks",
+                "Bursts sparks, tinted by the hit's element, from the target when a hit lands, kicks up dust from your footing on lunging attacks, and ends spell hits with a ground shockwave that cracks the ground on heavy hits.",
+                config.hitFeedbackSparks,
+            ) { config.hitFeedbackSparks = it }
+            checkbox(
+                "Slash arcs",
+                "Draws a short crescent slash across the target on each hit, tinted by the hit's element.",
+                config.hitFeedbackArcs,
+            ) { config.hitFeedbackArcs = it }
+            checkbox(
+                "Impact sounds",
+                "Layers a local impact sound over your hits that changes with your weapon, gets deeper on heavy hits, trails off with a high tail and quiets with distance. Only you hear these.",
+                config.hitFeedbackSound,
+            ) { config.hitFeedbackSound = it }
+            checkbox(
+                "Damage numbers",
+                "Replaces the floating damage text with numbers that pop in, drift upward and grow with how hard the hit is, colored by element.",
+                config.hitFeedbackNumbers,
+            ) { config.hitFeedbackNumbers = it }
+            dropdown(
+                "Damage number style",
+                "Pop scales in with a bounce and drifts up, Float rises steadily at a fixed size, Slam lands large and shrinks with a shake, Fountain throws numbers in a sideways arc.",
+                DamageNumbers.Style.entries.map { it.name to it.label },
+                DamageNumbers.Style.of(config.damageNumberStyle).name,
+            ) { config.damageNumberStyle = it }
+            slider(
+                "Damage number size (%)", 50.0, 200.0, 0, config.damageNumberScale.toDouble(),
+                "Overall size of the floating damage numbers.",
+            ) { config.damageNumberScale = it.toInt() }
+            checkbox(
+                "Compact damage numbers",
+                "Shortens numbers from 1,000 up, so 2400 shows as 2.4k and 1,500,000 as 1.5m.",
+                config.damageNumberCompact,
+            ) { config.damageNumberCompact = it }
+
+            header("Ultimates")
+            checkbox(
+                "Show ultimate ready indicator",
+                "Shows a persistent Ultimate READY indicator when your class ultimate is fully charged, in its own element you can drag, scale and lock in the HUD designer. Off leaves it in the vanilla action bar position. Charge progress itself has no readable action-bar signal (the meter there echoes stamina), so only the ready state is shown.",
+                config.ultimateHudEnabled,
+            ) { config.ultimateHudEnabled = it }
+            checkbox(
+                "Show powder special status",
+                "Subtle powder special charge indicator as its own HUD element; the style (server glyph, circle, half circle) is picked on the element itself in the HUD designer. Powder specials are separate from class ultimates and track nothing else.",
+                config.powderSpecialHudEnabled,
+            ) { config.powderSpecialHudEnabled = it }
+        }
+    }
+
     private fun buildHudTab(left: Int, w: Int, top: Int) {
         panel(left, w, top) {
             checkbox(
@@ -957,47 +1071,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Shows active effects as an icon + name + remaining-time list instead.",
                 config.customPotionHudEnabled,
             ) { config.customPotionHudEnabled = it }
-
-            header("Ability Cooldowns")
-            checkbox(
-                "Show ability cooldown HUD",
-                "Shows active class/archetype ability cooldowns (read from the tab-list \"Status Effects\" listing) as a name + timer + bar per ability.",
-                config.abilityCooldownHudEnabled,
-            ) { config.abilityCooldownHudEnabled = it }
-            checkbox(
-                "Show totem timers",
-                "Shows your own active shaman totems and any nearby mob and gathering totems with remaining time, read from their floating timer labels.",
-                config.totemHudEnabled,
-            ) { config.totemHudEnabled = it }
-
-            checkbox(
-                "Show class buffs",
-                "Shows your active class buffs: Mantle and Guardian Angels style shields with their charges, Arrow Shield, Judrajim, and your Crow, Hound, Snake and shaman puppet summons with their timers.",
-                config.classBuffHudEnabled,
-            ) { config.classBuffHudEnabled = it }
-
-            header("Damage")
-            checkbox(
-                "Show DPS meter",
-                "Shows your damage per second, the fight total, the peak and an element split, read from the floating damage numbers above mobs.",
-                config.dpsHudEnabled,
-            ) { config.dpsHudEnabled = it }
-            slider(
-                "DPS averaging window (seconds)", 1.0, 30.0, 0, config.dpsWindowSeconds.toDouble(),
-                "How many seconds of recent damage the DPS figure averages over. Shorter reacts faster, longer is steadier.",
-            ) { config.dpsWindowSeconds = it.toInt() }
-
-            header("Ultimates")
-            checkbox(
-                "Show ultimate ready indicator",
-                "Shows a persistent Ultimate READY indicator when your class ultimate is fully charged, in its own element you can drag, scale and lock in the HUD designer. Off leaves it in the vanilla action bar position. Charge progress itself has no readable action-bar signal (the meter there echoes stamina), so only the ready state is shown.",
-                config.ultimateHudEnabled,
-            ) { config.ultimateHudEnabled = it }
-            checkbox(
-                "Show powder special status",
-                "Subtle powder special charge indicator as its own HUD element; the style (server glyph, circle, half circle) is picked on the element itself in the HUD designer. Powder specials are separate from class ultimates and track nothing else.",
-                config.powderSpecialHudEnabled,
-            ) { config.powderSpecialHudEnabled = it }
 
             header("Quest Log")
             checkbox(

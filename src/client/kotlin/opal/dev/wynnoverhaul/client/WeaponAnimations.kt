@@ -16,12 +16,15 @@ import net.minecraft.sounds.SoundSource
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.Level
+import net.minecraft.world.phys.Vec3
 import org.joml.Quaternionf
 import org.joml.Vector3f
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -35,6 +38,9 @@ object WeaponAnimations {
     private const val AMP_MIN = 0.45f
     private const val CHAIN_SKIP = 0.7f
     private const val HOLD_SECONDS = 0.12f
+    private const val HOLD_SHARE = 0.2f
+    private const val SHORT_SWING_SECONDS = 0.22f
+    private const val MIN_HOLD_NANOS = 15_000_000L
     private const val RELAX_SECONDS = 0.22f
     private const val MIN_GAP_FRACTION = 0.75f
     private const val MIN_GAP_LOW = 0.12f
@@ -1251,6 +1257,99 @@ object WeaponAnimations {
 
     private val FINISHER_CUE: Cue by lazy { cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.8f, 0.5f) }
 
+    private val IMPACT: Map<String, List<Cue>> by lazy {
+        mapOf(
+            "SPEAR" to listOf(cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.85f, 0.5f), cue(0f, SoundEvents.TRIDENT_HIT, 1.3f, 0.3f)),
+            "DAGGER" to listOf(cue(0f, SoundEvents.PLAYER_ATTACK_WEAK, 1.5f, 0.45f), cue(0f, SoundEvents.PLAYER_ATTACK_NODAMAGE, 1.8f, 0.2f)),
+            "WAND" to listOf(cue(0f, SoundEvents.AMETHYST_BLOCK_CHIME, 1.5f, 0.35f), cue(0f, SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.4f, 0.3f)),
+            "RELIK" to listOf(cue(0f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 0.35f), cue(0f, SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.0f, 0.35f)),
+            "BOW" to listOf(cue(0f, SoundEvents.ARROW_HIT, 1.2f, 0.5f), cue(0f, SoundEvents.PLAYER_ATTACK_WEAK, 1.2f, 0.3f)),
+            "SPELL" to listOf(cue(0f, SoundEvents.MACE_SMASH_GROUND, 1.2f, 0.45f), cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.8f, 0.4f)),
+        )
+    }
+
+    private val IMPACT_THUMP: Cue by lazy { cue(0f, SoundEvents.MACE_SMASH_GROUND, 1.5f, 0.3f) }
+    private val IMPACT_TAIL: Cue by lazy { cue(0f, SoundEvents.AMETHYST_BLOCK_CHIME, 1.9f, 0.22f) }
+    private val IMPACT_SLAM: Cue by lazy { cue(0f, SoundEvents.MACE_SMASH_GROUND_HEAVY, 1.3f, 0.35f) }
+
+    private fun playCue(level: Level, x: Double, y: Double, z: Double, cue: Cue, pitchScale: Float, volumeScale: Float) {
+        val jitter = 0.97f + ThreadLocalRandom.current().nextFloat() * 0.06f
+        val volume = cue.volume * WynnOverhaulConfig.current.weaponAnimationSfxVolume.toFloat() * volumeScale
+        level.playLocalSound(x, y, z, cue.sound, SoundSource.PLAYERS, volume, cue.pitch * pitchScale * jitter, false)
+    }
+
+    private fun impactFamily(client: Minecraft): String =
+        (SwingClock.pose?.key ?: client.player?.mainHandItem?.let { autoStyleKey(it) })?.substringBefore(':') ?: "SPEAR"
+
+    fun playImpact(at: Vec3, weight: Float, spell: Boolean) {
+        val client = Minecraft.getInstance()
+        val level = client.level ?: return
+        val layers = ArrayList(IMPACT[if (spell) "SPELL" else impactFamily(client)] ?: IMPACT.getValue("SPEAR"))
+        if (weight > THUMP_WEIGHT) layers.add(IMPACT_THUMP)
+        if (weight > SLAM_WEIGHT) layers.add(IMPACT_SLAM)
+        val distance = client.player?.position()?.distanceTo(at) ?: 0.0
+        val reach = (1.0 - distance / IMPACT_FALLOFF_BLOCKS).coerceIn(IMPACT_FALLOFF_MIN, 1.0).toFloat()
+        val volumeScale = (IMPACT_VOLUME_BASE + IMPACT_VOLUME_SPAN * weight.coerceIn(0.6f, 2f)) * reach
+        val pitchScale = (IMPACT_PITCH_BASE - IMPACT_PITCH_DROP * weight).coerceIn(IMPACT_PITCH_MIN, IMPACT_PITCH_MAX)
+        for (layer in layers) playCue(level, at.x, at.y, at.z, layer, pitchScale, volumeScale)
+        tails.add(Tail(System.nanoTime() + IMPACT_TAIL_DELAY_NANOS, at, pitchScale, volumeScale))
+    }
+
+    private class Tail(val dueNanos: Long, val at: Vec3, val pitchScale: Float, val volumeScale: Float)
+
+    private val tails = ArrayList<Tail>()
+
+    private fun playTails(client: Minecraft) {
+        if (tails.isEmpty()) return
+        val level = client.level
+        val now = System.nanoTime()
+        val iterator = tails.iterator()
+        while (iterator.hasNext()) {
+            val tail = iterator.next()
+            if (now < tail.dueNanos) continue
+            iterator.remove()
+            if (level != null) playCue(level, tail.at.x, tail.at.y, tail.at.z, IMPACT_TAIL, tail.pitchScale, tail.volumeScale)
+        }
+    }
+
+    fun clearImpactTails() {
+        tails.clear()
+    }
+
+    private val LUNGE_FAMILIES = setOf("SPEAR", "DAGGER")
+    private const val LUNGE_LEAN = 0.12f
+    private const val LUNGE_STEP = 0.55f
+    private const val MOVE_LEAN_CUT = 0.6f
+    private const val MOVE_TURN_CUT_WALK = 0.25f
+    private const val MOVE_TURN_CUT_RUN = 0.45f
+    private const val DRIVE_LEAN_WALK = 0.07f
+    private const val DRIVE_LEAN_RUN = 0.16f
+    private const val PLANT_CUT = 0.45f
+    private const val STRIKE_FRESH_NANOS = 120_000_000L
+    private const val MOVE_TAU = 0.06f
+    private const val MOVE_DUST_MAX = 0.3f
+    private const val REBOUND_REACH = 1.4f
+    private const val REBOUND_DECAY = 14f
+    private const val REBOUND_FREQ = 22f
+    private const val REBOUND_SECONDS = 0.25f
+    private const val IMPACT_FALLOFF_BLOCKS = 40.0
+    private const val IMPACT_FALLOFF_MIN = 0.45
+    private const val IMPACT_TAIL_DELAY_NANOS = 70_000_000L
+    private const val ANTICIPATION = 0.55f
+    private const val FLINCH_LEAN = 0.2f
+    private const val FLINCH_REACH = 1.2f
+    private const val FLINCH_RISE = 0.04f
+    private const val FLINCH_DECAY = 9f
+    private const val FLINCH_SECONDS = 0.45f
+    private const val THUMP_WEIGHT = 1.35f
+    private const val SLAM_WEIGHT = 1.9f
+    private const val IMPACT_VOLUME_BASE = 0.6f
+    private const val IMPACT_VOLUME_SPAN = 0.4f
+    private const val IMPACT_PITCH_BASE = 1.15f
+    private const val IMPACT_PITCH_DROP = 0.15f
+    private const val IMPACT_PITCH_MIN = 0.8f
+    private const val IMPACT_PITCH_MAX = 1.1f
+
     private val HAND_SHIFT = mapOf(
         "SPEAR:RUBY" to 12f,
         "SPEAR:RUBY_VAULT" to 12f,
@@ -1334,6 +1433,10 @@ object WeaponAnimations {
         private var previewStack: ItemStack? = null
         private var previewCached: Pose? = null
         private var startNanos = 0L
+        private var pauseStart = 0L
+        private var pauseEnd = 0L
+        private var reboundStart = 0L
+        private var reboundAmp = 0f
         private var totalSeconds = 1f
         private var startP = 0f
         private var blendSeconds = BLEND_SECONDS
@@ -1357,6 +1460,11 @@ object WeaponAnimations {
         private var sprintingNow = false
         private var walkAmt = 0f
         private var walkingNow = false
+        private var movingNow = false
+        private var moveAmt = 0f
+        private var runAmt = 0f
+        private var strikeWeight = 0f
+        private var strikeStamp = 0L
         private var idleLast = 0L
         private var readyUntil = 0L
         private var idleStack: ItemStack? = null
@@ -1412,6 +1520,8 @@ object WeaponAnimations {
 
         fun heldAmount(): Float = idleAmt
 
+        fun moveAmount(): Float = moveAmt
+
         fun rawAt(p: Pose, t: Float, base: FloatArray, out: FloatArray) = sampleRaw(p, t, base, out)
 
         fun breath(): Float {
@@ -1435,6 +1545,9 @@ object WeaponAnimations {
             stillAmt += ((if (stillGoal) 1f else 0f) - stillAmt) * a
             sprintAmt += ((if (sprintGoal) 1f else 0f) - sprintAmt) * a
             walkAmt += ((if (walkGoal) 1f else 0f) - walkAmt) * a
+            val moveA = MathX.expApproach(dt, MOVE_TAU)
+            moveAmt += ((if (movingNow) 1f else 0f) - moveAmt) * moveA
+            runAmt += ((if (sprintingNow) 1f else 0f) - runAmt) * moveA
             if (table != null) {
                 val snap = idleAmt < 0.01f
                 for (i in 0 until CHANNELS) {
@@ -1457,6 +1570,7 @@ object WeaponAnimations {
             stillTicks = if (still) stillTicks + 1 else 0
             sprintingNow = player.isSprinting && speedSq > SPRINT_SPEED_SQ
             walkingNow = speedSq > WALK_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isCrouching
+            movingNow = speedSq > WALK_SPEED_SQ && !player.isSwimming
             if (!enabled() || !WynnOverhaulConfig.current.weaponIdleEnabled || player.isUsingItem) {
                 idleTable = null
                 return
@@ -1480,6 +1594,7 @@ object WeaponAnimations {
             }
             if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
             refreshIdle(player)
+            watchHurt(player)
             val config = WynnOverhaulConfig.current
             if (config.weaponAnimationPreview && enabled()) {
                 val stack = player.mainHandItem
@@ -1542,8 +1657,11 @@ object WeaponAnimations {
             pose = chosen
             right = arm == HumanoidArm.RIGHT
             startNanos = now
+            pauseEnd = 0L
+            reboundStart = 0L
             startP = if (chained) chosen.hit * CHAIN_SKIP else 0f
             lastBeginNanos = now
+            if (config.weaponAnimationLunge && chosen.key.substringBefore(':') in LUNGE_FAMILIES && moveAmt < MOVE_DUST_MAX) WynnHitFeedback.stepDust(player)
             val total = minOf(chosen.seconds, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
             totalSeconds = total
             hitSeconds = minOf(HIT_SECONDS, total * HIT_SHARE)
@@ -1567,6 +1685,8 @@ object WeaponAnimations {
             pose = chosen
             right = player.mainArm == HumanoidArm.RIGHT
             startNanos = now
+            pauseEnd = 0L
+            reboundStart = 0L
             startP = 0f
             lastBeginNanos = now
             totalSeconds = chosen.seconds
@@ -1600,11 +1720,7 @@ object WeaponAnimations {
                 if (cueFired[i] || t < cues[i].at) continue
                 cueFired[i] = true
                 if (!config.weaponAnimationSfx || player == null || level == null) continue
-                val cue = cues[i]
-                val jitter = 0.97f + ThreadLocalRandom.current().nextFloat() * 0.06f
-                val pitch = cue.pitch * (1f + comboIndex * COMBO_PITCH_STEP) * jitter
-                val volume = cue.volume * config.weaponAnimationSfxVolume.toFloat() * (if (cueFinisher) 1.15f else 1f)
-                level.playLocalSound(player.x, player.y, player.z, cue.sound, SoundSource.PLAYERS, volume, pitch, false)
+                playCue(level, player.x, player.y, player.z, cues[i], 1f + comboIndex * COMBO_PITCH_STEP, if (cueFinisher) 1.15f else 1f)
             }
         }
 
@@ -1614,7 +1730,93 @@ object WeaponAnimations {
             return if (extra <= 0f) 1f else 1f - smooth(extra / RELAX_SECONDS)
         }
 
-        private fun elapsedSeconds(): Float = (System.nanoTime() - startNanos) / 1_000_000_000f
+        private fun elapsedSeconds(): Float {
+            val now = System.nanoTime()
+            settlePause(now)
+            val reference = if (pauseEnd != 0L) pauseStart else now
+            return (reference - startNanos) / 1_000_000_000f
+        }
+
+        private fun settlePause(now: Long) {
+            if (pauseEnd == 0L || now < pauseEnd) return
+            startNanos += pauseEnd - pauseStart
+            pauseStart = 0L
+            pauseEnd = 0L
+        }
+
+        private var flinchStart = 0L
+        private var flinchAmp = 0f
+        private var lastHurtTime = 0
+
+        private fun watchHurt(player: LocalPlayer) {
+            val hurt = player.hurtTime
+            if (hurt > lastHurtTime && enabled() && WynnOverhaulConfig.current.weaponAnimationFlinch) {
+                flinchStart = System.nanoTime()
+                flinchAmp = WynnOverhaulConfig.current.hitFeedbackIntensity.coerceIn(0, 200) / 100f
+            }
+            lastHurtTime = hurt
+        }
+
+        fun flinch(): Float {
+            if (flinchStart == 0L) return 0f
+            val t = (System.nanoTime() - flinchStart) / 1_000_000_000f
+            if (t > FLINCH_SECONDS) {
+                flinchStart = 0L
+                return 0f
+            }
+            val rise = (t / FLINCH_RISE).coerceAtMost(1f)
+            return flinchAmp * rise * exp(-FLINCH_DECAY * maxOf(0f, t - FLINCH_RISE))
+        }
+
+        fun applyFlinch(out: FloatArray) {
+            val f = flinch()
+            if (f == 0f) return
+            out[LEAN] -= FLINCH_LEAN * f
+            out[REACH] -= FLINCH_REACH * f
+        }
+
+        fun hold(nanos: Long, strength: Float) {
+            if (pose == null || previewing) return
+            val now = System.nanoTime()
+            settlePause(now)
+            if (pauseEnd != 0L) return
+            val limit = (totalSeconds * HOLD_SHARE * 1_000_000_000f).toLong()
+            val held = if (totalSeconds < SHORT_SWING_SECONDS) 0L else minOf(nanos, limit)
+            if (held >= MIN_HOLD_NANOS) {
+                pauseStart = now
+                pauseEnd = now + held
+            }
+            reboundStart = now + maxOf(held, 0L)
+            reboundAmp = strength * amp
+        }
+
+        private fun rebound(): Float {
+            if (reboundStart == 0L) return 0f
+            val t = (System.nanoTime() - reboundStart) / 1_000_000_000f
+            if (t < 0f) return 0f
+            if (t > REBOUND_SECONDS) {
+                reboundStart = 0L
+                return 0f
+            }
+            return REBOUND_REACH * reboundAmp * exp(-REBOUND_DECAY * t) * cos(REBOUND_FREQ * t)
+        }
+
+        private fun strike(p: Pose, t: Float): Float {
+            val hit = p.hit.coerceIn(0.05f, 0.95f)
+            return if (t < hit) smooth(t / hit) else 1f - smooth((t - hit) / (1f - hit))
+        }
+
+        private fun lunge(weight: Float, p: Pose, scale: Float, out: FloatArray) {
+            if (!WynnOverhaulConfig.current.weaponAnimationLunge || p.key.substringBefore(':') !in LUNGE_FAMILIES) return
+            val standing = 1f - moveAmt
+            out[LEAN] += LUNGE_LEAN * weight * scale * standing
+            out[STEP] += LUNGE_STEP * weight * scale * standing
+        }
+
+        fun moveStrike(): Float =
+            if (System.nanoTime() - strikeStamp > STRIKE_FRESH_NANOS) 0f else strikeWeight * moveAmt
+
+        fun runShare(): Float = runAmt
 
         private fun previewPose(stack: ItemStack): Pose? {
             if (stack !== previewStack) {
@@ -1647,10 +1849,14 @@ object WeaponAnimations {
                 }
                 return 1f
             }
+            val anticipation = if (WynnOverhaulConfig.current.weaponAnimationAnticipation) ANTICIPATION * ((amp - AMP_MIN) / (1f - AMP_MIN)).coerceIn(0f, 1f) else 0f
             return if (tau < hitSeconds) {
-                startP + tau / hitSeconds * (current.hit - startP)
+                val u = tau / hitSeconds
+                val eased = if (startP == 0f) u + (u * u - u) * anticipation else u
+                startP + eased * (current.hit - startP)
             } else {
-                current.hit + (tau - hitSeconds) / (totalSeconds - hitSeconds) * (1f - current.hit)
+                val u = (tau - hitSeconds) / (totalSeconds - hitSeconds)
+                current.hit + (u + ((1f - (1f - u) * (1f - u)) - u) * anticipation) * (1f - current.hit)
             }
         }
 
@@ -1681,11 +1887,17 @@ object WeaponAnimations {
                 val sc = if ((i == HEAD_Y || i == TWIST) && p.spin) 1f else scale
                 out[i] = base[i] + (raw[i] - base[i]) * sc
             }
+            out[REACH] += rebound()
+            val weight = strike(p, t)
+            strikeWeight = weight * scale
+            strikeStamp = System.nanoTime()
+            lunge(weight, p, scale, out)
         }
     }
 
     fun init() {
         ClientTickEvents.END_CLIENT_TICK.register(SwingClock::tick)
+        ClientTickEvents.END_CLIENT_TICK.register(::playTails)
     }
 
     @JvmStatic
@@ -1696,6 +1908,8 @@ object WeaponAnimations {
 
     @JvmStatic
     fun trailStrength(): Float = SwingClock.trailStrength
+
+    fun holdAtImpact(nanos: Long, strength: Float) = SwingClock.hold(nanos, strength)
 
     @JvmStatic
     fun trailActive(): Boolean {
@@ -1880,6 +2094,13 @@ object WeaponAnimations {
 
         val out = outBuffer
         if (pose != null && swinging) SwingClock.sample(pose, t, base, k, out) else base.copyInto(out)
+        SwingClock.applyFlinch(out)
+        val moving = SwingClock.moveAmount()
+        val drive = SwingClock.moveStrike()
+        val run = SwingClock.runShare()
+        out[STEP] *= 1f - moving
+        out[LEAN] = out[LEAN] * (1f - moving * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
+        out[TURN] *= 1f - moving * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
         springTip(out)
 
         val yaw = if (swinging) -s * out[TURN] else 0f
@@ -1895,6 +2116,7 @@ object WeaponAnimations {
         applyArm(off, s, -s, yaw, out[OFF_PITCH], out[OFF_ACROSS], out[OFF_ABDUCT])
         main.z += out[REACH]
         applyBody(model, right, yaw, out[LEAN], out[STEP])
+        plantLegs(model, drive)
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
         val guardKey = if (swinging) pose.key else SwingClock.idleKey()
@@ -2016,6 +2238,13 @@ object WeaponAnimations {
         part.z = clipPoint.z
     }
 
+    private fun plantLegs(model: HumanoidModel<*>, drive: Float) {
+        if (drive <= 0.001f) return
+        val keep = 1f - PLANT_CUT * drive
+        model.rightLeg.xRot *= keep
+        model.leftLeg.xRot *= keep
+    }
+
     private fun applyBody(model: HumanoidModel<*>, right: Boolean, yaw: Float, lean: Float, step: Float) {
         if (abs(lean) > 0.001f) {
             leanPart(model.body, yaw, lean)
@@ -2135,6 +2364,7 @@ object WeaponAnimations {
         REST_BASE.copyInto(fpBase)
         SwingClock.blendIdle(fpBase)
         SwingClock.sample(pose, t, fpBase, 1f, out)
+        out[REACH] -= SwingClock.flinch() * FLINCH_REACH
         SwingClock.rawAt(pose, 0f, fpBase, fpStart)
         poseFirstPersonSwing(stack, sign, out, fpStart, t)
         return true
@@ -2149,7 +2379,7 @@ object WeaponAnimations {
         val breath = SwingClock.breath() + SwingClock.sprintBob()
         val sway = SwingClock.sway()
         val scale = 1f - (1f - FP_SCALE) * held
-        stack.translate(sway * FP_SWAY_MOVE, breath, 0f)
+        stack.translate(sway * FP_SWAY_MOVE, breath, SwingClock.flinch() * FLINCH_REACH * FP_UNIT)
         stack.scale(scale, scale, scale)
         fpMix.rotationX(-breath * FP_BREATH_TILT).rotateZ(sway * FP_SWAY_TILT * sign)
         stack.mulPose(fpMix)

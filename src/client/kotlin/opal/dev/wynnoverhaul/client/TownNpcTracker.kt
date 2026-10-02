@@ -17,6 +17,7 @@ object TownNpcTracker {
         Role(Regex("""powder master""", RegexOption.IGNORE_CASE)) { ItemStack(Items.GUNPOWDER) },
         Role(Regex("""\bbank(er)?\b""", RegexOption.IGNORE_CASE)) { ItemStack(Items.ENDER_CHEST) },
         Role(Regex("""merchant""", RegexOption.IGNORE_CASE)) { ItemStack(Items.EMERALD) },
+        Role(Regex("""^trade market$""", RegexOption.IGNORE_CASE)) { ItemStack(Items.GOLD_INGOT) },
     )
 
     private val levelTag = Regex("""\bLv\.?\s*\d+""", RegexOption.IGNORE_CASE)
@@ -61,9 +62,10 @@ object TownNpcTracker {
             if (stable < MIN_STABLE_SCANS) continue
             if (levelTag.containsMatchIn(name)) continue
             if (!hasNpcTag(entity, name, npcTags)) continue
-            val role = roles.firstOrNull { it.pattern.containsMatchIn(name) } ?: continue
-            val label = TextClean.clean(name).replace(spaces, " ")
-            if (label.isBlank() || label.length > MAX_LABEL) continue
+            val lines = name.lines().map { TextClean.clean(it).replace(spaces, " ").trim() }.filter { it.isNotEmpty() }
+            val role = roles.firstOrNull { role -> lines.any { role.pattern.containsMatchIn(it) } } ?: continue
+            val label = lines.first { role.pattern.containsMatchIn(it) }
+            if (label.length > MAX_LABEL) continue
             val list = seen.getOrPut(role) { ArrayList() }
             if (list.any { it.distanceToSqr(entity) < DEDUP_SQR }) continue
             list.add(entity)

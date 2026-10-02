@@ -4,7 +4,20 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+### Added
+- Your hits land with weight: the weapon swing holds and recoils on contact, layered impact sounds change with your weapon and deepen on heavy hits, sparks burst from the target in the hit's element, and spell hits end in a ground shockwave. Heavier hits compared with your recent hits respond more strongly, and strength is adjustable with a toggle for each effect.
+- Floating damage numbers grow with how hard the hit is and are colored by element. Four styles (Pop, Float, Slam, Fountain), a size slider and compact formatting such as 2.4k are available in the Combat tab.
+- Spear and dagger attacks step your body forward into the swing and ease back out of it.
+- Hits draw a short slash arc across the target, lunging attacks kick up dust from the ground, and heavy spell shockwaves crack the ground.
+- Impact sounds end with a high tail and get quieter with distance.
+- Weapon swings linger in the wind-up and ease out after the strike, strongest on slow weapons.
+- Your weapon arm and body flinch when you take damage.
+- Attacking while walking or sprinting uses a movement variant: legs stay on the stride and brace on the strike, the torso twist is reduced, and the body drives forward into the hit, more so when sprinting.
+- Town NPC markers include the Trade Market.
+
 ### Changed
+- Combat settings moved from the HUD and QoL tabs into their own Combat tab.
+- Weapon afterimages default to the lowest opacity and swing sounds to 0.45 volume.
 - Depositing an item into the bank first tops up an existing stack of the same item, on any page, before using an empty slot.
 
 ## 1.4.0 - 2026-10-01

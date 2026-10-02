@@ -14,7 +14,6 @@ import opal.dev.wynnoverhaul.WynnOverhaul
 import org.joml.Matrix4f
 import org.joml.Vector4f
 import kotlin.math.floor
-import kotlin.math.sqrt
 
 object TrackerEsp {
     class Waypoint(
@@ -134,37 +133,10 @@ object TrackerEsp {
         val az = (box.minZ + box.maxZ) * 0.5
         val ay = box.maxY + WAYPOINT_Y_OFFSET
 
-        var dx = ax - camPos.x
-        var dy = ay - camPos.y
-        var dz = az - camPos.z
-        val len = sqrt(dx * dx + dy * dy + dz * dz)
-        if (len > MAX_PROJECT_DISTANCE) {
-            val k = MAX_PROJECT_DISTANCE / len
-            dx *= k
-            dy *= k
-            dz *= k
-        }
-
-        view.transform(dx.toFloat(), dy.toFloat(), dz.toFloat(), 1.0f, clip)
-        val behind = -clip.z < FORWARD_MIN
-        vp.transform(dx.toFloat(), dy.toFloat(), dz.toFloat(), 1.0f, clip)
-
-        var w = clip.w
-        var flip = false
-        if (w <= EPS) {
-            flip = true
-            w = if (w > -EPS) -EPS else w
-        }
-        var ndcX = clip.x / w
-        var ndcY = clip.y / w
-        if (flip) {
-            ndcX = -ndcX
-            ndcY = -ndcY
-        }
-        val onScreen = !behind && !flip && ndcX >= -1f && ndcX < 1f && ndcY >= -1f && ndcY < 1f
+        val projected = WorldProjection.project(camPos, vp, view, clip, ax, ay, az)
         val distance = player?.position()?.distanceTo(center)?.toFloat() ?: 0f
 
-        out.add(Waypoint(onScreen, ndcX, ndcY, distance, match.label, match.colorArgb, match.icon, subtle))
+        out.add(Waypoint(projected.onScreen, projected.x, projected.y, distance, match.label, match.colorArgb, match.icon, subtle))
     }
 
     private fun losKey(match: EntityTracker.Match): Long {
@@ -194,8 +166,5 @@ object TrackerEsp {
     }
 
     private const val LOS_REFRESH_NANOS = 150_000_000L
-    private const val EPS = 1.0e-4f
-    private const val FORWARD_MIN = 0.05f
-    private const val MAX_PROJECT_DISTANCE = 250000.0
     private const val WAYPOINT_Y_OFFSET = 0.35
 }
