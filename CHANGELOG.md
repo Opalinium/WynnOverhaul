@@ -25,6 +25,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Tabs and screens fade in, loading states show placeholders instead of plain text, and the Identifications tab shows which page it is reading.
 
 ### Fixed
+- The compass follows the camera direction instead of the player's facing, so it stays correct with the orbital camera.
 - The emerald price prompt in the trade market is now recognized, so the chat channel no longer sends your price as a party or guild command.
 
 ## 1.3.0 - 2026-09-30

@@ -28,9 +28,9 @@ class WynnCompassHudElement : HudElement {
         val player = Minecraft.getInstance().player ?: return
         val font = Minecraft.getInstance().font
 
-        val look = player.lookAngle
-        if (look.x == 0.0 && look.z == 0.0) return
-        val heading = Math.toDegrees(atan2(look.x, -look.z))
+        val look = Minecraft.getInstance().gameRenderer.mainCamera().forwardVector()
+        if (look.x() == 0f && look.z() == 0f) return
+        val heading = Math.toDegrees(atan2(look.x().toDouble(), -look.z().toDouble()))
 
         val playerPos = player.position()
         val markers = ArrayList<Marker>()
