@@ -12,6 +12,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Impact sounds end with a high tail and get quieter with distance.
 - Weapon swings linger in the wind-up and ease out after the strike, strongest on slow weapons.
 - Your weapon arm and body flinch when you take damage.
+- The Dump Open Container key (F8 by default) copies the items, names and lore of the open container to the clipboard and saves the full data to a file in the game folder. With no menu open it copies the game state, including the last dialogue prompt the dialogue tracker caught and the last one it missed, for reporting what a menu or dialogue contains.
 - Attacking while walking or sprinting uses a movement variant: legs stay on the stride and brace on the strike, the torso twist is reduced, and the body drives forward into the hit, more so when sprinting.
 - Town NPC markers include the Trade Market.
 - Loot chests open in a custom screen styled like the inventory, with the chest contents as sorted tiles beside your inventory, a Take all button, and the chest tier.

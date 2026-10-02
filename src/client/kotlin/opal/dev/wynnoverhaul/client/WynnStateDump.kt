@@ -1,11 +1,16 @@
 package opal.dev.wynnoverhaul.client
 
+import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.brigadier.arguments.DoubleArgumentType
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents
 import net.minecraft.ChatFormatting
+import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.screens.inventory.InventoryScreen
@@ -17,6 +22,11 @@ import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.Display
 import net.minecraft.world.phys.AABB
 import opal.dev.wynnoverhaul.mixin.client.BossHealthOverlayAccessor
+import net.minecraft.world.inventory.AbstractContainerMenu
+import opal.dev.wynnoverhaul.WynnOverhaul
+import java.nio.file.Files
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Optional
 
 object WynnStateDump {
@@ -26,11 +36,49 @@ object WynnStateDump {
     @Volatile
     private var lastContainer: String? = null
 
+    @Volatile
+    private var lastCaughtDialogue: String? = null
+
+    @Volatile
+    private var lastMissedDialogue: String? = null
+
+    private var lastMissLogMillis = 0L
+    private var openTitle: Component? = null
+    private var openScreenName = ""
+    private var openMenu: AbstractContainerMenu? = null
+    private lateinit var dumpKey: KeyMapping
+
     fun register() {
-        ClientReceiveMessageEvents.GAME.register { message, overlay -> if (overlay) lastActionBar = message }
+        dumpKey = KeyMappingHelper.registerKeyMapping(
+            KeyMapping("key.wynnoverhaul.dump_container", InputConstants.Type.KEYSYM, DEFAULT_DUMP_KEY, WynnOverhaulKeyCategory.CATEGORY),
+        )
+        ClientReceiveMessageEvents.GAME.register { message, overlay ->
+            if (overlay) {
+                lastActionBar = message
+                noteDialogue(message)
+            }
+        }
+        ClientTickEvents.END_CLIENT_TICK.register { client ->
+            if (client.gui.screen() == null) {
+                var pressed = false
+                while (dumpKey.consumeClick()) pressed = true
+                if (pressed) run(DEFAULT_RADIUS)
+            }
+        }
         ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
             if (screen is AbstractContainerScreen<*> && screen !is InventoryScreen) {
-                ScreenEvents.remove(screen).register { lastContainer = describeContainer(it as AbstractContainerScreen<*>) }
+                openTitle = screen.title
+                openScreenName = screen.javaClass.simpleName
+                openMenu = screen.menu
+                ScreenEvents.remove(screen).register { lastContainer = describeContainer(screen.title, screen.javaClass.simpleName, screen.menu, DumpMode.LEGACY) }
+            }
+            ScreenKeyboardEvents.allowKeyPress(screen).register { _, event ->
+                if (dumpKey.matches(event) && screen !is InventoryScreen) {
+                    dumpOpenContainer()
+                    false
+                } else {
+                    true
+                }
             }
         }
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
@@ -50,6 +98,23 @@ object WynnStateDump {
         }
     }
 
+    private fun noteDialogue(message: Component) {
+        val caught = WynnDialogueTracker.isDialogue(message)
+        val prompt = DIALOGUE_PROMPT.containsMatchIn(message.string)
+        if (!caught && !prompt) return
+        val line = "caught=$caught ${describe(message)}"
+        if (caught) {
+            lastCaughtDialogue = line
+        } else {
+            lastMissedDialogue = line
+            val now = System.currentTimeMillis()
+            if (now - lastMissLogMillis > MISS_LOG_GAP_MS) {
+                lastMissLogMillis = now
+                WynnOverhaul.LOGGER.info("[DialogueMissed] {}", line)
+            }
+        }
+    }
+
     private fun run(radius: Double) {
         val client = Minecraft.getInstance()
         val player = client.player ?: return
@@ -60,19 +125,49 @@ object WynnStateDump {
         )
     }
 
-    private fun describeContainer(screen: AbstractContainerScreen<*>): String = buildString {
-        val slots = screen.menu.slots
+    private enum class DumpMode { LEGACY, FULL, COMPACT }
+
+    private fun dumpOpenContainer() {
+        val client = Minecraft.getInstance()
+        val player = client.player ?: return
+        val menu = openMenu
+        val title = openTitle
+        if (menu == null || title == null || player.containerMenu !== menu) {
+            player.sendSystemMessage(Component.literal("No container is open.").withStyle(ChatFormatting.GRAY))
+            return
+        }
+        val full = describeContainer(title, openScreenName, menu, DumpMode.FULL)
+        val compact = describeContainer(title, openScreenName, menu, DumpMode.COMPACT)
+        val directory = client.gameDirectory.toPath().resolve(DUMP_DIRECTORY)
+        val path = runCatching {
+            Files.createDirectories(directory)
+            directory.resolve("container-${LocalDateTime.now().format(DUMP_TIME)}.txt").also { Files.writeString(it, full) }
+        }.getOrNull()
+        client.keyboardHandler.setClipboard(compact)
+        val where = if (path != null) " Full data saved to $path" else ""
+        player.sendSystemMessage(Component.literal("Copied container data (${compact.length} chars) to the clipboard.$where").withStyle(ChatFormatting.GRAY))
+    }
+
+    private fun describeContainer(title: Component, screenName: String, menu: AbstractContainerMenu, mode: DumpMode): String = buildString {
+        val slots = menu.slots
         val containerSize = (slots.size - PLAYER_SLOTS).coerceAtLeast(0)
-        appendLine("title=${describe(screen.title)} screen=${screen.javaClass.simpleName} menuSlots=${slots.size} containerSlots=$containerSize")
+        appendLine("title=${describe(title)} screen=$screenName menuSlots=${slots.size} containerSlots=$containerSize")
         for (i in 0 until containerSize) {
             val stack = slots[i].item
             if (stack.isEmpty) continue
             val models = stack.get(DataComponents.CUSTOM_MODEL_DATA)?.floats().orEmpty()
-            val name = stack.get(DataComponents.CUSTOM_NAME)?.let(::describe) ?: stack.hoverName.string
-            appendLine("slot=$i ${BuiltInRegistries.ITEM.getKey(stack.item)} x${stack.count} cmd=$models name=$name")
-            if (models.isNotEmpty() && stack.count == 1 && BuiltInRegistries.ITEM.getKey(stack.item).path == "potion") {
-                stack.get(DataComponents.LORE)?.lines()?.forEach { appendLine("    lore: ${describe(it)}") }
+            val key = BuiltInRegistries.ITEM.getKey(stack.item)
+            val lore = stack.get(DataComponents.LORE)?.lines().orEmpty()
+            if (mode == DumpMode.COMPACT) {
+                val name = TextClean.clean(stack.hoverName.string)
+                val text = lore.map { TextClean.clean(it.string) }.filter { it.isNotBlank() }.joinToString(" | ")
+                appendLine("slot=$i $key x${stack.count} cmd=$models name=$name" + if (text.isNotEmpty()) " lore=$text" else "")
+                continue
             }
+            val name = stack.get(DataComponents.CUSTOM_NAME)?.let(::describe) ?: stack.hoverName.string
+            appendLine("slot=$i $key x${stack.count} cmd=$models name=$name")
+            val withLore = mode == DumpMode.FULL || (models.isNotEmpty() && stack.count == 1 && key.path == "potion")
+            if (withLore) lore.forEach { appendLine("    lore: ${describe(it)}") }
         }
     }
 
@@ -80,6 +175,10 @@ object WynnStateDump {
         val player = client.player
         appendLine("== Last container screen")
         appendLine(lastContainer ?: "(none)")
+        appendLine("== Last caught dialogue")
+        appendLine(lastCaughtDialogue ?: "(none)")
+        appendLine("== Last missed dialogue")
+        appendLine(lastMissedDialogue ?: "(none)")
         appendLine("== Tab footer")
         appendLine(WynnStatusEffectTracker.lastFooter?.let(::describe) ?: "(none)")
         appendLine("== Action bar")
@@ -140,5 +239,10 @@ object WynnStateDump {
     }
 
     private const val DEFAULT_RADIUS = 16.0
+    private const val MISS_LOG_GAP_MS = 1000L
+    private val DIALOGUE_PROMPT = Regex("(?i)\\bto (choose option|confirm|continue)\\b")
     private const val PLAYER_SLOTS = 36
+    private const val DEFAULT_DUMP_KEY = 297
+    private const val DUMP_DIRECTORY = "wynnoverhaul-dumps"
+    private val DUMP_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
 }

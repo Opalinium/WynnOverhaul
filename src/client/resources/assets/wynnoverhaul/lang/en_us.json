@@ -1,6 +1,7 @@
 {
   "key.wynnoverhaul.toggle": "Toggle Hold-to-Attack",
   "key.wynnoverhaul.config": "Open WynnOverhaul Config",
+  "key.wynnoverhaul.dump_container": "Dump Open Container",
   "key.wynnoverhaul.souls_camera": "Toggle Souls Camera",
   "key.wynnoverhaul.souls_recenter": "Recenter Souls Camera",
   "key.wynnoverhaul.weapon_anim": "Register Weapon for Animations",
