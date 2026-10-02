@@ -285,7 +285,46 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
             warn("That item moved, page refreshed")
             return
         }
+        if (pending.mergeFrom >= 0) {
+            val source = stackAt(pending.mergeFrom)
+            if (source.isEmpty || !canMerge(source, stackAt(pending.slot))) {
+                send(pending.mergeFrom, 0, ContainerInput.QUICK_MOVE)
+            } else {
+                mergeDeposit(pending.mergeFrom, pending.slot)
+            }
+            return
+        }
         send(pending.slot, pending.button, pending.kind)
+    }
+
+    private fun canMerge(source: ItemStack, target: ItemStack): Boolean =
+        !target.isEmpty && target.count < target.maxStackSize && ItemStack.isSameItemSameComponents(source, target)
+
+    private fun mergeDeposit(inventorySlot: Int, bankSlot: Int) {
+        send(inventorySlot, 0, ContainerInput.PICKUP)
+        send(bankSlot, 0, ContainerInput.PICKUP)
+        if (menu.carried.isEmpty) return
+        val empty = (0 until BANK_SLOTS).firstOrNull { stackAt(it).isEmpty }
+        send(empty ?: inventorySlot, 0, ContainerInput.PICKUP)
+    }
+
+    private fun findMergeTarget(storage: String, stack: ItemStack): Pair<Int, Int>? {
+        val page = currentPage()
+        val live = (0 until BANK_SLOTS).firstOrNull { canMerge(stack, stackAt(it)) }
+        if (live != null) return page to live
+        var best: Pair<Int, Int>? = null
+        var bestCost = Int.MAX_VALUE
+        for ((p, data) in BankSession.pagesOf(storage)) {
+            if (p == page) continue
+            val slot = data.stacks.indexOfFirst { canMerge(stack, it) }
+            if (slot < 0) continue
+            val cost = navCost(page, p)
+            if (cost < bestCost) {
+                bestCost = cost
+                best = p to slot
+            }
+        }
+        return best
     }
 
     private fun contentHash(): Int {
@@ -739,8 +778,12 @@ class WynnOverhaulBankScreen(private val menu: AbstractContainerMenu) : Screen(C
         }
         when (button) {
             0 -> if (!stack.isEmpty) {
-                val target = freeBankSlot(storageName())
+                val storage = storageName()
+                val merge = findMergeTarget(storage, stack)
+                val target = if (merge == null) freeBankSlot(storage) else null
                 when {
+                    merge != null && merge.first == currentPage() -> mergeDeposit(slot, merge.second)
+                    merge != null -> BankSession.act(BankSession.Pending(merge.first, merge.second, 0, ContainerInput.PICKUP, true, slot))
                     target == null -> warn("The bank is full")
                     target.first == currentPage() -> send(slot, 0, ContainerInput.QUICK_MOVE)
                     else -> BankSession.act(BankSession.Pending(target.first, slot, 0, ContainerInput.QUICK_MOVE, true))

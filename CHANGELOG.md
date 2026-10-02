@@ -4,6 +4,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+### Changed
+- Depositing an item into the bank first tops up an existing stack of the same item, on any page, before using an empty slot.
+
 ## 1.4.0 - 2026-10-01
 
 ### Added

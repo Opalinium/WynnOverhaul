@@ -7,7 +7,14 @@ import java.util.TreeMap
 object BankSession {
     class PageData(val stacks: List<ItemStack>)
 
-    class Pending(val page: Int, val slot: Int, val button: Int, val kind: ContainerInput, val needsItem: Boolean)
+    class Pending(
+        val page: Int,
+        val slot: Int,
+        val button: Int,
+        val kind: ContainerInput,
+        val needsItem: Boolean,
+        val mergeFrom: Int = -1,
+    )
 
     private enum class Scan { OFF, FORWARD_A, TO_FIRST, FORWARD_B }
 
