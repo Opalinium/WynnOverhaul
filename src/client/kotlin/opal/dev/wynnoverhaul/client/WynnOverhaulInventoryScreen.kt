@@ -221,15 +221,16 @@ class WynnOverhaulInventoryScreen(
         }
         val panelH = layout.panelH
         val pt = panelTopFor(panelH)
+        val tabW = minOf(TAB_W, (panelWidth() - MARGIN * 2 - 2 * (InvTab.entries.size - 1)) / InvTab.entries.size)
         var tx = ox + MARGIN
         tabButtons.clear()
         for (tab in InvTab.entries) {
-            val button = OwButton(tx, pt + TAB_Y_REL, TAB_W, TAB_H, Component.literal(tab.label), accent = tab == invTab) {
+            val button = OwButton(tx, pt + TAB_Y_REL, tabW, TAB_H, Component.literal(tab.label), accent = tab == invTab) {
                     selectTab(tab)
                 }
             tabButtons.add(button)
             addRenderableWidget(button)
-            tx += TAB_W + 2
+            tx += tabW + 2
         }
         addClaimButtons(ox, pt)
         addShortcutDropdown(ox, pt)
@@ -967,7 +968,7 @@ class WynnOverhaulInventoryScreen(
         } else if (invTab == InvTab.SETTINGS) {
             (width * 0.46).toInt().coerceIn(460, 560).coerceAtMost((width - 20).coerceAtLeast(200))
         } else {
-            (width * 0.26).toInt().coerceIn(282, 300).coerceAtMost((width - 20).coerceAtLeast(200))
+            (width * 0.22).toInt().coerceIn(252, 264).coerceAtMost((width - 20).coerceAtLeast(200))
         }
     private fun dockW(): Int = TILE + GAP + PREVIEW_W + GAP + TILE
 

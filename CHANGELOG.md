@@ -21,6 +21,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Mount Settings screen shows each setting as a card with its options, with the active option highlighted.
 - The Journal detail pane is a card with aligned requirements and a clearer rewards list.
 - The Quest Book, quest detail and wiki screens use aligned rows and section headers.
+- The inventory panel is narrower, since the last two hotbar slots are never shown.
 - Tabs and screens fade in, loading states show placeholders instead of plain text, and the Identifications tab shows which page it is reading.
 
 ### Fixed
