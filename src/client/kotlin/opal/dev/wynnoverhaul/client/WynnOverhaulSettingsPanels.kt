@@ -674,6 +674,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.weaponAnimationFlinch,
             ) { config.weaponAnimationFlinch = it }
             checkbox(
+                "Gathering tool animations",
+                "Pickaxes, axes, scythes and fishing rods swing with their own animation while you mine, chop wood, harvest and fish.",
+                config.weaponAnimationTools,
+            ) { config.weaponAnimationTools = it }
+            checkbox(
                 "Spell animations",
                 "Plays a unique animation for each class spell (Bash, Heal, Arrow Storm, Spin Attack, Totem and the rest, including archetype variants) the moment Wynncraft announces the cast. Spells without a dedicated animation use a generic cast. Needs weapon attack animations on.",
                 config.weaponAnimationSpells,

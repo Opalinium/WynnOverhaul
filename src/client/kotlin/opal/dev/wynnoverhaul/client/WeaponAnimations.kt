@@ -23,6 +23,7 @@ import org.joml.Vector3f
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.abs
@@ -76,6 +77,11 @@ object WeaponAnimations {
     private const val STILL_SPEED_SQ = 0.0004
     private const val SPRINT_SPEED_SQ = 0.005
     private const val TICK_NANOS = 50_000_000L
+    private const val GATHER_CHAIN_SECONDS = 1.2f
+    private const val GATHER_MAX_SECONDS = 1.0f
+    private const val GATHER_MIN_STROKE = 0.5f
+    private const val GATHER_RESTART_SHARE = 0.6f
+    private const val GATHER_INTERVAL_SMOOTH = 0.5f
 
     private const val PITCH = 0
     private const val ACROSS = 1
@@ -210,6 +216,49 @@ object WeaponAnimations {
         gait: Gait = DEFAULT_GAIT,
     ) = Stance(carry, ready, idle, sprint, gripOffset, walk, gait)
 
+    private fun toolStances(): Map<String, Stance> = mapOf(
+        "TOOL:PICKAXE" to stance(
+            floatArrayOf(-0.75f, 0.25f, 0.08f, -0.7f, 0.4f, 0.05f, 0.08f, 0f, -0.8f, 0.15f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-1.2f, 0.3f, 0.1f, -1.05f, 0.5f, 0.05f, 0.2f, -0.4f, -1.4f, 0.15f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.4f, 0.18f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.2f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.95f, 0.3f, 0.06f, -0.85f, 0.45f, 0.05f, 0.1f, -0.2f, -0.2f, 0.25f, 0f, 1f, 0.22f, 0f),
+            gait = Gait(
+                mainWalk = 0.06f, offWalk = 0.07f, mainSprint = 0.12f, offSprint = 0.14f,
+                across = 0.05f, lean = 0.06f, leanBounce = 0.03f,
+                tipWalk = 0.05f, tipSprint = 0.06f, yaw = 0.1f, armBob = 0.06f,
+            ),
+        ),
+        "TOOL:AXE" to stance(
+            floatArrayOf(-0.75f, 0.25f, 0.08f, -0.7f, 0.4f, 0.05f, 0.08f, 0f, -0.8f, 0.15f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-1.2f, 0.3f, 0.1f, -1.05f, 0.5f, 0.05f, 0.2f, -0.4f, -1.4f, 0.15f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.4f, 0.18f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.2f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.95f, 0.3f, 0.06f, -0.85f, 0.45f, 0.05f, 0.1f, -0.2f, -0.2f, 0.25f, 0f, 1f, 0.22f, 0f),
+            gait = Gait(
+                mainWalk = 0.06f, offWalk = 0.07f, mainSprint = 0.12f, offSprint = 0.14f,
+                across = 0.05f, lean = 0.06f, leanBounce = 0.03f,
+                tipWalk = 0.05f, tipSprint = 0.06f, yaw = 0.1f, armBob = 0.06f,
+            ),
+        ),
+        "TOOL:SCYTHE" to stance(
+            floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
+            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.95f, 0.45f, 0.08f, -0.85f, 0.5f, 0.05f, 0.1f, -0.15f, -0.3f, 0.55f, -0.5f, 1f, 0.3f, 0f),
+            walk = floatArrayOf(-0.75f, 0.35f, 0.08f, -0.65f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.4f, 0.2f, 1f, 0.05f, 0f),
+            gait = Gait(
+                mainWalk = 0.06f, offWalk = 0.08f, mainSprint = 0.14f, offSprint = 0.16f,
+                across = 0.06f, lean = 0.06f, leanBounce = 0.03f,
+                tipWalk = 0.06f, tipSprint = 0.08f, yaw = 0.16f, armBob = 0.06f, twist = 0.25f,
+            ),
+        ),
+        "TOOL:ROD" to stance(
+            floatArrayOf(-0.6f, 0.15f, 0.08f, -0.25f, 0.1f, 0.12f, 0.08f, 0f, -0.55f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-1.1f, 0.2f, 0.1f, -0.4f, 0.15f, 0.2f, 0.12f, 0f, -0.9f, 0.1f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.3f, 0.1f, 0.1f, -0.1f, 0.05f, 0.12f, 0.05f, 0f, -0.4f, 0.05f, 0f, 0f, 0f, 0f),
+            floatArrayOf(-0.6f, 0.15f, 0.06f, -0.3f, 0.12f, 0.12f, 0.06f, 0f, -0.2f, 0.1f, 0f, 0f, 0.2f, 0f),
+        ),
+    )
+
     private val STANCES: Map<String, Stance> = mapOf(
         "SPEAR" to stance(
             floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
@@ -284,7 +333,7 @@ object WeaponAnimations {
             floatArrayOf(-0.8f, 0.35f, 0f, -0.85f, 0.4f, 0f, 0.1f, 0f, 0.15f, 0f, 0f, 1f, 0.2f, 0f),
             9f,
         ),
-    )
+    ) + toolStances()
 
     private fun stanceFor(key: String?): Stance? =
         if (key == null) null else STANCES[key] ?: STANCES[key.substringBefore(':')]
@@ -371,6 +420,63 @@ object WeaponAnimations {
 
         val curves: Array<Curve> = arrayOf(pitch, across, abduct, offPitch, offAcross, offAbduct, turn, reach, headA, headY, twist, grip, lean, step)
     }
+
+    private fun toolPoses(): Map<String, Pose> = mapOf(
+        "TOOL:PICKAXE" to Pose(
+            pitch = curve(0f to B, 0.2f to -2.3f, 0.4f to -0.95f, 0.6f to -0.9f, 1f to B),
+            across = curve(0f to B, 0.2f to -0.1f, 0.4f to 0.2f, 0.6f to 0.2f, 1f to B),
+            offPitch = curve(0f to B, 0.2f to -2.0f, 0.4f to -0.9f, 0.6f to -0.85f, 1f to B),
+            offAcross = curve(0f to B, 0.2f to 0.4f, 0.4f to 0.5f, 0.6f to 0.5f, 1f to B),
+            turn = curve(0f to B, 0.2f to -0.2f, 0.4f to 0.28f, 0.6f to 0.22f, 1f to B),
+            reach = curve(0f to B, 0.2f to 1.2f, 0.4f to -2.0f, 0.6f to -1.6f, 1f to B),
+            headA = curve(0f to B, 0.2f to -2.1f, 0.4f to 1.0f, 0.6f to 0.8f, 1f to B),
+            headY = curve(0f to B, 0.2f to 0f, 0.4f to 0.1f, 0.6f to 0.1f, 1f to B),
+        ),
+        "TOOL:AXE" to Pose(
+            pitch = curve(0f to B, 0.2f to -2.1f, 0.42f to -1.1f, 0.7f to -0.85f, 1f to B),
+            across = curve(0f to B, 0.2f to -0.6f, 0.42f to 0.5f, 0.7f to 0.3f, 1f to B),
+            abduct = curve(0f to B, 0.2f to 0.4f, 0.42f to -0.05f, 1f to B),
+            offPitch = curve(0f to B, 0.2f to -1.8f, 0.42f to -1.0f, 0.7f to -0.8f, 1f to B),
+            offAcross = curve(0f to B, 0.2f to 0.2f, 0.42f to 0.6f, 0.7f to 0.4f, 1f to B),
+            turn = curve(0f to B, 0.2f to -0.35f, 0.42f to 0.45f, 0.7f to 0.25f, 1f to B),
+            reach = curve(0f to B, 0.2f to 1.0f, 0.42f to -2.0f, 1f to B),
+            headA = curve(0f to B, 0.2f to -2.0f, 0.42f to 0.7f, 0.7f to 0.4f, 1f to B),
+            headY = curve(0f to B, 0.2f to -0.4f, 0.42f to 0.5f, 0.7f to 0.3f, 1f to B),
+            twist = curve(0f to B, 0.2f to -0.3f, 0.42f to 0.9f, 0.7f to 0.5f, 1f to B),
+        ),
+        "TOOL:SCYTHE" to Pose(
+            pitch = curve(0f to B, 0.16f to -1.0f, 0.42f to -1.05f, 0.72f to -0.8f, 1f to B),
+            across = curve(0f to B, 0.16f to -0.9f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
+            abduct = curve(0f to B, 0.16f to 0.3f, 0.42f to -0.1f, 1f to B),
+            offPitch = curve(0f to B, 0.16f to -0.9f, 0.42f to -0.95f, 0.72f to -0.7f, 1f to B),
+            offAcross = curve(0f to B, 0.16f to 0.2f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
+            turn = curve(0f to B, 0.16f to -0.5f, 0.42f to 0.6f, 0.72f to 0.3f, 1f to B),
+            reach = curve(0f to B, 0.42f to -1.6f, 1f to B),
+            headA = curve(0f to B, 0.16f to 0.15f, 0.42f to 0.35f, 0.72f to 0.2f, 1f to B),
+            headY = curve(0f to B, 0.16f to -0.8f, 0.42f to 0.9f, 0.72f to 0.6f, 1f to B),
+            twist = curve(0f to B, 0.16f to 0.5f, 0.42f to 1.2f, 0.72f to 0.6f, 1f to B),
+        ),
+        "TOOL:ROD_REEL" to Pose(
+            pitch = curve(0f to B, 0.2f to -1.1f, 0.4f to -1.7f, 0.7f to -1.2f, 1f to B),
+            across = curve(0f to B, 0.4f to 0.05f, 1f to B),
+            offPitch = curve(0f to B, 0.2f to -0.6f, 0.4f to -0.9f, 0.7f to -0.6f, 1f to B),
+            offAcross = curve(0f to B, 0.2f to 0.3f, 0.7f to 0.3f, 1f to B),
+            turn = curve(0f to B, 0.4f to -0.1f, 1f to B),
+            reach = curve(0f to B, 0.2f to -1.2f, 0.4f to 0.6f, 0.7f to -0.3f, 1f to B),
+            headA = curve(0f to B, 0.2f to -0.3f, 0.4f to -1.3f, 0.7f to -0.6f, 1f to B),
+            lean = curve(0f to B, 0.2f to 0.15f, 0.4f to -0.15f, 1f to B),
+        ),
+        "TOOL:ROD" to Pose(
+            pitch = curve(0f to B, 0.25f to -2.3f, 0.5f to -1.1f, 0.75f to -1.0f, 1f to B),
+            across = curve(0f to B, 0.25f to 0.1f, 0.5f to 0f, 1f to B),
+            offPitch = curve(0f to B, 0.25f to -0.7f, 0.5f to -0.5f, 1f to B),
+            offAcross = curve(0f to B, 0.25f to 0.3f, 0.5f to 0.3f, 1f to B),
+            turn = curve(0f to B, 0.25f to -0.15f, 0.5f to 0.2f, 0.75f to 0.15f, 1f to B),
+            reach = curve(0f to B, 0.25f to 1.0f, 0.5f to -1.6f, 0.75f to -1.2f, 1f to B),
+            headA = curve(0f to B, 0.25f to -1.9f, 0.5f to 0.1f, 0.75f to -0.3f, 1f to B),
+            lean = curve(0f to B, 0.25f to -0.1f, 0.5f to 0.25f, 0.75f to 0.15f, 1f to B),
+        ),
+    )
 
     private val POSES: Map<String, Pose> = mapOf(
         "SPEAR" to Pose(
@@ -1007,7 +1113,7 @@ object WeaponAnimations {
             headA = curve(0f to B, 0.25f to -0.9f, 0.5f to -0.2f, 1f to B),
             lean = curve(0f to B, 0.5f to 0.3f, 1f to B),
         ),
-    )
+    ) + toolPoses()
 
     private val SECONDS = mapOf(
         "SPEAR" to 0.3f,
@@ -1064,6 +1170,11 @@ object WeaponAnimations {
         "SPELL:UPROOT" to 0.8f,
         "SPELL:SWITCH_MASKS" to 0.8f,
         "SPELL:CAST" to 0.7f,
+        "TOOL:PICKAXE" to 0.34f,
+        "TOOL:AXE" to 0.36f,
+        "TOOL:SCYTHE" to 0.38f,
+        "TOOL:ROD" to 0.5f,
+        "TOOL:ROD_REEL" to 0.42f,
     )
 
     private val HITS = mapOf(
@@ -1121,6 +1232,11 @@ object WeaponAnimations {
         "SPELL:UPROOT" to 0.6f,
         "SPELL:SWITCH_MASKS" to 0.3f,
         "SPELL:CAST" to 0.5f,
+        "TOOL:PICKAXE" to 0.4f,
+        "TOOL:AXE" to 0.42f,
+        "TOOL:SCYTHE" to 0.42f,
+        "TOOL:ROD" to 0.5f,
+        "TOOL:ROD_REEL" to 0.4f,
     )
 
     private val BODY_MOTION: Map<String, Pair<Curve, Curve>> = mapOf(
@@ -1137,6 +1253,10 @@ object WeaponAnimations {
         "RELIK" to (curve(0f to B, 0.2f to -0.05f, 0.5f to 0.1f, 0.75f to 0.05f, 1f to B) to KEEP),
         "BOW" to (curve(0f to B, 0.16f to -0.08f, 0.7f to -0.12f, 0.84f to 0.05f, 1f to B) to curve(0f to B, 0.16f to 0.6f, 0.7f to 0.6f, 0.84f to 0.3f, 1f to B)),
         "BOW:FIREARM" to (curve(0f to B, 0.1f to -0.03f, 0.2f to -0.3f, 0.4f to -0.05f, 0.8f to -0.03f, 1f to B) to KEEP),
+        "TOOL:PICKAXE" to (curve(0f to B, 0.2f to -0.3f, 0.4f to 0.55f, 0.6f to 0.45f, 1f to B) to curve(0f to B, 0.2f to -0.15f, 0.4f to 0.7f, 0.6f to 0.55f, 1f to B)),
+        "TOOL:AXE" to (curve(0f to B, 0.2f to -0.25f, 0.42f to 0.35f, 0.7f to 0.2f, 1f to B) to curve(0f to B, 0.2f to -0.1f, 0.42f to 0.6f, 0.7f to 0.4f, 1f to B)),
+        "TOOL:SCYTHE" to (curve(0f to B, 0.16f to -0.1f, 0.42f to 0.2f, 0.72f to 0.12f, 1f to B) to curve(0f to B, 0.16f to -0.1f, 0.42f to 0.6f, 0.72f to 0.4f, 1f to B)),
+        "TOOL:ROD" to (curve(0f to B, 0.25f to -0.1f, 0.5f to 0.2f, 0.75f to 0.1f, 1f to B) to curve(0f to B, 0.5f to 0.3f, 0.75f to 0.2f, 1f to B)),
     )
 
     init {
@@ -1154,7 +1274,7 @@ object WeaponAnimations {
         HITS.forEach { (key, value) -> POSES[key]?.hit = value }
         POSES.forEach { (key, value) -> value.key = key }
         val gripOn = curve(0f to B, 0.12f to 1f, 0.65f to 1f, 1f to B)
-        listOf("SPELL:BASH", "SPELL:CHARGE", "SPELL:UPPERCUT", "SPELL:WAR_SCREAM", "SPEAR", "SPEAR:SWEEP", "SPEAR:SCYTHE", "SPEAR:RUBY", "SPEAR:RUBY_VAULT", "SPEAR:RUBY_SPIN", "SPEAR:SLAM", "SPEAR:TWIRL", "WAND:STAFF", "WAND:STAFF_SWEEP", "WAND:STAFF_RAISE", "BOW:FIREARM").forEach { key ->
+        listOf("SPELL:BASH", "SPELL:CHARGE", "SPELL:UPPERCUT", "SPELL:WAR_SCREAM", "SPEAR", "SPEAR:SWEEP", "SPEAR:SCYTHE", "SPEAR:RUBY", "SPEAR:RUBY_VAULT", "SPEAR:RUBY_SPIN", "SPEAR:SLAM", "SPEAR:TWIRL", "WAND:STAFF", "WAND:STAFF_SWEEP", "WAND:STAFF_RAISE", "BOW:FIREARM", "TOOL:PICKAXE", "TOOL:AXE", "TOOL:SCYTHE").forEach { key ->
             POSES[key]?.curves?.set(GRIP, gripOn)
         }
         POSES["BOW:FIREARM"]?.gripOffset = 9f
@@ -1175,6 +1295,8 @@ object WeaponAnimations {
         "WAND" to listOf(step("WAND:FLICK"), step("WAND"), step("WAND:FLICK", true), step("WAND:ORBIT", finisher = true)),
         "WAND:STAFF" to listOf(step("WAND:STAFF"), step("WAND:STAFF_SWEEP"), step("WAND:STAFF_SWEEP", true), step("WAND:STAFF_RAISE", finisher = true)),
         "RELIK" to listOf(step("RELIK"), step("RELIK:PULSE"), step("RELIK", true), step("RELIK:WAVE", finisher = true)),
+        "TOOL:AXE" to listOf(step("TOOL:AXE"), step("TOOL:AXE", true)),
+        "TOOL:SCYTHE" to listOf(step("TOOL:SCYTHE"), step("TOOL:SCYTHE", true)),
     )
 
     private val mirrorCache = HashMap<String, Pose>()
@@ -1252,6 +1374,11 @@ object WeaponAnimations {
             "SPELL:UPROOT" to listOf(cue(0.6f, SoundEvents.MACE_SMASH_GROUND, 0.9f, 0.45f)),
             "SPELL:SWITCH_MASKS" to listOf(cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.8f, 0.4f)),
             "SPELL:CAST" to listOf(cue(0.5f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2f, 0.4f)),
+            "TOOL:PICKAXE" to listOf(cue(0.18f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.3f)),
+            "TOOL:AXE" to listOf(cue(0.18f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.9f, 0.35f)),
+            "TOOL:SCYTHE" to listOf(cue(0.14f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.75f, 0.4f)),
+            "TOOL:ROD" to listOf(cue(0.3f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.5f, 0.3f)),
+            "TOOL:ROD_REEL" to listOf(cue(0.25f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.25f)),
         )
     }
 
@@ -1403,6 +1530,11 @@ object WeaponAnimations {
         "RELIK:WAVE" to "Relik: Wave",
         "BOW" to "Bow: Draw and release",
         "BOW:FIREARM" to "Bow: Firearm recoil",
+        "TOOL:PICKAXE" to "Tool: Pickaxe overhead strike",
+        "TOOL:AXE" to "Tool: Axe chop",
+        "TOOL:SCYTHE" to "Tool: Scythe reap",
+        "TOOL:ROD" to "Tool: Fishing rod cast",
+        "TOOL:ROD_REEL" to "Tool: Fishing rod reel",
     )
 
     private val CLASS_KINDS = mapOf(
@@ -1595,6 +1727,7 @@ object WeaponAnimations {
             if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
             refreshIdle(player)
             watchHurt(player)
+            watchGather(client, player)
             val config = WynnOverhaulConfig.current
             if (config.weaponAnimationPreview && enabled()) {
                 val stack = player.mainHandItem
@@ -1619,14 +1752,15 @@ object WeaponAnimations {
                 suppress = false
                 return
             }
-            if (SpellComboGuard.isSuspended() || (pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) {
+            val hand = player.swingingArm ?: InteractionHand.MAIN_HAND
+            val holdingTool = toolKey(player.getItemInHand(hand)) != null
+            if ((SpellComboGuard.isSuspended() && !holdingTool) || (pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) {
                 suppress = true
                 return
             }
-            val hand = player.swingingArm ?: InteractionHand.MAIN_HAND
             val arm = if (hand == InteractionHand.MAIN_HAND) player.mainArm else player.mainArm.opposite
             val stack = player.getItemInHand(hand)
-            val styleKey = resolveKey(stack)
+            val styleKey = resolveKey(stack)?.let { if (it == "TOOL:ROD" && player.fishing != null) "TOOL:ROD_REEL" else it }
             val styleBase = styleKey?.let { POSES[it] }
             if (styleKey == null || styleBase == null) {
                 pose = null
@@ -1634,13 +1768,19 @@ object WeaponAnimations {
                 suppress = false
                 return
             }
+            val gathering = styleKey.startsWith("TOOL:")
             val now = System.nanoTime()
             val gap = if (lastBeginNanos == 0L) Float.MAX_VALUE else (now - lastBeginNanos) / 1_000_000_000f
             val aps = WynnWeapons.attacksPerSecond(stack)
             val minGap = if (aps != null) (MIN_GAP_FRACTION / aps.toFloat()).coerceIn(MIN_GAP_LOW, MIN_GAP_HIGH) else FALLBACK_GAP
             suppress = true
             readyUntil = now + READY_NANOS
-            if (gap < minGap) return
+            if (gathering) {
+                noteGatherSwing(now)
+                if (pose?.key?.startsWith("TOOL:") == true && computeProgress() >= 0f && elapsedSeconds() < totalSeconds * GATHER_RESTART_SHARE) return
+            } else if (gap < minGap) {
+                return
+            }
             val config = WynnOverhaulConfig.current
             val combo = advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
             val standard = stepPose(combo) ?: styleBase
@@ -1662,14 +1802,39 @@ object WeaponAnimations {
             startP = if (chained) chosen.hit * CHAIN_SKIP else 0f
             lastBeginNanos = now
             if (config.weaponAnimationLunge && chosen.key.substringBefore(':') in LUNGE_FAMILIES && moveAmt < MOVE_DUST_MAX) WynnHitFeedback.stepDust(player)
-            val total = minOf(chosen.seconds, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
+            val total = if (gathering) gatherStrokeSeconds(chosen) else minOf(chosen.seconds, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
             totalSeconds = total
-            hitSeconds = minOf(HIT_SECONDS, total * HIT_SHARE)
+            hitSeconds = if (gathering) total * chosen.hit else minOf(HIT_SECONDS, total * HIT_SHARE)
             blendSeconds = if (chained) hitSeconds else BLEND_SECONDS
             val span = chosen.seconds - MIN_SECONDS
             val target = if (span <= 0f) 1f else AMP_MIN + (1f - AMP_MIN) * ((total - MIN_SECONDS) / span).coerceIn(0f, 1f)
             val settle = MathX.expApproach(gap, AMP_SMOOTH_TAU)
             amp += (target - amp) * settle.coerceIn(0f, 1f)
+        }
+
+        private var gatherSwingNanos = 0L
+        private var gatherInterval = 0f
+
+        private fun noteGatherSwing(now: Long) {
+            val since = if (gatherSwingNanos == 0L) Float.MAX_VALUE else (now - gatherSwingNanos) / 1_000_000_000f
+            gatherSwingNanos = now
+            if (since >= GATHER_CHAIN_SECONDS) {
+                gatherInterval = 0f
+                return
+            }
+            gatherInterval = if (gatherInterval == 0f) since else gatherInterval + (since - gatherInterval) * GATHER_INTERVAL_SMOOTH
+        }
+
+        private fun gatherStrokeSeconds(chosen: Pose): Float {
+            val interval = if (gatherInterval > 0f) gatherInterval else chosen.seconds
+            val beats = ceil(GATHER_MIN_STROKE / interval).coerceAtLeast(1f)
+            return (beats * interval).coerceIn(GATHER_MIN_STROKE, GATHER_MAX_SECONDS)
+        }
+
+        private fun watchGather(client: Minecraft, player: LocalPlayer) {
+            val key = if (enabled() && !previewing) toolKey(player.mainHandItem) else null
+            GatherSession.tick(client, player, key)
+            if (GatherSession.takeCompleted() && key == "TOOL:ROD") POSES["TOOL:ROD_REEL"]?.let { beginSpell(player, it) }
         }
 
         fun beginSpell(player: LocalPlayer, chosen: Pose) {
@@ -1822,7 +1987,7 @@ object WeaponAnimations {
             if (stack !== previewStack) {
                 previewStack = stack
                 val assigned = WeaponAnimationRegistry.styleFor(stack)
-                previewCached = if (assigned != null) POSES[assigned] else autoStyleKey(stack)?.let { POSES[it] }
+                previewCached = if (assigned != null) POSES[assigned] else (autoStyleKey(stack) ?: toolKey(stack))?.let { POSES[it] }
             }
             return previewCached
         }
@@ -1969,9 +2134,17 @@ object WeaponAnimations {
     private fun enabled(): Boolean =
         WynnOverhaulConfig.current.weaponAnimationsEnabled && WynnOverhaulGate.isInGame()
 
+    private val TOOL_NAME = Regex("""\b(Pickaxe|Axe|Scythe|Rod)\s+T\d+""")
+
+    private fun toolKey(stack: ItemStack): String? {
+        if (!WynnOverhaulConfig.current.weaponAnimationTools) return null
+        val match = TOOL_NAME.find(TextClean.clean(stack.hoverName.string)) ?: return null
+        return "TOOL:" + match.groupValues[1].uppercase()
+    }
+
     private fun resolveKey(stack: ItemStack): String? {
         if (stack.isEmpty) return null
-        val assigned = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack)
+        val assigned = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack) ?: toolKey(stack)
         return assigned?.takeIf { it in POSES }
     }
 

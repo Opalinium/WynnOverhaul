@@ -672,7 +672,7 @@ object EntityTracker {
     private fun namePatternEntries(pattern: String): List<String> =
         pattern.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
-    private fun textOf(entity: Entity): Component? {
+    internal fun textOf(entity: Entity): Component? {
         if (entity !is Display.TextDisplay) return null
         return runCatching { (entity as TextDisplayAccessor).`wynnoverhaul$getText`() }.getOrNull()
     }

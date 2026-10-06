@@ -29,6 +29,7 @@ data class WynnOverhaulConfig(
     var weaponAnimationLunge: Boolean = true,
     var weaponAnimationAnticipation: Boolean = true,
     var weaponAnimationFlinch: Boolean = true,
+    var weaponAnimationTools: Boolean = true,
     var weaponAnimationSpells: Boolean = true,
     var weaponAnimationSfx: Boolean = true,
     var weaponAnimationSfxVolume: Double = 0.45,
