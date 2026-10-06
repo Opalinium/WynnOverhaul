@@ -803,6 +803,16 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Adds the weapon and armour special effect of a powder to its tooltip (unlocked with two Tier 4+ powders of the same element).",
                 config.powderSpecialsTooltipEnabled,
             ) { config.powderSpecialsTooltipEnabled = it }
+            checkbox(
+                "Item roll percentages",
+                "Shows how well each identified stat rolled as a percentage beside the stat, colored from red for a poor roll to aqua for a perfect one. Read from the roll meter on the item.",
+                config.itemRollPercentEnabled,
+            ) { config.itemRollPercentEnabled = it }
+            checkbox(
+                "Overall roll in item name",
+                "Adds the average roll of all identified stats to the end of the item name.",
+                config.itemRollOverallEnabled,
+            ) { config.itemRollOverallEnabled = it }
 
             header("Prices")
             checkbox(

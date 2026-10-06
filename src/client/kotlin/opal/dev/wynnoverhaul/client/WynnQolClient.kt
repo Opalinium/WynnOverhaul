@@ -41,6 +41,7 @@ class WynnQolClient : ClientModInitializer {
         WynnLocationToasts.register()
         MountTooltipFeature.register()
         PowderSpecialsTooltip.register()
+        ItemRollTooltip.register()
         ObjectiveClaims.register()
         WynnActionBar.registerDebug()
         PriceCheck.register()
