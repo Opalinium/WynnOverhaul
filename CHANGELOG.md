@@ -23,6 +23,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The Item Identifier, item selling and item repair menus use the same custom screen, with the Corkian Augments and Repair Items buttons in the corner.
 - Merchant shops open in a custom screen that lists each offer with its price, level requirement and main effect, colors prices you can't afford, and has search and sorting by price, level or name. Any merchant works, whatever it stocks.
 - While you gather, the XP bar and Discord presence show your profession and its level instead of your combat level.
+- Dropped items get a subtle gold beam and ground glow, with a toggle and an intensity slider in the Alerts tab.
 
 ### Changed
 - Combat settings moved from the HUD and QoL tabs into their own Combat tab.

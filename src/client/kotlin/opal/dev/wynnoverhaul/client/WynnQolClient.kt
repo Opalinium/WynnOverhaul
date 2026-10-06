@@ -54,6 +54,7 @@ class WynnQolClient : ClientModInitializer {
             HudElement { graphics, _ ->
                 ImpactSparks.draw(graphics)
                 DamageNumbers.draw(graphics)
+                LootBeams.draw(graphics)
             },
         )
         HudElementRegistry.addLast(
@@ -189,6 +190,7 @@ class WynnQolClient : ClientModInitializer {
         WynnOverhaulGate.refresh(client)
         if (!WynnOverhaulGate.inGame) return
         RareItemAlert.tick(client)
+        LootBeams.tick(client)
         WynnScoreboardTracker.tick(client)
         WynnDirectMessages.tick(client)
         QuestBeaconTracker.tick(client)

@@ -32,6 +32,7 @@ class EntityTrackerClient : ClientModInitializer {
             TrackerEsp.capture(ctx)
             DamageNumbers.capture(ctx)
             ImpactSparks.capture(ctx)
+            LootBeams.capture(ctx)
         }
         HudElementRegistry.addFirst(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "entity_tracker_esp"),

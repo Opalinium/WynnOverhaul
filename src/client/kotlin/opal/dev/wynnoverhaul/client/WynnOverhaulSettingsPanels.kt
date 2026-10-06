@@ -960,6 +960,14 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.mythicBlockerEnabled,
             ) { config.mythicBlockerEnabled = it }
 
+            header("Loot Beams")
+            checkbox(
+                "Beams over ground loot",
+                "Draws a subtle gold beam with a ground glow over dropped items.",
+                config.lootBeamEnabled,
+            ) { config.lootBeamEnabled = it }
+            slider("Beam intensity", 0.2, 1.5, config.lootBeamIntensity, "Overall opacity of loot beams.") { config.lootBeamIntensity = it }
+
             header("Entity Tracker Alerts")
             checkbox("Chat message on new match", "", config.trackerPingChat) { config.trackerPingChat = it }
             checkbox("Sound on new match", "", config.trackerPingSound) { config.trackerPingSound = it }

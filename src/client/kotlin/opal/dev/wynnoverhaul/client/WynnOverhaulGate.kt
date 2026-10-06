@@ -43,6 +43,7 @@ object WynnOverhaulGate {
             WynnHitFeedback.clear()
             DamageNumbers.clear()
             ImpactSparks.clear()
+            LootBeams.clear()
             WeaponAnimations.clearImpactTails()
             WynnClassBuffTracker.clear()
             WynnUltimateTracker.clear()

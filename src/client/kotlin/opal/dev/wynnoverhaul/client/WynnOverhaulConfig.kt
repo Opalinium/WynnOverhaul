@@ -70,6 +70,8 @@ data class WynnOverhaulConfig(
     var mythicAlertSound: Boolean = true,
     var mythicAlertChat: Boolean = true,
     var mythicBlockerEnabled: Boolean = false,
+    var lootBeamEnabled: Boolean = true,
+    var lootBeamIntensity: Double = 1.0,
     var mythicAlertSoundId: String = "minecraft:entity.player.levelup",
     var mythicAlertVolume: Double = 1.0,
     var discordRpcEnabled: Boolean = true,
@@ -253,6 +255,7 @@ data class WynnOverhaulConfig(
         weaponAnimationTrailIntensity = weaponAnimationTrailIntensity.coerceIn(0.2, 1.5)
         if (LocomotionAnimations.styleNamed(locomotionStyle) == null) locomotionStyle = "HEROIC"
         mythicAlertVolume = mythicAlertVolume.coerceIn(0.0, 1.0)
+        lootBeamIntensity = lootBeamIntensity.coerceIn(0.2, 1.5)
         trackerPingVolume = trackerPingVolume.coerceIn(0.0, 1.0)
         WynnOverhaulToastQueue.Kind.entries.forEach {
             val t = toast(it)
