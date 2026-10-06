@@ -24,8 +24,9 @@ class XpHudElement : HudElement {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.customHudEnabled) return
         val fraction = WynnCombatXpTracker.progressFraction ?: return
         val percent = (fraction * 100).toInt()
+        val profession = WynnLevelTracker.professionDisplay()
         val level = WynnLevelTracker.level
-        val label = if (level != null) "Lv $level  $percent%" else "XP  $percent%"
+        val label = if (profession != null) "${profession.first} Lv ${profession.second}  $percent%" else if (level != null) "Lv $level  $percent%" else "XP  $percent%"
         renderBar(graphics, Minecraft.getInstance().font, label, fraction)
     }
 

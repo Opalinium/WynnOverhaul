@@ -113,7 +113,14 @@ class DiscordRichPresence : ClientModInitializer {
             activity.addProperty("details", if (config.discordShowActivity) currentActivity() else "Playing Wynncraft")
 
             val stateParts = ArrayList<String>(2)
-            if (config.discordShowLevel) WynnLevelTracker.level?.let { stateParts.add("Lv. $it") }
+            if (config.discordShowLevel) {
+                val profession = WynnLevelTracker.professionDisplay()
+                if (profession != null) {
+                    stateParts.add("${profession.first} ${profession.second}")
+                } else {
+                    WynnLevelTracker.level?.let { stateParts.add("Lv. $it") }
+                }
+            }
             if (config.discordShowRegion) WynnRegions.nearestRegion(player.x, player.z)?.let { stateParts.add(it) }
             activity.addProperty("state", if (stateParts.isEmpty()) (server ?: "Wynncraft") else stateParts.joinToString(" · "))
         }
