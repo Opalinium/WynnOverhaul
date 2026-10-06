@@ -22,9 +22,24 @@ object WynnItemRarity {
 
     fun of(stack: ItemStack): WynnRarity? {
         if (stack.isEmpty) return null
-        val color = firstStyledColor(stack.hoverName) ?: return null
-        return byColor[color]
+        tierFromModelData(stack)?.let { return it }
+        tierFromTooltipStyle(stack)?.let { return it }
+        return firstStyledColor(stack.hoverName)?.let { byColor[it] }
     }
+
+    private fun tierFromTooltipStyle(stack: ItemStack): WynnRarity? {
+        val path = stack.get(DataComponents.TOOLTIP_STYLE)?.toString()?.substringAfterLast(':') ?: return null
+        if (path == "uncommon") return WynnRarity.UNIQUE
+        return WynnRarity.entries.firstOrNull { it.name == path.uppercase() }
+    }
+
+    private fun tierFromModelData(stack: ItemStack): WynnRarity? {
+        val data = stack.get(DataComponents.CUSTOM_MODEL_DATA) ?: return null
+        val tier = data.strings().firstOrNull { it.startsWith(TIER_PREFIX) } ?: return null
+        return WynnRarity.entries.firstOrNull { it.name == tier.substring(TIER_PREFIX.length).uppercase() }
+    }
+
+    private const val TIER_PREFIX = "item_tier_"
 
     private class LoreEntry(val lore: ItemLore, val lines: List<String>)
 
@@ -54,8 +69,8 @@ object WynnItemRarity {
     private fun firstStyledColor(text: FormattedText): Int? {
         var found: Int? = null
         text.visit(
-            FormattedText.StyledContentConsumer<Unit> { style, _ ->
-                if (found == null) found = style.color?.value
+            FormattedText.StyledContentConsumer<Unit> { style, segment ->
+                if (found == null && segment.any { ch -> ch.isLetterOrDigit() }) found = style.color?.value
                 Optional.empty()
             },
             Style.EMPTY,

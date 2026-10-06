@@ -29,6 +29,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Custom menu settings moved from the QoL and Advanced tabs into a new Menus tab, and the bank, loot chest, Item Upgrader, identifier, selling and repair, merchant and mount menus each have their own toggle.
 - Weapon afterimages default to the lowest opacity and swing sounds to 0.45 volume.
 - Depositing an item into the bank first tops up an existing stack of the same item, on any page, before using an empty slot.
+- Item rarity is read from the item's tier data when it has any, and a colored symbol before the name no longer decides the tier.
 
 ## 1.4.0 - 2026-10-01
 
