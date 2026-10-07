@@ -31,6 +31,7 @@ public class ScrollWheelHandlerMixin {
             if (scrollDelta != 0) {
                 WynnDialogueTracker.INSTANCE.nudgeSelection(-scrollDelta);
             }
+            return;
         }
         boolean clamp = config.getQolPreventHotbarOverscroll();
         boolean skipHidden = config.getCustomHudEnabled();

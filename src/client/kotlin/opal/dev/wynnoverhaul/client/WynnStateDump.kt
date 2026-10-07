@@ -28,6 +28,7 @@ import java.nio.file.Files
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Optional
+import net.minecraft.network.chat.FontDescription
 
 object WynnStateDump {
     @Volatile
@@ -42,6 +43,7 @@ object WynnStateDump {
     @Volatile
     private var lastMissedDialogue: String? = null
 
+    private val dialogueLog = ArrayDeque<String>()
     private var lastMissLogMillis = 0L
     private var openTitle: Component? = null
     private var openScreenName = ""
@@ -85,6 +87,12 @@ object WynnStateDump {
             dispatcher.register(
                 ClientCommands.literal("owdump")
                     .then(
+                        ClientCommands.literal("dialogue").executes {
+                            runDialogue()
+                            1
+                        },
+                    )
+                    .then(
                         ClientCommands.argument("radius", DoubleArgumentType.doubleArg(1.0, 64.0)).executes { ctx ->
                             run(DoubleArgumentType.getDouble(ctx, "radius"))
                             1
@@ -105,6 +113,13 @@ object WynnStateDump {
         val line = "caught=$caught ${describe(message)}"
         if (caught) {
             lastCaughtDialogue = line
+            val compact = describeDialogue(message)
+            synchronized(dialogueLog) {
+                if (dialogueLog.lastOrNull() != compact) {
+                    dialogueLog.addLast(compact)
+                    while (dialogueLog.size > DIALOGUE_LOG_SIZE) dialogueLog.removeFirst()
+                }
+            }
         } else {
             lastMissedDialogue = line
             val now = System.currentTimeMillis()
@@ -122,6 +137,21 @@ object WynnStateDump {
         client.keyboardHandler.setClipboard(text)
         player.sendSystemMessage(
             Component.literal("Copied game state (${text.length} chars) to the clipboard.").withStyle(ChatFormatting.GRAY),
+        )
+    }
+
+    private fun runDialogue() {
+        val client = Minecraft.getInstance()
+        val player = client.player ?: return
+        val text = buildString {
+            appendLine("== Tracker state")
+            appendLine(WynnDialogueTracker.debugState())
+            appendLine("== Dialogue bars, oldest first")
+            synchronized(dialogueLog) { dialogueLog.forEach { appendLine(it) } }
+        }
+        client.keyboardHandler.setClipboard(text)
+        player.sendSystemMessage(
+            Component.literal("Copied ${dialogueLog.size} dialogue bars (${text.length} chars) to the clipboard.").withStyle(ChatFormatting.GRAY),
         )
     }
 
@@ -227,6 +257,25 @@ object WynnStateDump {
         )
     }
 
+    private fun describeDialogue(component: Component): String = buildString {
+        component.visit(
+            FormattedText.StyledContentConsumer<Unit> { style, text ->
+                val path = (style.font as? FontDescription.Resource)?.id?.path
+                if (path != null && path.startsWith("hud/dialogue/") && text.isNotEmpty() && !path.startsWith("hud/dialogue/effect/") && !path.contains("/box") && !path.contains("/footer") && !path.contains("nameplate")) {
+                    if (isNotEmpty()) append(" | ")
+                    append(path.removePrefix("hud/dialogue/"))
+                    style.color?.let { append(" #%06X".format(it.value and 0xFFFFFF)) }
+                    append(": ")
+                    for (ch in text) {
+                        if (ch.code in 0x20..0x7E) append(ch) else append("\\u%04X".format(ch.code))
+                    }
+                }
+                Optional.empty()
+            },
+            Style.EMPTY,
+        )
+    }
+
     private fun styleOf(style: Style): String {
         val parts = ArrayList<String>()
         style.color?.let { parts.add("#%06X".format(it.value and 0xFFFFFF)) }
@@ -240,6 +289,7 @@ object WynnStateDump {
 
     private const val DEFAULT_RADIUS = 16.0
     private const val MISS_LOG_GAP_MS = 1000L
+    private const val DIALOGUE_LOG_SIZE = 40
     private val DIALOGUE_PROMPT = Regex("(?i)\\bto (choose option|confirm|continue)\\b")
     private const val PLAYER_SLOTS = 36
     private const val DEFAULT_DUMP_KEY = 297

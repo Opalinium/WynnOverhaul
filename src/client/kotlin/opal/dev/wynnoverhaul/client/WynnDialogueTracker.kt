@@ -1,6 +1,7 @@
 package opal.dev.wynnoverhaul.client
 
 import java.util.Optional
+import kotlin.math.abs
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.FontDescription
@@ -22,8 +23,13 @@ object WynnDialogueTracker {
         private set
 
     @Volatile
-    var choices: List<Choice> = emptyList()
-        private set
+    private var built: List<Choice> = emptyList()
+
+    val choices: List<Choice>
+        get() {
+            settle()
+            return built
+        }
 
     @Volatile
     var requiresShift: Boolean = false
@@ -45,12 +51,15 @@ object WynnDialogueTracker {
         text = null
         speaker = null
         body = ""
-        choices = emptyList()
+        built = emptyList()
+        lastTruth = null
         requiresShift = false
         hasChoices = false
         dialogueAtMillis = 0L
-        choiceTexts.clear()
-        selNumber = null
+        options.clear()
+        windowStart = 0
+        selIndex = null
+        pendingUntil = 0L
         stableSpeaker = null
         stableBody = ""
     }
@@ -106,17 +115,15 @@ object WynnDialogueTracker {
         val samePrompt = speaker == stableSpeaker &&
             (stableBody.isEmpty() || body.startsWith(stableBody) || stableBody.startsWith(body))
         if (!samePrompt) {
-            choiceTexts.clear()
-            selNumber = null
+            options.clear()
+            windowStart = 0
+            selIndex = null
+            pendingUntil = 0L
         }
-        if (live.isNotEmpty()) {
-            for (c in live) {
-                val prev = choiceTexts[c.number]
-                choiceTexts[c.number] = if (prev == null) c.text else stitch(prev, c.text)
-            }
-
-            if (selNumber == null) selNumber = oddOneOut(live) ?: choiceTexts.keys.minOrNull()
-        }
+        learnPolarity(visited.selectedRow)
+        lastSelectedRow = visited.selectedRow
+        val truthRank = visited.selectedRow?.let { rankOf(it, visited.rowCount) }
+        if (live.isNotEmpty()) mergeWindow(live, truthRank)
         stableSpeaker = speaker
         stableBody = body
         refreshChoices()
@@ -126,6 +133,9 @@ object WynnDialogueTracker {
         WynnOverhaulGate.noteActionBar()
     }
 
+    fun debugState(): String =
+        "selectedRow=$lastSelectedRow polarity=$polarity options=${options.mapIndexed { i, t -> "$i:${t.take(40)}" }} windowStart=$windowStart selIndex=$selIndex hasChoices=$hasChoices"
+
     fun isChoiceActive(): Boolean {
         if (!hasChoices || choices.isEmpty()) return false
         return dialogueVisible(System.currentTimeMillis())
@@ -133,29 +143,97 @@ object WynnDialogueTracker {
 
     fun nudgeSelection(direction: Int) {
         if (direction == 0 || !isChoiceActive()) return
-        val numbers = choiceTexts.keys.sorted()
-        if (numbers.isEmpty()) return
-        val current = selNumber?.let { numbers.indexOf(it) }?.takeIf { it >= 0 } ?: 0
-        val next = ((current + direction) % numbers.size + numbers.size) % numbers.size
-        selNumber = numbers[next]
+        if (options.isEmpty()) return
+        val current = selIndex ?: 0
+        selIndex = Math.floorMod(current + direction, options.size)
+        pendingUntil = System.currentTimeMillis() + PENDING_NUDGE_MS
+        if (polarity == 0) {
+            rowBeforeNudge = lastSelectedRow
+            nudgeDirection = direction
+        }
         refreshChoices()
     }
 
+    private fun settle() {
+        val due = pendingUntil
+        if (due == 0L || System.currentTimeMillis() < due) return
+        pendingUntil = 0L
+        val truth = lastTruth ?: return
+        if (truth != selIndex && truth in options.indices) {
+            selIndex = truth
+            refreshChoices()
+        }
+    }
+
     private fun refreshChoices() {
-        choices = choiceTexts.entries.sortedBy { it.key }
-            .map { Choice(it.value.take(MAX_CHOICE_LENGTH), it.key == selNumber) }
+        built = options.mapIndexed { index, text -> Choice(text.take(MAX_CHOICE_LENGTH), index == selIndex) }
             .filter { it.text.isNotEmpty() }
+    }
+
+    private fun mergeWindow(live: List<NumberedChoice>, selectedRank: Int?) {
+        val window = live.sortedBy { it.number }
+        val offset = alignWindow(window)
+        for ((i, c) in window.withIndex()) {
+            val at = offset + i
+            while (options.size <= at) options.add("")
+            options[at] = stitch(options[at], c.text)
+        }
+        windowStart = offset
+        val strong = selectedRank?.coerceIn(0, window.size - 1)
+            ?: strongPick(live)?.let { number -> window.indexOfFirst { it.number == number } }?.takeIf { it >= 0 }
+        val current = selIndex
+        val truth = strong?.let { offset + it }
+        lastTruth = truth
+        val now = System.currentTimeMillis()
+        if (now < pendingUntil && current != null) {
+            if (truth == current) pendingUntil = 0L
+            return
+        }
+        selIndex = when {
+            truth != null -> truth
+            current == null -> offset
+            current < offset -> offset
+            current >= offset + window.size -> offset + window.size - 1
+            else -> current
+        }
+    }
+
+    private fun alignWindow(window: List<NumberedChoice>): Int {
+        val absolute = maxOf(0, window.first().number)
+        if (options.isEmpty()) return absolute
+        var best = windowStart
+        var bestScore = -1
+        for (offset in maxOf(0, windowStart - window.size)..windowStart + window.size) {
+            var score = 0
+            for ((i, c) in window.withIndex()) {
+                val known = options.getOrNull(offset + i) ?: continue
+                if (sameOption(known, c.text)) score++
+            }
+            if (score > bestScore || score == bestScore && abs(offset - windowStart) < abs(best - windowStart)) {
+                best = offset
+                bestScore = score
+            }
+        }
+        return if (bestScore > 0 || absolute == 0) best else absolute
+    }
+
+    private fun sameOption(a: String, b: String): Boolean {
+        if (a.length < SAME_MIN_LENGTH || b.length < SAME_MIN_LENGTH) return false
+        if (a.startsWith(b) || b.startsWith(a)) return true
+        return longestCommonSubstring(a, b).len >= LCS_MIN_LENGTH
     }
 
     private data class NumberedChoice(val number: Int, val text: String, val color: String)
 
-    private data class Visited(val bodyRaw: String, val choices: List<NumberedChoice>, val speakerRaw: String)
+    private data class Visited(val bodyRaw: String, val choices: List<NumberedChoice>, val speakerRaw: String, val selectedRow: Int?, val rowCount: Int)
 
     private fun visitParts(message: Component): Visited {
         val body = StringBuilder()
         val speaker = StringBuilder()
         val texts = LinkedHashMap<Int, StringBuilder>()
         val colors = HashMap<Int, String>()
+        var selectedRow: Int? = null
+        val rows = HashSet<Int>()
         message.visit(
             FormattedText.StyledContentConsumer<Unit> { style, string ->
                 val path = (style.font as? FontDescription.Resource)?.id?.path
@@ -168,6 +246,10 @@ object WynnDialogueTracker {
                                 colors.putIfAbsent(num, style.color?.toString() ?: "default")
                             }
                         }
+                        path.endsWith(CHOICE_STYLE_SUFFIX) -> {
+                            if (selectedRow == null) selectedRow = selectedRowOf(string)
+                            rowsOf(string, rows)
+                        }
                         BODY_MARKER in path -> body.append(string)
                         path.endsWith(NAMEPLATE_PATH) -> speaker.append(string)
                     }
@@ -179,12 +261,45 @@ object WynnDialogueTracker {
         val choices = texts.map { (num, sb) ->
             NumberedChoice(num, cleanText(sb.toString()).trim(), colors[num] ?: "default")
         }
-        return Visited(body.toString(), choices, speaker.toString())
+        return Visited(body.toString(), choices, speaker.toString(), selectedRow, rows.size)
     }
 
-    private fun oddOneOut(live: List<NumberedChoice>): Int? {
-        if (live.isEmpty()) return null
-        if (live.size == 1) return live[0].number
+    private fun rowsOf(string: String, into: MutableSet<Int>) {
+        for (ch in string) {
+            val code = ch.code
+            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || code == CHOICE_MARKER_GLYPH) continue
+            val row = (code shr 4) and 0xF
+            if (row in 1..8) into.add(row)
+        }
+    }
+
+    private fun rankOf(row: Int, rowCount: Int): Int? = when {
+        polarity > 0 -> row - 1
+        polarity < 0 -> rowCount - row
+        else -> null
+    }
+
+    private fun learnPolarity(row: Int?) {
+        val before = rowBeforeNudge ?: return
+        if (polarity != 0 || row == null || row == before) return
+        rowBeforeNudge = null
+        val delta = row - before
+        if (abs(delta) != 1) return
+        polarity = if (delta * nudgeDirection > 0) 1 else -1
+    }
+
+    private fun selectedRowOf(string: String): Int? {
+        for (ch in string) {
+            val code = ch.code
+            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || code == CHOICE_MARKER_GLYPH) continue
+            val row = (code shr 4) and 0xF
+            if (code and 0xF != 0 && row in 1..8) return row
+        }
+        return null
+    }
+
+    private fun strongPick(live: List<NumberedChoice>): Int? {
+        if (live.size < 2) return null
         val byColor = live.groupBy { it.color }
         if (byColor.size == 2) {
             byColor.values.firstOrNull { it.size == 1 }?.firstOrNull()?.let { return it.number }
@@ -235,6 +350,8 @@ object WynnDialogueTracker {
     }
 
     private const val LCS_MIN_LENGTH = 12
+    private const val PENDING_NUDGE_MS = 300L
+    private const val SAME_MIN_LENGTH = 3
 
     private fun cleanText(raw: String): String {
         val sb = StringBuilder(raw.length)
@@ -271,8 +388,17 @@ object WynnDialogueTracker {
         return last to head
     }
 
-    private val choiceTexts = LinkedHashMap<Int, String>()
-    private var selNumber: Int? = null
+    @Volatile
+    private var lastSelectedRow: Int? = null
+
+    private val options = ArrayList<String>()
+    private var windowStart = 0
+    private var pendingUntil = 0L
+    private var lastTruth: Int? = null
+    private var polarity = 0
+    private var rowBeforeNudge: Int? = null
+    private var nudgeDirection = 0
+    private var selIndex: Int? = null
 
     @Volatile
     private var stableSpeaker: String? = null
@@ -283,6 +409,10 @@ object WynnDialogueTracker {
     private val WHITESPACE_RUN = Regex("\\s+")
     private val CONTROL_PHRASES = Regex("(?i)\\bto (choose option|confirm|continue)\\b")
     private val CHOICE_NUMBER_PATTERN = Regex("choice_(\\d+)")
+    private const val CHOICE_STYLE_SUFFIX = "/style/default/choice"
+    private const val CHOICE_GLYPH_MIN = 0xE000
+    private const val CHOICE_GLYPH_MAX = 0xE0FF
+    private const val CHOICE_MARKER_GLYPH = 0xE090
     private const val BODY_MARKER = "/body_"
     private const val NAMEPLATE_PATH = "/text/nameplate"
     private const val DIALOGUE_FONT_PREFIX = "hud/dialogue/"
