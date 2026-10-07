@@ -1,0 +1,62 @@
+lungeFamilies: ["DAGGER", "SPEAR"]
+cues:
+  finisher: {sound: "minecraft:entity.player.attack.strong", pitch: 0.8, volume: 0.5}
+  thump: {sound: "minecraft:item.mace.smash_ground", pitch: 1.5, volume: 0.3}
+  tail: {sound: "minecraft:block.amethyst_block.chime", pitch: 1.9, volume: 0.22}
+  slam: {sound: "minecraft:item.mace.smash_ground_heavy", pitch: 1.3, volume: 0.35}
+impact:
+  "SPEAR":
+    - {sound: "minecraft:entity.player.attack.strong", pitch: 0.85, volume: 0.5}
+    - {sound: "minecraft:item.trident.hit", pitch: 1.3, volume: 0.3}
+  "DAGGER":
+    - {sound: "minecraft:entity.player.attack.weak", pitch: 1.5, volume: 0.45}
+    - {sound: "minecraft:entity.player.attack.nodamage", pitch: 1.8, volume: 0.2}
+  "WAND":
+    - {sound: "minecraft:block.amethyst_block.chime", pitch: 1.5, volume: 0.35}
+    - {sound: "minecraft:entity.player.attack.knockback", pitch: 1.4, volume: 0.3}
+  "RELIK":
+    - {sound: "minecraft:block.amethyst_block.resonate", pitch: 1, volume: 0.35}
+    - {sound: "minecraft:entity.player.attack.knockback", pitch: 1, volume: 0.35}
+  "BOW":
+    - {sound: "minecraft:entity.arrow.hit", pitch: 1.2, volume: 0.5}
+    - {sound: "minecraft:entity.player.attack.weak", pitch: 1.2, volume: 0.3}
+  "SPELL":
+    - {sound: "minecraft:item.mace.smash_ground", pitch: 1.2, volume: 0.45}
+    - {sound: "minecraft:entity.player.attack.strong", pitch: 0.8, volume: 0.4}
+spellNames:
+  "bash": "SPELL:BASH"
+  "charge": "SPELL:CHARGE"
+  "uppercut": "SPELL:UPPERCUT"
+  "warscream": "SPELL:WAR_SCREAM"
+  "heal": "SPELL:HEAL"
+  "teleport": "SPELL:TELEPORT"
+  "meteor": "SPELL:METEOR"
+  "icesnake": "SPELL:ICE_SNAKE"
+  "arcanetransfer": "SPELL:ARCANE_TRANSFER"
+  "ophanim": "SPELL:OPHANIM"
+  "arrowstorm": "SPELL:ARROW_STORM"
+  "escape": "SPELL:ESCAPE"
+  "arrowbomb": "SPELL:ARROW_BOMB"
+  "bombarrow": "SPELL:ARROW_BOMB"
+  "arrowshield": "SPELL:ARROW_SHIELD"
+  "phantomray": "SPELL:PHANTOM_RAY"
+  "grapplinghook": "SPELL:GRAPPLING_HOOK"
+  "guardianangels": "SPELL:GUARDIAN_ANGELS"
+  "spinattack": "SPELL:SPIN_ATTACK"
+  "dash": "SPELL:DASH"
+  "multihit": "SPELL:MULTIHIT"
+  "smokebomb": "SPELL:SMOKE_BOMB"
+  "lacerate": "SPELL:LACERATE"
+  "backstab": "SPELL:BACKSTAB"
+  "bamboozle": "SPELL:BAMBOOZLE"
+  "totem": "SPELL:TOTEM"
+  "haul": "SPELL:HAUL"
+  "aura": "SPELL:AURA"
+  "uproot": "SPELL:UPROOT"
+  "switchmasks": "SPELL:SWITCH_MASKS"
+firstPerson:
+  hidden: ["swimming", "crawling", "gliding", "sleeping", "spinAttack"]
+  shift:
+    standing: 0.25
+    crouching: 0.15
+    riding: 0.25

@@ -8,19 +8,21 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 
-SRC = Path(__file__).resolve().parent.parent / "src/client/kotlin/opal/dev/wynnoverhaul/client/WeaponAnimations.kt"
+SRC = Path(__file__).resolve().parent.parent / "src/client/resources/assets/wynnoverhaul/animations"
 
-PITCH, ACROSS, ABDUCT, OFF_PITCH, OFF_ACROSS, OFF_ABDUCT, TURN, REACH, HEAD_A, HEAD_Y, TWIST, GRIP, LEAN, STEP = range(14)
+PITCH, ACROSS, ABDUCT, OFF_PITCH, OFF_ACROSS, OFF_ABDUCT, TURN, REACH, HEAD_A, HEAD_Y, TWIST, GRIP, LEAN, STEP, LEG_L, LEG_R, BODY_Y, BODY_R = range(18)
 TURN_BOOST = 1.4
 HIP_Y = 12.0
-CHANNEL_NAMES = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step"]
-REST_BASE = np.array([-0.3, 0, 0.05, 0, 0, 0.05, 0, 0, -0.3, 0, 0, 0, 0, 0], dtype=float)
+CHANNEL_NAMES = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step", "legL", "legR", "bodyY", "bodyR"]
+REST_BASE = np.array([-0.3, 0, 0.05, 0, 0, 0.05, 0, 0, -0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=float)
 GRIP_Y, GRIP_Z = 10.0, -2.0
 BODY_HALF_WIDTH, BODY_FRONT, BODY_BOTTOM = 4.5, -4.2, 14.0
 GUARD_POINTS = (0.6, 0.85, 1.0)
 TWIST_SCALE = 1.0
 BLADE_SIDE = -1.0
+BLADE_ROLL_OFFSET = math.pi / 2
 NAN = float("nan")
 SPELL_STANCE = {}
 for _k in ("BASH", "CHARGE", "UPPERCUT", "WAR_SCREAM"):
@@ -182,6 +184,7 @@ def lean_point(p, yaw, lean):
 
 
 def solve(out, grip_offset=7.0, guard=True):
+    out = np.pad(np.array(out, dtype=float), (0, max(0, 18 - len(out))))
     s = 1.0
     yaw = -s * out[TURN]
     lean = out[LEAN]
@@ -219,6 +222,10 @@ def solve(out, grip_offset=7.0, guard=True):
     front.z -= 2.2 * step
     back.xr += 0.25 * step
     back.z += 0.6 * step
+    front.xr += out[LEG_R]
+    back.xr += out[LEG_L]
+    body.yr += out[BODY_Y]
+    body.zr += out[BODY_R]
     return yaw, right, left, clipped, head, body, front, back, lean
 
 
@@ -250,9 +257,10 @@ BLADES = {
     "SPEAR:SLAM": ("leaf", 9.0, 2.5),
     "SPEAR:TWIRL": ("leaf", 9.0, 2.5),
     "SPEAR:SCYTHE": ("sickle", 14.0, 13.0),
-    "SPEAR:RUBY": ("sickle", 14.0, 13.0),
-    "SPEAR:RUBY_VAULT": ("sickle", 14.0, 13.0),
-    "SPEAR:RUBY_SPIN": ("sickle", 14.0, 13.0),
+    "SPEAR:GLAIVE": ("sickle", 14.0, 13.0),
+    "SPEAR:GLAIVE_DRAW": ("sickle", 14.0, 13.0),
+    "SPEAR:GLAIVE_RISE": ("sickle", 14.0, 13.0),
+    "SPEAR:GLAIVE_CLEAVE": ("sickle", 14.0, 13.0),
     "DAGGER": ("blade", 11.0, 2.5),
     "DAGGER:STAB": ("blade", 11.0, 2.5),
     "DAGGER:WHIRL": ("blade", 11.0, 2.5),
@@ -266,7 +274,7 @@ def blade_axes(right, shaft_world, twist):
     m = right.matrix()
     local = m.T @ shaft_world
     wrist = rotation_to(np.array([0, 0, -1.0]), local)
-    tw = axis_angle(np.array([0, 0, -1.0]), twist * TWIST_SCALE)
+    tw = axis_angle(np.array([0, 0, -1.0]), (twist + BLADE_ROLL_OFFSET) * TWIST_SCALE)
     frame = m @ wrist @ tw
     normal = frame @ np.array([0, -1.0, 0])
     width = frame @ np.array([BLADE_SIDE, 0, 0])
@@ -335,17 +343,28 @@ def scene(ax, out, view, grip_offset, weapon_len, title, blade=None):
     ax.set_ylim(-34, 14)
 
 
-def parse_array(text):
-    return [float(v) for v in re.findall(r"-?\d+\.?\d*f?", text.replace("f", ""))]
+def load_library(directory):
+    lib = {"poses": {}, "stances": {}, "movesets": {}}
+    for path in sorted(Path(directory).glob("*.yml")):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        lib["poses"].update(doc.get("poses") or {})
+        lib["stances"].update(doc.get("stances") or {})
+        lib["movesets"].update(doc.get("movesets") or {})
+    SPIN_KEYS.update(k for k, pose in lib["poses"].items() if pose.get("spin"))
+    return lib
 
 
-def load_states(src):
+def state_array(values):
+    out = REST_BASE.copy()
+    for name, v in (values or {}).items():
+        out[CHANNEL_NAMES.index(name)] = v
+    return out
+
+
+def load_states(lib):
     states = {}
-    pat = r'"([A-Z_:]+)" to stance\(\s*' + r'\s*'.join([r'floatArrayOf\(([^)]*)\),'] * 4) + r'\s*(\d+f)?'
-    for m in re.finditer(pat, src):
-        arrays = [np.array(parse_array(m.group(i))) for i in range(2, 6)]
-        offset = float(m.group(6).replace("f", "")) if m.group(6) else 7.0
-        states[m.group(1)] = (*arrays, offset)
+    for key, st in lib["stances"].items():
+        states[key] = (state_array(st["carry"]), state_array(st["ready"]), state_array(st["idle"]), state_array(st["sprint"]), float(st.get("gripOffset", 7.0)))
     return states
 
 
@@ -353,7 +372,7 @@ def load_stances(src):
     return {k: (v[0], v[1], v[4]) for k, v in load_states(src).items()}
 
 
-WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (2, 12), "WAND": (2, 14), "RELIK": (2, 16), "BOW": (14, 14), "BOW:FIREARM": (10, 16)}
+WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "SPEAR:GLAIVE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (2, 12), "WAND": (2, 14), "RELIK": (2, 16), "BOW": (14, 14), "BOW:FIREARM": (10, 16)}
 
 
 def render_stances(src, out_dir, only=None):
@@ -396,50 +415,22 @@ class Curve:
         return self.val(len(self.t) - 1, base)
 
 
-def parse_curve(text):
-    keys = []
-    for a, b in re.findall(r"(-?\d+\.?\d*)f to (B|-?\d+\.?\d*)f?", text):
-        keys.append((float(a), NAN if b == "B" else float(b)))
-    return Curve(keys)
+def parse_curve(points):
+    return Curve([(float(t), NAN if v is None else float(v)) for t, v in points])
 
 
-def load_poses(src):
-    poses = {}
-    for m in re.finditer(r'"([A-Z_:]+)" to Pose\(', src):
-        start = m.end()
-        depth = 1
-        i = start
-        while depth:
-            c = src[i]
-            depth += c == "("
-            depth -= c == ")"
-            i += 1
-        body = src[start:i - 1]
-        curves = {}
-        for cm in re.finditer(r"(\w+) = curve\(([^\n]*)\),?", body):
-            curves[cm.group(1)] = parse_curve(cm.group(2))
-        if not m.group(1).startswith("BOW") and "turn" in curves:
-            c = curves["turn"]
-            curves["turn"] = Curve([(t, v * TURN_BOOST) for t, v in zip(c.t, c.v)])
-        poses[m.group(1)] = curves
-    body_re = r'"([A-Z_:]+)" to \((curve\([^\n]*?\)|KEEP) to (curve\([^\n]*?\)|KEEP)\)'
-    for m in re.finditer(body_re, src):
-        if m.group(1) in poses:
-            if m.group(2) != "KEEP":
-                poses[m.group(1)]["lean"] = parse_curve(m.group(2))
-            if m.group(3) != "KEEP":
-                poses[m.group(1)]["step"] = parse_curve(m.group(3))
-    return poses
+def load_poses(lib):
+    return {key: {name: parse_curve(points) for name, points in (pose.get("channels") or {}).items()} for key, pose in lib["poses"].items()}
 
 
+PARAMS = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step", "legL", "legR", "bodyY", "bodyR"]
 
-PARAMS = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step"]
 
-
-SPIN_KEYS = {"SPEAR:TWIRL", "SPEAR:RUBY_SPIN"}
+SPIN_KEYS = set()
 
 
 def sample_pose(curves, t, base, key=None):
+    base = np.pad(np.array(base, dtype=float), (0, max(0, 18 - len(base))))
     out = np.array(base, dtype=float)
     for i, name in enumerate(PARAMS):
         if name in curves:
@@ -448,6 +439,51 @@ def sample_pose(curves, t, base, key=None):
             else:
                 out[i] = curves[name].at(t, base[i])
     return out
+
+
+MIRROR_NEGATE = {"across", "offAcross", "turn", "headY", "twist", "bodyY", "bodyR"}
+
+
+def mirror_curves(curves):
+    out = {}
+    for name, c in curves.items():
+        target = {"legL": "legR", "legR": "legL"}.get(name, name)
+        if name in MIRROR_NEGATE:
+            out[target] = Curve([(t, v if math.isnan(v) else -v) for t, v in zip(c.t, c.v)])
+        else:
+            out[target] = c
+    return out
+
+
+def blade_for(key):
+    return BLADES.get(key) or BLADES.get(key.split(":")[0])
+
+
+def render_moveset(src, key, out_dir):
+    stances = load_stances(src)
+    poses = load_poses(src)
+    moveset = src["movesets"][key]
+    stance_key = moveset.get("stance") or (key if key in stances else key.split(":")[0])
+    carry, ready, offset = stances[stance_key]
+    length = WEAPON_LEN.get(stance_key) or WEAPON_LEN.get(stance_key.split(":")[0], (4, 14))
+    steps = ([dict(moveset["opener"], opener=True)] if moveset.get("opener") else []) + moveset["light"]
+    for view in ("front", "top", "side"):
+        fig, axes = plt.subplots(len(steps), 7, figsize=(2.0 * 7, 2.2 * len(steps)))
+        for r, step in enumerate(steps):
+            pose = step["pose"]
+            curves = poses[pose]
+            if step.get("mirror"):
+                curves = mirror_curves(curves)
+            hit = float(src["poses"][pose]["hit"])
+            times = [0.0, hit * 0.5, hit * 0.85, hit, hit + (1 - hit) * 0.25, hit + (1 - hit) * 0.55, 1.0]
+            for c, t in enumerate(times):
+                out = sample_pose(curves, t, ready, pose)
+                title = f"{pose}{' (m)' if step.get('mirror') else ''}{' *' if step.get('finisher') else ''}{' (opener)' if step.get('opener') else ''} {t:.2f}" if c == 0 else f"t={t:.2f}"
+                scene(axes[r][c], out, view, offset, length, title, blade_for(pose))
+        fig.suptitle(f"{key} {view}")
+        fig.tight_layout()
+        fig.savefig(out_dir / f"moveset_{key.replace(':', '_')}_{view}.png", dpi=62)
+        plt.close(fig)
 
 
 def render_swing(src, key, path, frames=8):
@@ -604,48 +640,26 @@ def render_fp(src, key, path, frames=8):
 
 
 
-def kotlin_const(src, name):
-    m = re.search(r"const val " + name + r" = (-?[\d.]+)f", src)
-    return float(m.group(1))
+DEFAULT_GAIT = {
+    "mainWalk": 0.2, "offWalk": 0.5, "mainSprint": 0.55, "offSprint": 1.05, "across": 0.18, "lean": 0.14,
+    "leanBounce": 0.05, "tipWalk": 0.05, "tipSprint": 0.14, "yaw": 0.06, "armBob": 0.0, "twist": 0.0,
+}
 
 
-def stance_block(src, key):
-    start = src.index('"' + key + '" to stance(')
-    nxt = re.search(r'\n        "[A-Z_:]+" to stance\(', src[start + 10:])
-    end = start + 10 + nxt.start() if nxt else len(src)
-    return src[start:end]
-
-
-def load_gait(src, block):
-    m = re.search(r"gait = Gait\(([^)]*)\)", block, re.S)
-    if m:
-        return {k: float(v) for k, v in re.findall(r"(\w+) = (-?[\d.]+)f", m.group(1))}
-    return {
-        "mainWalk": kotlin_const(src, "WALK_MAIN_SWING"),
-        "offWalk": kotlin_const(src, "WALK_OFF_SWING"),
-        "mainSprint": kotlin_const(src, "SPRINT_MAIN_SWING"),
-        "offSprint": kotlin_const(src, "SPRINT_OFF_SWING"),
-        "across": kotlin_const(src, "SPRINT_ACROSS"),
-        "lean": kotlin_const(src, "SPRINT_LEAN"),
-        "leanBounce": kotlin_const(src, "SPRINT_BOUNCE"),
-        "tipWalk": kotlin_const(src, "WALK_TIP_BOUNCE"),
-        "tipSprint": kotlin_const(src, "SPRINT_TIP_BOUNCE"),
-        "yaw": 0.06,
-        "armBob": 0.0,
-    }
+def load_gait(stance):
+    return {**DEFAULT_GAIT, **(stance.get("gait") or {})}
 
 
 def gait_channels(src, key, mode, phase):
-    block = stance_block(src, key)
+    stance = src["stances"][key]
     carry, ready, idle, sprint, offset = load_states(src)[key]
-    m = re.search(r"walk = floatArrayOf\(([^)]*)\)", block)
     if mode == "sprint":
         base = sprint.copy()
         walk_amt, sprint_amt = 0.0, 1.0
     else:
-        base = np.array(parse_array(m.group(1))) if m else carry + (sprint - carry) * 0.35
+        base = state_array(stance["walk"]) if stance.get("walk") else carry + (sprint - carry) * 0.35
         walk_amt, sprint_amt = 1.0, 0.0
-    g = load_gait(src, block)
+    g = load_gait(stance)
     move = walk_amt + sprint_amt
     swing = math.cos(phase)
     bounce = math.sin(phase * 2)
@@ -676,7 +690,7 @@ def render_gait(src, key, mode, path, frames=8):
     plt.close(fig)
 
 if __name__ == "__main__":
-    src = SRC.read_text(encoding="utf-8")
+    src = load_library(SRC)
     if sys.argv[1] == "--audit":
         audit(src)
         sys.exit(0)
@@ -684,9 +698,14 @@ if __name__ == "__main__":
     out_dir.mkdir(parents=True, exist_ok=True)
     args = sys.argv[2:]
     swings = [a[6:] for a in args if a.startswith("swing:")]
+    movesets = [a[8:] for a in args if a.startswith("moveset:")]
+    for key in movesets:
+        render_moveset(src, key, out_dir)
+    if movesets and len(movesets) == len(args):
+        sys.exit(0)
     fps = [a[3:] for a in args if a.startswith("fp:")]
     gaits = [a[5:] for a in args if a.startswith("gait:")]
-    only = [a for a in args if not a.startswith("swing:") and not a.startswith("fp:") and not a.startswith("gait:")]
+    only = [a for a in args if not a.startswith("swing:") and not a.startswith("fp:") and not a.startswith("gait:") and not a.startswith("moveset:")]
     for key in gaits:
         for mode in ("walk", "sprint"):
             render_gait(src, key, mode, out_dir / f"gait_{key.replace(':', '_')}_{mode}.png")

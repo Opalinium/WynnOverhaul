@@ -1,0 +1,141 @@
+poses:
+  "BOW":
+    label: "Bow: Draw and release"
+    seconds: 0.4
+    hit: 0.84
+    gripOffset: 7
+    sounds:
+      - {at: 0.84, sound: "minecraft:item.crossbow.shoot", pitch: 1.4, volume: 0.45}
+    channels:
+      pitch: [[0, null], [0.16, -1.45], [0.7, -1.45], [0.84, -1.5], [1, null]]
+      across: [[0, null], [0.16, 0.25], [0.72, 0.25], [1, null]]
+      offPitch: [[0, null], [0.16, -1.5], [0.7, -1.5], [0.84, -1.45], [1, null]]
+      offAcross: [[0, null], [0.16, 0.7], [0.7, -0.1], [0.84, -0.5], [1, null]]
+      turn: [[0, null], [0.16, 0.35], [0.7, 0.35], [0.84, 0.1], [1, null]]
+      reach: [[0, null], [0.16, -0.6], [0.7, -0.6], [1, null]]
+      twist: [[0, null], [1, null]]
+      lean: [[0, null], [0.16, -0.08], [0.7, -0.12], [0.84, 0.05], [1, null]]
+      step: [[0, null], [0.16, 0.6], [0.7, 0.6], [0.84, 0.3], [1, null]]
+  "BOW:FIREARM":
+    label: "Bow: Firearm recoil"
+    seconds: 0.34
+    hit: 0.2
+    gripOffset: 9
+    sounds:
+      - {at: 0.18, sound: "minecraft:item.crossbow.shoot", pitch: 0.85, volume: 0.5}
+    channels:
+      pitch: [[0, null], [0.1, -1.3], [0.2, -1.6], [0.4, -1.3], [0.8, -1.3], [1, null]]
+      across: [[0, null], [0.1, 0.3], [0.8, 0.3], [1, null]]
+      offPitch: [[0, null], [0.1, -1.3], [0.2, -1.5], [0.8, -1.3], [1, null]]
+      offAcross: [[0, null], [0.1, 0.6], [0.8, 0.6], [1, null]]
+      turn: [[0, null], [0.1, 0.2], [0.2, 0.05], [0.8, 0.15], [1, null]]
+      reach: [[0, null], [0.1, -0.8], [0.2, 0.7], [0.4, -0.8], [0.8, -0.8], [1, null]]
+      headA: [[0, null], [0.1, -0.1], [0.2, -0.35], [0.4, -0.1], [0.8, -0.1], [1, null]]
+      headY: [[0, null], [0.1, 0.15], [0.8, 0.15], [1, null]]
+      grip: [[0, null], [0.12, 1], [0.65, 1], [1, null]]
+      lean: [[0, null], [0.1, -0.03], [0.2, -0.3], [0.4, -0.05], [0.8, -0.03], [1, null]]
+  "BOW:SNAP":
+    label: "Bow: Snap shot"
+    seconds: 0.28
+    hit: 0.7
+    blend: 0.05
+    gripOffset: 7
+    sounds:
+      - {at: 0.7, sound: "minecraft:item.crossbow.shoot", pitch: 1.6, volume: 0.4}
+    channels:
+      pitch: [[0, null], [0.14, -1.4], [0.6, -1.4], [0.7, -1.45], [1, null]]
+      across: [[0, null], [0.14, 0.22], [0.6, 0.22], [1, null]]
+      offPitch: [[0, null], [0.14, -1.45], [0.6, -1.45], [0.7, -1.4], [1, null]]
+      offAcross: [[0, null], [0.14, 0.6], [0.6, -0.05], [0.7, -0.4], [1, null]]
+      turn: [[0, null], [0.14, 0.3], [0.6, 0.3], [0.7, 0.1], [1, null]]
+      reach: [[0, null], [0.14, -0.5], [0.6, -0.5], [1, null]]
+      lean: [[0, null], [0.14, -0.06], [0.6, -0.08], [0.7, 0.04], [1, null]]
+      step: [[0, null], [0.14, 0.4], [0.6, 0.4], [0.7, 0.2], [1, null]]
+  "BOW:VOLLEY":
+    label: "Bow: Volley"
+    seconds: 0.5
+    hit: 0.82
+    blend: 0.12
+    gripOffset: 7
+    sounds:
+      - {at: 0.3, sound: "minecraft:item.crossbow.loading_middle", pitch: 1.2, volume: 0.3}
+      - {at: 0.82, sound: "minecraft:item.crossbow.shoot", pitch: 1.1, volume: 0.55}
+    channels:
+      pitch: [[0, null], [0.2, -1.5], [0.72, -1.5], [0.82, -1.55], [1, null]]
+      across: [[0, null], [0.2, 0.28], [0.74, 0.28], [1, null]]
+      offPitch: [[0, null], [0.2, -1.55], [0.72, -1.55], [0.82, -1.5], [1, null]]
+      offAcross: [[0, null], [0.2, 0.75], [0.72, -0.2], [0.82, -0.6], [1, null]]
+      turn: [[0, null], [0.2, 0.4], [0.72, 0.4], [0.82, 0.08], [1, null]]
+      reach: [[0, null], [0.2, -0.7], [0.72, -0.7], [0.82, -0.2], [1, null]]
+      lean: [[0, null], [0.2, -0.14], [0.72, -0.18], [0.82, 0.1], [1, null]]
+      step: [[0, null], [0.2, 0.7], [0.72, 0.7], [0.82, 0.3], [1, null]]
+      legL: [[0, null], [0.2, -0.1], [0.72, -0.1], [0.82, -0.2], [1, null]]
+      legR: [[0, null], [0.2, 0.1], [0.72, 0.1], [0.82, 0.18], [1, null]]
+      bodyY: [[0, null], [0.2, 0.15], [0.72, 0.15], [0.82, -0.05], [1, null]]
+  "BOW:FIREARM_KICK":
+    label: "Bow: Firearm kick"
+    seconds: 0.38
+    hit: 0.2
+    blend: 0.05
+    gripOffset: 9
+    sounds:
+      - {at: 0.18, sound: "minecraft:item.crossbow.shoot", pitch: 0.7, volume: 0.55}
+    channels:
+      pitch: [[0, null], [0.1, -1.3], [0.2, -1.8], [0.42, -1.3], [0.8, -1.3], [1, null]]
+      across: [[0, null], [0.1, 0.3], [0.2, 0.4], [0.8, 0.3], [1, null]]
+      offPitch: [[0, null], [0.1, -1.3], [0.2, -1.6], [0.8, -1.3], [1, null]]
+      offAcross: [[0, null], [0.1, 0.6], [0.8, 0.6], [1, null]]
+      turn: [[0, null], [0.1, 0.2], [0.2, -0.05], [0.8, 0.15], [1, null]]
+      reach: [[0, null], [0.1, -0.8], [0.2, 1], [0.42, -0.8], [0.8, -0.8], [1, null]]
+      headA: [[0, null], [0.1, -0.1], [0.2, -0.5], [0.42, -0.1], [0.8, -0.1], [1, null]]
+      headY: [[0, null], [0.1, 0.15], [0.8, 0.15], [1, null]]
+      lean: [[0, null], [0.1, -0.03], [0.2, -0.38], [0.42, -0.05], [0.8, -0.03], [1, null]]
+      step: [[0, null], [0.2, -0.2], [0.5, 0], [1, null]]
+  "BOW:FIREARM_PUMP":
+    label: "Bow: Firearm pump"
+    seconds: 0.5
+    hit: 0.2
+    blend: 0.06
+    gripOffset: 9
+    sounds:
+      - {at: 0.18, sound: "minecraft:item.crossbow.shoot", pitch: 0.8, volume: 0.55}
+      - {at: 0.5, sound: "minecraft:item.crossbow.loading_end", pitch: 1, volume: 0.35}
+    channels:
+      pitch: [[0, null], [0.1, -1.3], [0.2, -1.65], [0.4, -1.3], [0.9, -1.3], [1, null]]
+      across: [[0, null], [0.1, 0.3], [0.9, 0.3], [1, null]]
+      offPitch: [[0, null], [0.1, -1.3], [0.2, -1.5], [0.5, -1.2], [0.62, -1.4], [0.9, -1.3], [1, null]]
+      offAcross: [[0, null], [0.1, 0.6], [0.5, 0.75], [0.62, 0.6], [0.9, 0.6], [1, null]]
+      turn: [[0, null], [0.1, 0.2], [0.2, 0.02], [0.9, 0.15], [1, null]]
+      reach: [[0, null], [0.1, -0.8], [0.2, 0.8], [0.4, -0.8], [0.9, -0.8], [1, null]]
+      headA: [[0, null], [0.1, -0.1], [0.2, -0.4], [0.4, -0.1], [0.9, -0.1], [1, null]]
+      lean: [[0, null], [0.1, -0.03], [0.2, -0.3], [0.4, -0.05], [0.9, -0.03], [1, null]]
+stances:
+  "BOW":
+    gripOffset: 7
+    carry: {pitch: -0.8, across: 0.15, abduct: 0, offPitch: -0.6, offAcross: 0.3, offAbduct: 0, turn: 0.15, headA: -0.1}
+    ready: {pitch: -1.45, across: 0.25, abduct: 0, offPitch: -1.5, offAcross: 0.7, offAbduct: 0, turn: 0.35, reach: -0.6, headA: -0.1}
+    idle: {across: 0.1, abduct: 0, offPitch: -0.1, offAcross: 0.05, offAbduct: 0, turn: 0.05, headA: 0.5}
+    sprint: {pitch: -0.5, across: 0.12, abduct: 0, offPitch: -0.3, offAcross: 0.2, offAbduct: 0, turn: 0.1, headA: 0.15, lean: 0.22}
+    gait: {mainWalk: 0.2, offWalk: 0.5, mainSprint: 0.55, offSprint: 1.05, across: 0.18, lean: 0.14, leanBounce: 0.05, tipWalk: 0.05, tipSprint: 0.14, yaw: 0.06, armBob: 0, twist: 0}
+  "BOW:FIREARM":
+    gripOffset: 9
+    carry: {pitch: -0.9, across: 0.35, abduct: 0, offPitch: -0.9, offAcross: 0.4, offAbduct: 0, turn: 0.1, headA: -0.5, grip: 1}
+    ready: {pitch: -1.2, across: 0.45, abduct: 0, offPitch: -1.3, offAcross: 0.6, offAbduct: 0, turn: 0.15, reach: -0.8, headA: -0.05, grip: 1}
+    idle: {pitch: -0.6, across: 0.3, abduct: 0, offPitch: -0.5, offAcross: 0.3, offAbduct: 0, turn: 0.05, headA: 0.6, grip: 1}
+    sprint: {pitch: -0.8, across: 0.35, abduct: 0, offPitch: -0.85, offAcross: 0.4, offAbduct: 0, turn: 0.1, headA: 0.15, grip: 1, lean: 0.2}
+    gait: {mainWalk: 0.2, offWalk: 0.5, mainSprint: 0.55, offSprint: 1.05, across: 0.18, lean: 0.14, leanBounce: 0.05, tipWalk: 0.05, tipSprint: 0.14, yaw: 0.06, armBob: 0, twist: 0}
+movesets:
+  "BOW":
+    label: "Bow: Archer"
+    light:
+      - {pose: "BOW"}
+      - {pose: "BOW:SNAP"}
+      - {pose: "BOW"}
+      - {pose: "BOW:VOLLEY", finisher: true}
+  "BOW:FIREARM":
+    label: "Bow: Firearm"
+    light:
+      - {pose: "BOW:FIREARM"}
+      - {pose: "BOW:FIREARM_KICK"}
+      - {pose: "BOW:FIREARM"}
+      - {pose: "BOW:FIREARM_PUMP", finisher: true}

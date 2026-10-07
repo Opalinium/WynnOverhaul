@@ -34,6 +34,10 @@ import java.util.concurrent.ThreadLocalRandom
 object WeaponAnimations {
     private const val MIN_SECONDS = 0.18f
     private const val GAP_FRACTION = 0.95f
+    private const val STRETCH_MAX = 2.4f
+    private const val PACE_MAX = 1.2f
+    private const val PACE_SMOOTH = 0.5f
+    private const val IDLE_ENTRY_BLEND = 0.12f
     private const val HIT_SECONDS = 0.14f
     private const val HIT_SHARE = 0.5f
     private const val AMP_MIN = 0.45f
@@ -78,8 +82,8 @@ object WeaponAnimations {
     private const val SPRINT_SPEED_SQ = 0.005
     private const val TICK_NANOS = 50_000_000L
     private const val GATHER_CHAIN_SECONDS = 1.2f
-    private const val GATHER_MAX_SECONDS = 1.0f
-    private const val GATHER_MIN_STROKE = 0.5f
+    private const val GATHER_MAX_SECONDS = 0.6f
+    private const val GATHER_MIN_STROKE = 0.34f
     private const val GATHER_RESTART_SHARE = 0.6f
     private const val GATHER_INTERVAL_SMOOTH = 0.5f
 
@@ -97,7 +101,11 @@ object WeaponAnimations {
     private const val GRIP = 11
     private const val LEAN = 12
     private const val STEP = 13
-    private const val CHANNELS = 14
+    private const val LEG_L = 14
+    private const val LEG_R = 15
+    private const val BODY_Y = 16
+    private const val BODY_R = 17
+    internal const val CHANNELS = 18
     private const val TURN_BOOST = 1.4f
     private const val LEAN_HEAD_SHARE = 0.3f
     private const val HIP_Y = 12f
@@ -172,11 +180,11 @@ object WeaponAnimations {
     private val GUARD_POINTS = floatArrayOf(0.6f, 0.85f, 1f)
     private const val GRIP_LEN_SQ = GRIP_Y * GRIP_Y + GRIP_Z * GRIP_Z
 
-    private val REST_BASE = floatArrayOf(-0.3f, 0f, 0.05f, 0f, 0f, 0.05f, 0f, 0f, -0.3f, 0f, 0f, 0f, 0f, 0f)
+    internal val REST_BASE = floatArrayOf(-0.3f, 0f, 0.05f, 0f, 0f, 0.05f, 0f, 0f, -0.3f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
-    private val B = Float.NaN
+    internal val B = Float.NaN
 
-    private class Gait(
+    internal class Gait(
         val mainWalk: Float,
         val offWalk: Float,
         val mainSprint: Float,
@@ -191,12 +199,12 @@ object WeaponAnimations {
         val twist: Float = 0f,
     )
 
-    private val DEFAULT_GAIT = Gait(
+    internal val DEFAULT_GAIT = Gait(
         WALK_MAIN_SWING, WALK_OFF_SWING, SPRINT_MAIN_SWING, SPRINT_OFF_SWING,
         SPRINT_ACROSS, SPRINT_LEAN, SPRINT_BOUNCE, WALK_TIP_BOUNCE, SPRINT_TIP_BOUNCE, 0.06f, 0f,
     )
 
-    private class Stance(
+    internal class Stance(
         val carry: FloatArray,
         val ready: FloatArray,
         val idle: FloatArray,
@@ -206,139 +214,36 @@ object WeaponAnimations {
         val gait: Gait = DEFAULT_GAIT,
     )
 
-    private fun stance(
-        carry: FloatArray,
-        ready: FloatArray,
-        idle: FloatArray,
-        sprint: FloatArray,
-        gripOffset: Float = 7f,
-        walk: FloatArray? = null,
-        gait: Gait = DEFAULT_GAIT,
-    ) = Stance(carry, ready, idle, sprint, gripOffset, walk, gait)
+    private val POSES: Map<String, Pose> get() = AnimationLibrary.tables().poses
+    private val STANCES: Map<String, Stance> get() = AnimationLibrary.tables().stances
+    private val COMBOS: Map<String, List<ComboStep>> get() = AnimationLibrary.tables().combos
+    private val OPENERS: Map<String, ComboStep> get() = AnimationLibrary.tables().openers
+    private val SFX: Map<String, List<Cue>> get() = AnimationLibrary.tables().sfx
+    private val IMPACT: Map<String, List<Cue>> get() = AnimationLibrary.tables().impact
+    private val FINISHER_CUE: Cue get() = AnimationLibrary.tables().finisher
+    private val IMPACT_THUMP: Cue get() = AnimationLibrary.tables().thump
+    private val IMPACT_TAIL: Cue get() = AnimationLibrary.tables().tail
+    private val IMPACT_SLAM: Cue get() = AnimationLibrary.tables().slam
+    private val LUNGE_FAMILIES: Set<String> get() = AnimationLibrary.tables().lungeFamilies
+    private val HAND_SHIFT: Map<String, Float> get() = AnimationLibrary.tables().handShift
+    private val HAND_SPRINT_EXTRA: Map<String, Float> get() = AnimationLibrary.tables().handSprintExtra
+    private val TRAIL_SPANS: Map<String, Pair<Float, Float>> get() = AnimationLibrary.tables().trailSpans
+    private val LABELS: Map<String, String> get() = AnimationLibrary.tables().labels
+    private val SPELL_KEYS: Map<String, String> get() = AnimationLibrary.tables().spellKeys
 
-    private fun toolStances(): Map<String, Stance> = mapOf(
-        "TOOL:PICKAXE" to stance(
-            floatArrayOf(-0.75f, 0.25f, 0.08f, -0.7f, 0.4f, 0.05f, 0.08f, 0f, -0.8f, 0.15f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.2f, 0.3f, 0.1f, -1.05f, 0.5f, 0.05f, 0.2f, -0.4f, -1.4f, 0.15f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.4f, 0.18f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.2f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.95f, 0.3f, 0.06f, -0.85f, 0.45f, 0.05f, 0.1f, -0.2f, -0.2f, 0.25f, 0f, 1f, 0.22f, 0f),
-            gait = Gait(
-                mainWalk = 0.06f, offWalk = 0.07f, mainSprint = 0.12f, offSprint = 0.14f,
-                across = 0.05f, lean = 0.06f, leanBounce = 0.03f,
-                tipWalk = 0.05f, tipSprint = 0.06f, yaw = 0.1f, armBob = 0.06f,
-            ),
-        ),
-        "TOOL:AXE" to stance(
-            floatArrayOf(-0.75f, 0.25f, 0.08f, -0.7f, 0.4f, 0.05f, 0.08f, 0f, -0.8f, 0.15f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.2f, 0.3f, 0.1f, -1.05f, 0.5f, 0.05f, 0.2f, -0.4f, -1.4f, 0.15f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.4f, 0.18f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.2f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.95f, 0.3f, 0.06f, -0.85f, 0.45f, 0.05f, 0.1f, -0.2f, -0.2f, 0.25f, 0f, 1f, 0.22f, 0f),
-            gait = Gait(
-                mainWalk = 0.06f, offWalk = 0.07f, mainSprint = 0.12f, offSprint = 0.14f,
-                across = 0.05f, lean = 0.06f, leanBounce = 0.03f,
-                tipWalk = 0.05f, tipSprint = 0.06f, yaw = 0.1f, armBob = 0.06f,
-            ),
-        ),
-        "TOOL:SCYTHE" to stance(
-            floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.95f, 0.45f, 0.08f, -0.85f, 0.5f, 0.05f, 0.1f, -0.15f, -0.3f, 0.55f, -0.5f, 1f, 0.3f, 0f),
-            walk = floatArrayOf(-0.75f, 0.35f, 0.08f, -0.65f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.4f, 0.2f, 1f, 0.05f, 0f),
-            gait = Gait(
-                mainWalk = 0.06f, offWalk = 0.08f, mainSprint = 0.14f, offSprint = 0.16f,
-                across = 0.06f, lean = 0.06f, leanBounce = 0.03f,
-                tipWalk = 0.06f, tipSprint = 0.08f, yaw = 0.16f, armBob = 0.06f, twist = 0.25f,
-            ),
-        ),
-        "TOOL:ROD" to stance(
-            floatArrayOf(-0.6f, 0.15f, 0.08f, -0.25f, 0.1f, 0.12f, 0.08f, 0f, -0.55f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-1.1f, 0.2f, 0.1f, -0.4f, 0.15f, 0.2f, 0.12f, 0f, -0.9f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.3f, 0.1f, 0.1f, -0.1f, 0.05f, 0.12f, 0.05f, 0f, -0.4f, 0.05f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.6f, 0.15f, 0.06f, -0.3f, 0.12f, 0.12f, 0.06f, 0f, -0.2f, 0.1f, 0f, 0f, 0.2f, 0f),
-        ),
-    )
+    private fun stanceFor(key: String?): Stance? {
+        if (key == null) return null
+        val alias = AnimationLibrary.tables().movesetStances[key]
+        return STANCES[key] ?: alias?.let { STANCES[it] } ?: STANCES[key.substringBefore(':')]
+    }
 
-    private val STANCES: Map<String, Stance> = mapOf(
-        "SPEAR" to stance(
-            floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-1.05f, 0.32f, 0.06f, -0.95f, 0.5f, 0.05f, 0.1f, -0.3f, 0.02f, 0.3f, 0f, 1f, 0.26f, 0f),
-            walk = floatArrayOf(-0.8f, 0.3f, 0.08f, -0.72f, 0.42f, 0.05f, 0.1f, 0f, -0.62f, 0.22f, 0f, 1f, 0.06f, 0f),
-            gait = Gait(
-                mainWalk = 0.05f, offWalk = 0.06f, mainSprint = 0.1f, offSprint = 0.12f,
-                across = 0.04f, lean = 0.06f, leanBounce = 0.03f,
-                tipWalk = 0.05f, tipSprint = 0.04f, yaw = 0.1f, armBob = 0.08f,
-            ),
-        ),
-        "SPEAR:SCYTHE" to stance(
-            floatArrayOf(-0.9f, 0.3f, 0.08f, -0.8f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.3f, 0.3f, 0.1f, -1.1f, 0.5f, 0.05f, 0.2f, -0.5f, -0.35f, 0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.45f, 0.2f, 0.1f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.3f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.95f, 0.45f, 0.08f, -0.85f, 0.5f, 0.05f, 0.1f, -0.15f, -0.3f, 0.55f, -0.5f, 1f, 0.3f, 0f),
-            walk = floatArrayOf(-0.75f, 0.35f, 0.08f, -0.65f, 0.4f, 0.05f, 0.1f, 0f, -0.85f, 0.4f, 0.2f, 1f, 0.05f, 0f),
-            gait = Gait(
-                mainWalk = 0.06f, offWalk = 0.08f, mainSprint = 0.14f, offSprint = 0.16f,
-                across = 0.06f, lean = 0.06f, leanBounce = 0.03f,
-                tipWalk = 0.06f, tipSprint = 0.08f, yaw = 0.16f, armBob = 0.06f, twist = 0.25f,
-            ),
-        ),
-        "SPEAR:RUBY" to stance(
-            floatArrayOf(-0.5f, 0f, 0.3f, -0.05f, 0.05f, 0.1f, 0f, 0f, -0.15f, 3.35f, 1.2f, 0f, 0f, 0f),
-            floatArrayOf(-1.2f, 0.35f, 0.1f, -1.0f, 0.5f, 0.05f, 0.25f, -0.5f, -0.3f, 0.35f, -1.0f, 1f, 0f, 0f),
-            floatArrayOf(-0.6f, 0f, 0.35f, 0.1f, -0.1f, 0.5f, 0f, 0f, -0.7f, 3.25f, 1.2f, 0f, 0f, 0f),
-            floatArrayOf(-1.15f, 0.05f, 0.15f, 0.3f, 0.1f, 0.15f, 0.1f, -0.3f, 0.12f, 3.35f, 1.2f, 0f, 0.4f, 0f),
-            walk = floatArrayOf(-0.5f, 0f, 0.3f, -0.05f, 0.05f, 0.1f, 0f, 0f, -0.15f, 3.35f, 1.2f, 0f, 0.05f, 0f),
-            gait = Gait(
-                mainWalk = 0.03f, offWalk = 0.3f, mainSprint = 0.06f, offSprint = 0.5f,
-                across = 0.03f, lean = 0.1f, leanBounce = 0.025f,
-                tipWalk = 0.015f, tipSprint = 0.03f, yaw = 0.05f, armBob = 0.02f, twist = 0f,
-            ),
-        ),
-        "WAND:STAFF" to stance(
-            floatArrayOf(-0.7f, 0.2f, 0.05f, -0.7f, 0.4f, 0.05f, 0.05f, 0f, -1.35f, -0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.1f, 0.2f, 0.08f, -1.0f, 0.5f, 0.05f, 0.1f, -0.3f, -1.1f, -0.2f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.4f, 0.15f, 0.08f, -0.1f, 0.1f, 0.1f, 0.05f, 0f, -1.45f, -0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.65f, 0.2f, 0.05f, -0.6f, 0.3f, 0.05f, 0.05f, 0f, -0.7f, -0.1f, 0f, 1f, 0.2f, 0f),
-        ),
-        "DAGGER" to stance(
-            floatArrayOf(-0.6f, 0.15f, 0.1f, -0.3f, 0.1f, 0.2f, 0.15f, 0f, -0.15f, 0.15f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.9f, 0.3f, 0.15f, -0.4f, 0.15f, 0.35f, 0.3f, 0f, -0.3f, 0.35f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.25f, 0.1f, 0.12f, -0.1f, 0.05f, 0.15f, 0.1f, 0f, 0.35f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.5f, 0.1f, 0.1f, -0.3f, 0.1f, 0.2f, 0.1f, 0f, -0.3f, 0.1f, 0f, 0f, 0.24f, 0f),
-        ),
-        "WAND" to stance(
-            floatArrayOf(-0.55f, 0.1f, 0.05f, -0.2f, 0.05f, 0.1f, 0.05f, 0f, -0.4f, 0.05f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-1.0f, 0.15f, 0.1f, -0.3f, 0.1f, 0.15f, 0.1f, 0f, -0.5f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.3f, 0.08f, 0.06f, -0.1f, 0.05f, 0.12f, 0.05f, 0f, -0.15f, 0.05f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.6f, 0.1f, 0.05f, -0.3f, 0.1f, 0.15f, 0.05f, 0f, -0.5f, 0.05f, 0f, 0f, 0.2f, 0f),
-        ),
-        "RELIK" to stance(
-            floatArrayOf(-0.6f, 0.2f, 0.05f, -0.4f, 0.25f, 0.05f, 0.08f, 0f, -0.3f, 0.1f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-1.0f, 0.35f, 0.1f, -0.7f, 0.5f, 0.1f, 0.15f, 0f, -0.4f, 0.2f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.3f, 0.12f, 0.06f, -0.15f, 0.1f, 0.1f, 0.05f, 0f, -0.1f, 0.05f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.55f, 0.2f, 0.06f, -0.35f, 0.2f, 0.1f, 0.08f, 0f, -0.3f, 0.1f, 0f, 0f, 0.2f, 0f),
-        ),
-        "BOW" to stance(
-            floatArrayOf(-0.8f, 0.15f, 0f, -0.6f, 0.3f, 0f, 0.15f, 0f, -0.1f, 0f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-1.45f, 0.25f, 0f, -1.5f, 0.7f, 0f, 0.35f, -0.6f, -0.1f, 0f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.3f, 0.1f, 0f, -0.1f, 0.05f, 0f, 0.05f, 0f, 0.5f, 0f, 0f, 0f, 0f, 0f),
-            floatArrayOf(-0.5f, 0.12f, 0f, -0.3f, 0.2f, 0f, 0.1f, 0f, 0.15f, 0f, 0f, 0f, 0.22f, 0f),
-        ),
-        "BOW:FIREARM" to stance(
-            floatArrayOf(-0.9f, 0.35f, 0f, -0.9f, 0.4f, 0f, 0.1f, 0f, -0.5f, 0f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-1.2f, 0.45f, 0f, -1.3f, 0.6f, 0f, 0.15f, -0.8f, -0.05f, 0f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.6f, 0.3f, 0f, -0.5f, 0.3f, 0f, 0.05f, 0f, 0.6f, 0f, 0f, 1f, 0f, 0f),
-            floatArrayOf(-0.8f, 0.35f, 0f, -0.85f, 0.4f, 0f, 0.1f, 0f, 0.15f, 0f, 0f, 1f, 0.2f, 0f),
-            9f,
-        ),
-    ) + toolStances()
+    private fun basePose(key: String): Pose? = POSES[key] ?: COMBOS[key]?.firstOrNull()?.let { POSES[it.key] }
 
-    private fun stanceFor(key: String?): Stance? =
-        if (key == null) null else STANCES[key] ?: STANCES[key.substringBefore(':')]
+    private fun swingStyle(): SwingStyle = AnimationLibrary.tables().locomotion.swingFor(WynnOverhaulConfig.current.locomotionStyle)
 
-    private class Curve(private val times: FloatArray, private val values: FloatArray) {
+    private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1)
+
+    internal class Curve(val times: FloatArray, val values: FloatArray) {
         private fun value(i: Int, base: Float): Float = values[i].let { if (it.isNaN()) base else it }
 
         private fun slope(i: Int, base: Float): Float =
@@ -370,10 +275,10 @@ object WeaponAnimations {
     private fun curve(vararg keys: Pair<Float, Float>) =
         Curve(FloatArray(keys.size) { keys[it].first }, FloatArray(keys.size) { keys[it].second })
 
-    private val KEEP = curve(0f to B, 1f to B)
-    private val ZERO = curve(0f to 0f, 1f to 0f)
+    internal val KEEP = curve(0f to B, 1f to B)
+    internal val ZERO = curve(0f to 0f, 1f to 0f)
 
-    private class Pose(
+    internal class Pose(
         pitch: Curve = KEEP,
         across: Curve = KEEP,
         abduct: Curve = KEEP,
@@ -388,9 +293,15 @@ object WeaponAnimations {
         grip: Curve = KEEP,
         lean: Curve = KEEP,
         step: Curve = KEEP,
+        legL: Curve = KEEP,
+        legR: Curve = KEEP,
+        bodyY: Curve = KEEP,
+        bodyR: Curve = KEEP,
     ) {
         var seconds = 0.36f
         var hit = 0.3f
+        var recover = -1f
+        var blend = BLEND_SECONDS
         var holdEnd = false
         var spin = false
         var gripOffset = 7f
@@ -410,894 +321,24 @@ object WeaponAnimations {
             grip = curves[GRIP],
             lean = curves[LEAN],
             step = curves[STEP],
+            legL = curves[LEG_R],
+            legR = curves[LEG_L],
+            bodyY = curves[BODY_Y].negated(),
+            bodyR = curves[BODY_R].negated(),
         ).also {
             it.seconds = seconds
             it.hit = hit
+            it.recover = recover
+            it.blend = blend
             it.holdEnd = holdEnd
             it.spin = spin
             it.gripOffset = gripOffset
         }
 
-        val curves: Array<Curve> = arrayOf(pitch, across, abduct, offPitch, offAcross, offAbduct, turn, reach, headA, headY, twist, grip, lean, step)
+        val curves: Array<Curve> = arrayOf(pitch, across, abduct, offPitch, offAcross, offAbduct, turn, reach, headA, headY, twist, grip, lean, step, legL, legR, bodyY, bodyR)
     }
 
-    private fun toolPoses(): Map<String, Pose> = mapOf(
-        "TOOL:PICKAXE" to Pose(
-            pitch = curve(0f to B, 0.2f to -2.3f, 0.4f to -0.95f, 0.6f to -0.9f, 1f to B),
-            across = curve(0f to B, 0.2f to -0.1f, 0.4f to 0.2f, 0.6f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -2.0f, 0.4f to -0.9f, 0.6f to -0.85f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.4f, 0.4f to 0.5f, 0.6f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.2f, 0.4f to 0.28f, 0.6f to 0.22f, 1f to B),
-            reach = curve(0f to B, 0.2f to 1.2f, 0.4f to -2.0f, 0.6f to -1.6f, 1f to B),
-            headA = curve(0f to B, 0.2f to -2.1f, 0.4f to 1.0f, 0.6f to 0.8f, 1f to B),
-            headY = curve(0f to B, 0.2f to 0f, 0.4f to 0.1f, 0.6f to 0.1f, 1f to B),
-        ),
-        "TOOL:AXE" to Pose(
-            pitch = curve(0f to B, 0.2f to -2.1f, 0.42f to -1.1f, 0.7f to -0.85f, 1f to B),
-            across = curve(0f to B, 0.2f to -0.6f, 0.42f to 0.5f, 0.7f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.4f, 0.42f to -0.05f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -1.8f, 0.42f to -1.0f, 0.7f to -0.8f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.2f, 0.42f to 0.6f, 0.7f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.35f, 0.42f to 0.45f, 0.7f to 0.25f, 1f to B),
-            reach = curve(0f to B, 0.2f to 1.0f, 0.42f to -2.0f, 1f to B),
-            headA = curve(0f to B, 0.2f to -2.0f, 0.42f to 0.7f, 0.7f to 0.4f, 1f to B),
-            headY = curve(0f to B, 0.2f to -0.4f, 0.42f to 0.5f, 0.7f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.2f to -0.3f, 0.42f to 0.9f, 0.7f to 0.5f, 1f to B),
-        ),
-        "TOOL:SCYTHE" to Pose(
-            pitch = curve(0f to B, 0.16f to -1.0f, 0.42f to -1.05f, 0.72f to -0.8f, 1f to B),
-            across = curve(0f to B, 0.16f to -0.9f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            abduct = curve(0f to B, 0.16f to 0.3f, 0.42f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.16f to -0.9f, 0.42f to -0.95f, 0.72f to -0.7f, 1f to B),
-            offAcross = curve(0f to B, 0.16f to 0.2f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.16f to -0.5f, 0.42f to 0.6f, 0.72f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.42f to -1.6f, 1f to B),
-            headA = curve(0f to B, 0.16f to 0.15f, 0.42f to 0.35f, 0.72f to 0.2f, 1f to B),
-            headY = curve(0f to B, 0.16f to -0.8f, 0.42f to 0.9f, 0.72f to 0.6f, 1f to B),
-            twist = curve(0f to B, 0.16f to 0.5f, 0.42f to 1.2f, 0.72f to 0.6f, 1f to B),
-        ),
-        "TOOL:ROD_REEL" to Pose(
-            pitch = curve(0f to B, 0.2f to -1.1f, 0.4f to -1.7f, 0.7f to -1.2f, 1f to B),
-            across = curve(0f to B, 0.4f to 0.05f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.6f, 0.4f to -0.9f, 0.7f to -0.6f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.3f, 0.7f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.4f to -0.1f, 1f to B),
-            reach = curve(0f to B, 0.2f to -1.2f, 0.4f to 0.6f, 0.7f to -0.3f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.3f, 0.4f to -1.3f, 0.7f to -0.6f, 1f to B),
-            lean = curve(0f to B, 0.2f to 0.15f, 0.4f to -0.15f, 1f to B),
-        ),
-        "TOOL:ROD" to Pose(
-            pitch = curve(0f to B, 0.25f to -2.3f, 0.5f to -1.1f, 0.75f to -1.0f, 1f to B),
-            across = curve(0f to B, 0.25f to 0.1f, 0.5f to 0f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -0.7f, 0.5f to -0.5f, 1f to B),
-            offAcross = curve(0f to B, 0.25f to 0.3f, 0.5f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.25f to -0.15f, 0.5f to 0.2f, 0.75f to 0.15f, 1f to B),
-            reach = curve(0f to B, 0.25f to 1.0f, 0.5f to -1.6f, 0.75f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.25f to -1.9f, 0.5f to 0.1f, 0.75f to -0.3f, 1f to B),
-            lean = curve(0f to B, 0.25f to -0.1f, 0.5f to 0.25f, 0.75f to 0.15f, 1f to B),
-        ),
-    )
-
-    private val POSES: Map<String, Pose> = mapOf(
-        "SPEAR" to Pose(
-            pitch = curve(0f to B, 0.14f to -0.1f, 0.3f to -1.25f, 0.5f to -1.15f, 1f to B),
-            across = curve(0f to B, 0.14f to -0.15f, 0.3f to 0.1f, 1f to B),
-            abduct = curve(0f to B, 0.14f to 0.2f, 0.3f to 0.05f, 1f to B),
-            offPitch = curve(0f to B, 0.14f to -0.9f, 0.3f to -1.3f, 0.5f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.14f to 0.5f, 0.3f to 0.6f, 0.5f to 0.55f, 1f to B),
-            turn = curve(0f to B, 0.14f to -0.3f, 0.3f to 0.45f, 0.5f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.14f to 1.5f, 0.3f to -3.5f, 0.5f to -2.5f, 1f to B),
-            headA = curve(0f to B, 0.14f to 0.1f, 0.3f to -0.05f, 0.5f to 0f, 1f to B),
-            headY = curve(0f to B, 0.14f to -0.1f, 0.3f to 0f, 0.5f to 0f, 1f to B),
-        ),
-        "SPEAR:SWEEP" to Pose(
-            pitch = curve(0f to B, 0.16f to -1.0f, 0.42f to -1.1f, 0.72f to -0.8f, 1f to B),
-            across = curve(0f to B, 0.16f to -0.9f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            abduct = curve(0f to B, 0.16f to 0.3f, 0.42f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.16f to -0.9f, 0.42f to -1.0f, 0.72f to -0.7f, 1f to B),
-            offAcross = curve(0f to B, 0.16f to 0.2f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.16f to -0.5f, 0.42f to 0.6f, 0.72f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.42f to -1.8f, 1f to B),
-            headA = curve(0f to B, 0.16f to -0.15f, 0.42f to -0.1f, 0.72f to -0.15f, 1f to B),
-            headY = curve(0f to B, 0.16f to -0.8f, 0.42f to 0.9f, 0.72f to 0.6f, 1f to B),
-            twist = curve(0f to B, 0.16f to 0.5f, 0.42f to 1.2f, 0.72f to 0.6f, 1f to B),
-        ),
-        "SPEAR:SCYTHE" to Pose(
-            pitch = curve(0f to B, 0.2f to -2.2f, 0.42f to -1.2f, 0.72f to -0.7f, 1f to B),
-            across = curve(0f to B, 0.2f to -0.5f, 0.42f to 0.6f, 0.72f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.4f, 0.42f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -1.8f, 0.42f to -1.0f, 0.72f to -0.7f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.3f, 0.42f to 0.7f, 0.72f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.4f, 0.42f to 0.5f, 0.72f to 0.25f, 1f to B),
-            reach = curve(0f to B, 0.2f to 0.5f, 0.42f to -1.8f, 1f to B),
-            headA = curve(0f to B, 0.2f to -2.0f, 0.42f to 0.6f, 0.72f to 0.2f, 1f to B),
-            headY = curve(0f to B, 0.2f to -0.3f, 0.42f to 0.5f, 0.72f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.2f to -0.4f, 0.42f to 1.1f, 0.72f to 0.6f, 1f to B),
-        ),
-        "SPEAR:SLAM" to Pose(
-            pitch = curve(0f to B, 0.22f to -2.5f, 0.38f to -1.0f, 0.55f to -0.9f, 1f to B),
-            across = curve(0f to B, 0.22f to -0.1f, 0.38f to 0.2f, 0.55f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.22f to -2.2f, 0.38f to -0.9f, 0.55f to -0.85f, 1f to B),
-            offAcross = curve(0f to B, 0.22f to 0.4f, 0.38f to 0.5f, 0.55f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.22f to -0.25f, 0.38f to 0.3f, 0.55f to 0.25f, 1f to B),
-            reach = curve(0f to B, 0.22f to 1.5f, 0.38f to -2.2f, 0.55f to -1.8f, 1f to B),
-            headA = curve(0f to B, 0.22f to -2.3f, 0.38f to 1.2f, 0.55f to 1.0f, 1f to B),
-            headY = curve(0f to B, 0.22f to 0f, 0.38f to 0.1f, 0.55f to 0.1f, 1f to B),
-        ),
-        "SPEAR:TWIRL" to Pose(
-            pitch = curve(0f to B, 0.14f to -1.0f, 0.5f to -0.95f, 0.86f to -1.0f, 1f to B),
-            across = curve(0f to B, 0.14f to 0.3f, 0.5f to 0.35f, 0.86f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.14f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.14f to -1.1f, 0.5f to -1.0f, 0.86f to -1.1f, 1f to B),
-            offAcross = curve(0f to B, 0.14f to 0.5f, 0.5f to 0.5f, 0.86f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.14f to -0.6f, 0.5f to 0.2f, 0.86f to 0.9f, 1f to B),
-            reach = curve(0f to B, 0.5f to -1f, 1f to B),
-            headA = curve(0f to B, 0.14f to -0.15f, 0.86f to -0.15f, 1f to B),
-            headY = curve(0f to B, 0.14f to -0.7f, 0.5f to 3.3f, 0.86f to 6.0f, 1f to 6.2832f),
-            twist = curve(0f to B, 0.14f to 0.3f, 0.5f to 0.6f, 0.86f to 0.3f, 1f to B),
-        ),
-        "SPEAR:RUBY" to Pose(
-            pitch = curve(0f to B, 0.18f to -1.15f, 0.42f to -1.0f, 0.72f to -0.85f, 1f to B),
-            across = curve(0f to B, 0.18f to -0.9f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            abduct = curve(0f to B, 0.18f to 0.3f, 0.42f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.18f to -1.0f, 0.42f to -0.9f, 0.72f to -0.8f, 1f to B),
-            offAcross = curve(0f to B, 0.18f to 0.2f, 0.42f to 0.9f, 0.72f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.18f to -0.7f, 0.42f to 0.75f, 0.72f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.18f to 0.8f, 0.42f to -2.0f, 1f to B),
-            headA = curve(0f to B, 0.18f to -0.35f, 0.42f to -0.1f, 0.72f to -0.3f, 1f to B),
-            headY = curve(0f to B, 0.18f to -1.6f, 0.42f to 1.3f, 0.72f to 0.9f, 1f to B),
-            twist = curve(0f to B, 0.18f to -2.4f, 0.42f to -1.3f, 0.72f to -1.3f, 1f to B),
-            lean = curve(0f to B, 0.18f to -0.12f, 0.42f to 0.3f, 0.72f to 0.2f, 1f to B),
-            step = curve(0f to B, 0.18f to -0.2f, 0.42f to 0.9f, 0.72f to 0.6f, 1f to B),
-        ),
-        "SPEAR:RUBY_VAULT" to Pose(
-            pitch = curve(0f to B, 0.16f to -1.0f, 0.34f to -1.3f, 0.6f to -1.1f, 1f to B),
-            across = curve(0f to B, 0.16f to 0.2f, 0.34f to 0.1f, 1f to B),
-            abduct = curve(0f to B, 0.16f to 0.15f, 0.34f to 0.05f, 1f to B),
-            offPitch = curve(0f to B, 0.16f to -0.9f, 0.34f to -1.4f, 0.6f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.16f to 0.5f, 0.34f to 0.55f, 0.6f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.16f to -0.3f, 0.34f to 0.3f, 0.6f to 0.15f, 1f to B),
-            reach = curve(0f to B, 0.16f to 1.2f, 0.34f to -3.2f, 0.6f to -2.4f, 1f to B),
-            headA = curve(0f to B, 0.16f to -1.7f, 0.34f to 0.8f, 0.6f to 0.6f, 1f to B),
-            headY = curve(0f to B, 0.16f to -0.2f, 0.34f to 0.05f, 0.6f to 0.1f, 1f to B),
-            twist = curve(0f to B, 0.16f to -1.3f, 0.34f to -1.2f, 0.6f to -1.3f, 1f to B),
-            lean = curve(0f to B, 0.16f to -0.2f, 0.34f to 0.7f, 0.6f to 0.5f, 1f to B),
-            step = curve(0f to B, 0.16f to -0.3f, 0.34f to 1.2f, 0.6f to 0.9f, 1f to B),
-        ),
-        "SPEAR:RUBY_SPIN" to Pose(
-            pitch = curve(0f to B, 0.14f to -1.0f, 0.5f to -0.95f, 0.86f to -1.0f, 1f to B),
-            across = curve(0f to B, 0.14f to 0.3f, 0.5f to 0.35f, 0.86f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.14f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.14f to -1.1f, 0.5f to -1.0f, 0.86f to -1.1f, 1f to B),
-            offAcross = curve(0f to B, 0.14f to 0.5f, 0.5f to 0.5f, 0.86f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.14f to -0.6f, 0.5f to 0.2f, 0.86f to 0.9f, 1f to B),
-            reach = curve(0f to B, 0.14f to 0.9f, 0.3f to -1.6f, 0.5f to -1f, 1f to B),
-            headA = curve(0f to B, 0.14f to -0.3f, 0.86f to -0.3f, 1f to B),
-            headY = curve(0f to B, 0.14f to -0.7f, 0.5f to 3.3f, 0.86f to 6.0f, 1f to 6.2832f),
-            twist = curve(0f to 0f, 0.14f to -1.0f, 0.3f to -0.2f, 0.5f to 1.9f, 0.65f to 4.0f, 0.75f to 4.9f, 0.86f to 5.3f, 1f to 6.2832f),
-            lean = curve(0f to B, 0.14f to -0.1f, 0.3f to 0.25f, 0.86f to 0.2f, 1f to B),
-            step = curve(0f to B, 0.14f to -0.2f, 0.3f to 0.6f, 0.86f to 0.4f, 1f to B),
-        ),
-        "DAGGER" to Pose(
-            pitch = curve(0f to B, 0.1f to -1.1f, 0.28f to -1.3f, 0.55f to -0.8f, 1f to B),
-            across = curve(0f to B, 0.1f to -0.7f, 0.28f to 0.8f, 0.55f to 0.4f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.25f, 0.28f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.3f, 0.28f to 0.2f, 0.55f to -0.2f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.1f, 0.28f to -0.3f, 1f to B),
-            offAbduct = curve(0f to B, 0.1f to 0.3f, 0.28f to 0.35f, 1f to B),
-            turn = curve(0f to B, 0.1f to -0.4f, 0.28f to 0.55f, 0.55f to 0.25f, 1f to B),
-            reach = curve(0f to B, 0.28f to -1.5f, 1f to B),
-            headA = curve(0f to B, 0.1f to -0.1f, 0.28f to -0.1f, 0.55f to -0.3f, 1f to B),
-            headY = curve(0f to B, 0.1f to -0.9f, 0.28f to 0.9f, 0.55f to 0.4f, 1f to B),
-            twist = curve(0f to B, 0.1f to -0.6f, 0.28f to 0.8f, 0.55f to 0.3f, 1f to B),
-        ),
-        "DAGGER:STAB" to Pose(
-            pitch = curve(0f to B, 0.08f to -0.2f, 0.2f to -1.35f, 0.42f to -1.2f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.08f to 0.1f, 0.2f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.08f to -0.2f, 0.2f to 0.4f, 0.42f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.08f to 1f, 0.2f to -3.2f, 0.42f to -2f, 1f to B),
-            headA = curve(0f to B, 0.08f to 0.2f, 0.2f to 0f, 0.42f to 0f, 1f to B),
-            headY = curve(0f to B, 0.2f to 0.1f, 1f to B),
-        ),
-        "DAGGER:WHIRL" to Pose(
-            pitch = curve(0f to B, 0.12f to -1.2f, 0.7f to -1.2f, 1f to B),
-            across = curve(0f to B, 0.12f to -0.9f, 0.38f to 0.9f, 0.62f to -0.5f, 0.85f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.12f to 0.2f, 1f to B),
-            offAcross = curve(0f to B, 0.38f to -0.3f, 1f to B),
-            turn = curve(0f to B, 0.12f to -0.4f, 0.38f to 0.5f, 0.62f to -0.2f, 1f to B),
-            headA = curve(0f to B, 0.12f to -0.2f, 0.7f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.12f to -0.9f, 0.38f to 0.9f, 0.62f to -0.6f, 0.85f to 0.4f, 1f to B),
-        ),
-        "WAND" to Pose(
-            pitch = curve(0f to B, 0.14f to -0.8f, 0.3f to -1.45f, 0.6f to -1.25f, 1f to B),
-            across = curve(0f to B, 0.14f to -0.15f, 0.3f to 0.15f, 1f to B),
-            abduct = curve(0f to B, 0.14f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.14f to -0.2f, 0.3f to -0.1f, 1f to B),
-            turn = curve(0f to B, 0.14f to -0.1f, 0.3f to 0.15f, 1f to B),
-            reach = curve(0f to B, 0.3f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.14f to -0.5f, 0.3f to -0.1f, 0.6f to -0.15f, 1f to B),
-        ),
-        "WAND:STAFF" to Pose(
-            pitch = curve(0f to B, 0.14f to -2.0f, 0.32f to -0.9f, 0.6f to -0.85f, 1f to B),
-            offPitch = curve(0f to B, 0.14f to -1.7f, 0.32f to -0.8f, 0.6f to -0.8f, 1f to B),
-            offAcross = curve(0f to B, 0.14f to 0.35f, 0.32f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.14f to -0.15f, 0.32f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.14f to 0.8f, 0.32f to -2f, 1f to B),
-            headA = curve(0f to B, 0.14f to -1.4f, 0.32f to -1.5f, 0.6f to -1.5f, 1f to B),
-        ),
-        "RELIK" to Pose(
-            pitch = curve(0f to B, 0.2f to -1.1f, 0.65f to -1.05f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.5f, 0.5f to 0f, 0.75f to -0.4f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.15f, 0.75f to -0.15f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.6f, 0.7f to -0.6f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.4f, 0.75f to -0.1f, 1f to B),
-            turn = curve(0f to B, 0.2f to 0.15f, 0.75f to -0.15f, 1f to B),
-            reach = curve(0f to B, 0.2f to -1.2f, 0.7f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.3f, 0.5f to -0.1f, 0.75f to -0.3f, 1f to B),
-            headY = curve(0f to B, 0.2f to 0.4f, 0.5f to 0f, 0.75f to -0.4f, 1f to B),
-        ),
-        "BOW" to Pose(
-            pitch = curve(0f to B, 0.16f to -1.45f, 0.7f to -1.45f, 0.84f to -1.5f, 1f to B),
-            across = curve(0f to B, 0.16f to 0.25f, 0.72f to 0.25f, 1f to B),
-            offPitch = curve(0f to B, 0.16f to -1.5f, 0.7f to -1.5f, 0.84f to -1.45f, 1f to B),
-            offAcross = curve(0f to B, 0.16f to 0.7f, 0.7f to -0.1f, 0.84f to -0.5f, 1f to B),
-            turn = curve(0f to B, 0.16f to 0.35f, 0.7f to 0.35f, 0.84f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.16f to -0.6f, 0.7f to -0.6f, 1f to B),
-            twist = KEEP,
-        ),
-        "BOW:FIREARM" to Pose(
-            pitch = curve(0f to B, 0.1f to -1.3f, 0.2f to -1.6f, 0.4f to -1.3f, 0.8f to -1.3f, 1f to B),
-            across = curve(0f to B, 0.1f to 0.3f, 0.8f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -1.3f, 0.2f to -1.5f, 0.8f to -1.3f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.6f, 0.8f to 0.6f, 1f to B),
-            turn = curve(0f to B, 0.1f to 0.2f, 0.2f to 0.05f, 0.8f to 0.15f, 1f to B),
-            reach = curve(0f to B, 0.1f to -0.8f, 0.2f to 0.7f, 0.4f to -0.8f, 0.8f to -0.8f, 1f to B),
-            headA = curve(0f to B, 0.1f to -0.1f, 0.2f to -0.35f, 0.4f to -0.1f, 0.8f to -0.1f, 1f to B),
-            headY = curve(0f to B, 0.1f to 0.15f, 0.8f to 0.15f, 1f to B),
-        ),
-        "DAGGER:UPPER" to Pose(
-            pitch = curve(0f to B, 0.1f to -0.3f, 0.28f to -1.5f, 0.55f to -1.2f, 1f to B),
-            across = curve(0f to B, 0.1f to 0.6f, 0.28f to -0.5f, 0.55f to -0.2f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.1f, 0.28f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.6f, 0.28f to -0.9f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.3f, 0.28f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.1f to 0.4f, 0.28f to -0.5f, 0.55f to -0.2f, 1f to B),
-            reach = curve(0f to B, 0.1f to 0.5f, 0.28f to -1.6f, 1f to B),
-            headA = curve(0f to B, 0.1f to 0.5f, 0.28f to -0.9f, 0.55f to -0.5f, 1f to B),
-            headY = curve(0f to B, 0.1f to 0.5f, 0.28f to -0.4f, 0.55f to -0.2f, 1f to B),
-            twist = curve(0f to B, 0.1f to 0.6f, 0.28f to -0.8f, 0.55f to -0.3f, 1f to B),
-        ),
-        "DAGGER:CROSS" to Pose(
-            pitch = curve(0f to B, 0.1f to -0.9f, 0.26f to -0.8f, 0.5f to -0.7f, 1f to B),
-            across = curve(0f to B, 0.1f to -1.0f, 0.26f to 1.0f, 0.5f to 0.5f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.4f, 0.26f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.9f, 0.26f to -0.9f, 0.5f to -0.6f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 1.0f, 0.26f to -0.7f, 0.5f to -0.3f, 1f to B),
-            offAbduct = curve(0f to B, 0.1f to 0.4f, 0.26f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.1f to -0.6f, 0.26f to 0.7f, 0.5f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.26f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.1f to -0.2f, 0.26f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.1f to -1.1f, 0.26f to 1.1f, 0.5f to 0.5f, 1f to B),
-            twist = curve(0f to B, 0.1f to -0.8f, 0.26f to 1.0f, 0.5f to 0.4f, 1f to B),
-        ),
-        "WAND:FLICK" to Pose(
-            pitch = curve(0f to B, 0.12f to -0.9f, 0.26f to -1.25f, 0.55f to -1.0f, 1f to B),
-            across = curve(0f to B, 0.12f to 0.2f, 0.26f to -0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.12f to -0.3f, 0.26f to -0.5f, 1f to B),
-            offAcross = curve(0f to B, 0.26f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.12f to 0.1f, 0.26f to -0.1f, 1f to B),
-            reach = curve(0f to B, 0.26f to -0.8f, 1f to B),
-            headA = curve(0f to B, 0.12f to -1.1f, 0.26f to 0.2f, 0.55f to 0f, 1f to B),
-        ),
-        "WAND:ORBIT" to Pose(
-            pitch = curve(0f to B, 0.15f to -1.3f, 0.7f to -1.35f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.5f, 0.42f to 0.5f, 0.7f to 0.1f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.25f, 0.7f to 0.15f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.9f, 0.7f to -0.9f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.7f, 0.42f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.2f, 0.42f to 0.25f, 0.7f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.42f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.3f, 0.42f to -0.9f, 0.7f to -0.6f, 1f to B),
-            headY = curve(0f to B, 0.15f to -0.7f, 0.42f to 0.7f, 0.7f to 0.2f, 1f to B),
-            twist = curve(0f to B, 0.15f to -0.5f, 0.42f to 0.8f, 1f to B),
-        ),
-        "WAND:STAFF_SWEEP" to Pose(
-            pitch = curve(0f to B, 0.18f to -1.0f, 0.42f to -1.05f, 0.7f to -0.8f, 1f to B),
-            across = curve(0f to B, 0.18f to -0.8f, 0.42f to 0.8f, 0.7f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.18f to -1.0f, 0.42f to -1.0f, 0.7f to -0.8f, 1f to B),
-            offAcross = curve(0f to B, 0.18f to 0.2f, 0.42f to 0.8f, 0.7f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.18f to -0.5f, 0.42f to 0.6f, 0.7f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.42f to -1.5f, 1f to B),
-            headA = curve(0f to B, 0.18f to -1.2f, 0.42f to -0.7f, 0.7f to -0.9f, 1f to B),
-            headY = curve(0f to B, 0.18f to -0.8f, 0.42f to 0.9f, 0.7f to 0.5f, 1f to B),
-        ),
-        "WAND:STAFF_RAISE" to Pose(
-            pitch = curve(0f to B, 0.22f to -2.4f, 0.4f to -2.0f, 0.65f to -1.6f, 1f to B),
-            offPitch = curve(0f to B, 0.22f to -2.1f, 0.4f to -1.8f, 0.65f to -1.5f, 1f to B),
-            offAcross = curve(0f to B, 0.22f to 0.3f, 0.4f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.22f to 0.1f, 0.4f to -0.1f, 1f to B),
-            reach = curve(0f to B, 0.22f to 0.5f, 0.4f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.22f to -1.6f, 0.4f to -0.4f, 0.65f to -0.8f, 1f to B),
-        ),
-        "RELIK:PULSE" to Pose(
-            pitch = curve(0f to B, 0.2f to -1.3f, 0.6f to -1.3f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.3f, 0.6f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -1.3f, 0.6f to -1.3f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.6f, 0.6f to 0.6f, 1f to B),
-            turn = curve(0f to B, 0.12f to -0.15f, 0.3f to 0.05f, 1f to B),
-            reach = curve(0f to B, 0.1f to 0.8f, 0.3f to -1.6f, 0.6f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.2f, 0.6f to -0.2f, 1f to B),
-        ),
-        "RELIK:WAVE" to Pose(
-            pitch = curve(0f to B, 0.22f to -0.4f, 0.55f to -1.7f, 0.8f to -1.4f, 1f to B),
-            across = curve(0f to B, 0.22f to -0.7f, 0.55f to 0.6f, 0.8f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.22f to 0.5f, 0.55f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.22f to -0.3f, 0.55f to -1.4f, 1f to B),
-            offAcross = curve(0f to B, 0.22f to -0.4f, 0.55f to 0.7f, 1f to B),
-            turn = curve(0f to B, 0.22f to -0.4f, 0.55f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.55f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.22f to 0.4f, 0.55f to -0.6f, 1f to B),
-            headY = curve(0f to B, 0.22f to -0.6f, 0.55f to 0.5f, 1f to B),
-        ),
-        "SPELL:BASH" to Pose(
-            pitch = curve(0f to B, 0.15f to -1.96f, 0.35f to -0.84f, 0.6f to -0.7f, 0.85f to -0.63f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.3f, 0.35f to 0.4f, 0.6f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.4f, 0.35f to 0.1f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -1.75f, 0.35f to -0.7f, 0.6f to -0.63f, 0.85f to -0.59f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.6f, 0.35f to 0.7f, 0.6f to 0.6f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.4f, 0.35f to 0.5f, 0.6f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.15f to 2.0f, 0.35f to -3.0f, 0.6f to -2.5f, 1f to B),
-            headA = curve(0f to B, 0.15f to -1.82f, 0.35f to 1.05f, 0.6f to 0.84f, 0.85f to 0.77f, 1f to B),
-            headY = curve(0f to B, 0.15f to -0.2f, 0.35f to 0.6f, 0.6f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.15f to 0.3f, 0.35f to -0.4f, 0.6f to -0.2f, 1f to B),
-            lean = curve(0f to B, 0.15f to -0.5f, 0.35f to 0.8f, 0.6f to 0.5f, 1f to B),
-            step = curve(0f to B, 0.15f to -0.4f, 0.35f to 1.0f, 0.6f to 0.6f, 1f to B),
-        ),
-        "SPELL:CHARGE" to Pose(
-            pitch = curve(0f to B, 0.08f to -0.6f, 0.25f to -1.7f, 0.6f to -1.7f, 0.85f to -1.1f, 1f to B),
-            across = curve(0f to B, 0.08f to 0.0f, 0.25f to 0.2f, 0.6f to 0.15f, 1f to B),
-            abduct = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.08f to -0.5f, 0.25f to -1.5f, 0.6f to -1.5f, 0.85f to -1.0f, 1f to B),
-            offAcross = curve(0f to B, 0.08f to 0.2f, 0.25f to 0.4f, 0.6f to 0.35f, 1f to B),
-            offAbduct = curve(0f to B, 0.08f to 0.2f, 0.25f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.08f to -0.15f, 0.25f to 0.25f, 0.6f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.08f to 1.8f, 0.25f to -4.0f, 0.6f to -4.0f, 0.85f to -2.5f, 1f to B),
-            headA = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.3f, 0.6f to 0.35f, 0.85f to 0.3f, 1f to B),
-            headY = curve(0f to B, 0.25f to 0.1f, 0.6f to -0.1f, 1f to B),
-            twist = curve(0f to B, 0.08f to -0.1f, 0.25f to 0.15f, 0.6f to 0.1f, 1f to B),
-            lean = curve(0f to B, 0.08f to 0.1f, 0.25f to 0.9f, 0.6f to 1.0f, 0.85f to 0.6f, 1f to B),
-            step = curve(0f to B, 0.08f to -0.35f, 0.25f to -0.3f, 0.6f to -0.2f, 0.75f to 0.9f, 0.9f to 0.7f, 1f to B),
-        ),
-        "SPELL:UPPERCUT" to Pose(
-            pitch = curve(0f to B, 0.1f to 0.2f, 0.3f to -2.5f, 0.55f to -2.0f, 0.8f to -1.5f, 1f to B),
-            across = curve(0f to B, 0.1f to 0.3f, 0.3f to -0.8f, 0.55f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.2f, 0.3f to 0.4f, 0.55f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.2f, 0.3f to -2.2f, 0.55f to -1.8f, 0.8f to -1.4f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.4f, 0.3f to 0.5f, 0.55f to 0.4f, 1f to B),
-            offAbduct = curve(0f to B, 0.1f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.1f to 0.5f, 0.3f to -0.6f, 0.55f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.3f to -2.0f, 0.55f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.1f to 1.0f, 0.3f to -1.8f, 0.55f to -1.2f, 0.8f to -0.8f, 1f to B),
-            headY = curve(0f to B, 0.1f to 0.4f, 0.3f to -0.5f, 0.55f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.1f to 0.2f, 0.3f to -0.8f, 0.55f to 0.3f, 1f to B),
-            lean = curve(0f to B, 0.1f to 0.2f, 0.3f to 0.4f, 0.55f to 0.3f, 1f to B),
-            step = curve(0f to B, 0.1f to -0.3f, 0.3f to 1.0f, 0.55f to 0.6f, 0.8f to 0.4f, 1f to B),
-        ),
-        "SPELL:WAR_SCREAM" to Pose(
-            pitch = curve(0f to B, 0.15f to -0.98f, 0.4f to -1.4f, 0.7f to -1.26f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.3f, 0.4f to 0.5f, 0.7f to 0.35f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.6f, 0.4f to 0.5f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -1.9f, 0.4f to -2.4f, 0.7f to -2.2f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.8f, 0.4f to 1.0f, 0.7f to 0.75f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.3f, 0.4f to 0.4f, 0.7f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.15f to -1.05f, 0.4f to -1.5f, 0.7f to -1.05f, 1f to B),
-            headA = curve(0f to B, 0.15f to -1.2f, 0.4f to -1.5f, 0.7f to -1.2f, 1f to B),
-            headY = curve(0f to B, 0.15f to 2.24f, 0.4f to 3.2f, 0.7f to 2.56f, 1f to B),
-            twist = curve(0f to B, 0.15f to 0.2f, 0.4f to -0.3f, 0.7f to -0.1f, 1f to B),
-            lean = curve(0f to B, 0.15f to -0.5f, 0.4f to -0.2f, 0.7f to -0.3f, 1f to B),
-            step = curve(0f to B, 0.15f to -0.2f, 0.4f to 0.5f, 0.7f to 0.3f, 1f to B),
-        ),
-        "SPELL:HEAL" to Pose(
-            pitch = curve(0f to B, 0.2f to -0.72f, 0.5f to -0.88f, 0.8f to -0.8f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.1f, 0.5f to 0.4f, 0.8f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 1.0f, 0.5f to 0.6f, 0.8f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.72f, 0.5f to -0.84f, 0.8f to -0.76f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.8f, 0.5f to 1.0f, 0.8f to 0.8f, 1f to B),
-            offAbduct = curve(0f to B, 0.2f to 1.1f, 0.5f to 0.7f, 0.8f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.2f, 0.5f to 0.3f, 0.8f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.2f to -0.5f, 0.5f to -1.5f, 0.8f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.2f to -1.5f, 0.5f to -1.8f, 0.8f to -1.4f, 1f to B),
-            headY = curve(0f to B, 0.2f to -0.2f, 0.5f to 0.4f, 0.8f to 0.2f, 1f to B),
-            twist = curve(0f to B, 0.2f to 0.1f, 0.5f to -0.2f, 1f to B),
-            lean = curve(0f to B, 0.2f to -0.3f, 0.5f to -0.1f, 1f to B),
-            step = curve(0f to B, 0.2f to 0.1f, 0.5f to 0.3f, 0.8f to 0.2f, 1f to B),
-        ),
-        "SPELL:TELEPORT" to Pose(
-            pitch = curve(0f to B, 0.15f to -0.5f, 0.3f to -2.0f, 0.5f to -1.8f, 0.8f to -1.5f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.2f, 0.3f to 0.6f, 0.5f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.2f, 0.3f to 0.5f, 0.5f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.4f, 0.3f to -1.8f, 0.5f to -1.5f, 0.8f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.5f, 0.3f to 0.7f, 0.5f to 0.5f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.3f, 0.3f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.4f, 0.3f to 0.5f, 0.5f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.3f to -2.5f, 0.5f to -1.5f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.4f, 0.3f to -1.0f, 0.5f to -0.5f, 0.8f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.15f to -0.3f, 0.3f to 0.6f, 0.5f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.15f to 0.2f, 0.3f to -0.4f, 0.5f to -0.1f, 1f to B),
-            lean = curve(0f to B, 0.15f to 0.4f, 0.3f to 0.7f, 0.5f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.15f to 0.8f, 0.3f to 1.0f, 0.5f to 0.7f, 1f to B),
-        ),
-        "SPELL:METEOR" to Pose(
-            pitch = curve(0f to B, 0.2f to -0.7f, 0.45f to -2.1f, 0.65f to -1.05f, 0.85f to -0.91f, 1f to B),
-            across = curve(0f to B, 0.2f to -0.2f, 0.45f to 0.5f, 0.65f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.3f, 0.45f to 0.7f, 0.65f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.56f, 0.45f to -1.82f, 0.65f to -0.84f, 0.85f to -0.77f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.4f, 0.45f to 0.6f, 0.65f to 0.4f, 1f to B),
-            offAbduct = curve(0f to B, 0.2f to 0.3f, 0.45f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.3f, 0.45f to 0.4f, 0.65f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.2f to 1.0f, 0.45f to -2.5f, 0.65f to -2.0f, 0.85f to -1.8f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.8f, 0.45f to -2.0f, 0.65f to 0.8f, 0.85f to 0.5f, 1f to B),
-            headY = curve(0f to B, 0.2f to -0.4f, 0.45f to 0.7f, 0.65f to 0.3f, 1f to B),
-            twist = curve(0f to B, 0.2f to 0.2f, 0.45f to -0.5f, 0.65f to -0.2f, 1f to B),
-            lean = curve(0f to B, 0.2f to -0.4f, 0.45f to 0.7f, 0.65f to 0.4f, 0.85f to 0.3f, 1f to B),
-            step = curve(0f to B, 0.2f to -0.3f, 0.45f to 0.8f, 0.65f to 0.5f, 1f to B),
-        ),
-        "SPELL:ICE_SNAKE" to Pose(
-            pitch = curve(0f to B, 0.15f to -0.8f, 0.35f to -1.8f, 0.55f to -1.6f, 0.8f to -1.5f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.6f, 0.35f to 0.5f, 0.55f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.6f, 0.55f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.5f, 0.35f to -1.5f, 0.55f to -1.3f, 0.8f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.4f, 0.35f to 0.7f, 0.55f to 0.6f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.4f, 0.35f to 0.5f, 0.55f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.35f to -2.8f, 0.55f to -2.2f, 0.8f to -2.0f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.4f, 0.35f to -0.3f, 0.55f to -0.1f, 1f to B),
-            headY = curve(0f to B, 0.15f to -0.3f, 0.35f to 0.5f, 0.55f to 0.2f, 1f to B),
-            twist = curve(0f to B, 0.15f to 0.2f, 0.35f to -0.3f, 0.55f to -0.1f, 1f to B),
-            lean = curve(0f to B, 0.15f to 0.4f, 0.35f to 0.5f, 0.55f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.15f to 0.2f, 0.35f to 0.6f, 0.55f to 0.4f, 1f to B),
-        ),
-        "SPELL:ARCANE_TRANSFER" to Pose(
-            pitch = curve(0f to B, 0.2f to -0.7f, 0.45f to -1.26f, 0.7f to -1.26f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.2f, 0.45f to 0.5f, 0.7f to 0.4f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 0.4f, 0.45f to 0.7f, 0.7f to 0.5f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.7f, 0.45f to -1.26f, 0.7f to -1.26f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.9f, 0.45f to 1.1f, 0.7f to 1.0f, 1f to B),
-            offAbduct = curve(0f to B, 0.2f to 0.5f, 0.45f to 0.8f, 0.7f to 0.6f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.2f, 0.45f to 0.4f, 0.7f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.45f to -1.8f, 0.7f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.5f, 0.45f to -0.3f, 0.7f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.2f to 0.1f, 0.45f to -0.3f, 0.7f to 0.1f, 1f to B),
-            twist = curve(0f to B, 0.2f to 0.1f, 0.45f to -0.3f, 0.7f to -0.1f, 1f to B),
-            lean = curve(0f to B, 0.2f to 0.4f, 0.45f to 0.5f, 0.7f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.2f to 0.2f, 0.45f to 0.5f, 0.7f to 0.3f, 1f to B),
-        ),
-        "SPELL:OPHANIM" to Pose(
-            pitch = curve(0f to B, 0.15f to -0.99f, 0.4f to -1.38f, 0.7f to -1.32f, 1f to B),
-            across = curve(0f to B, 0.15f to -0.2f, 0.4f to 0.4f, 0.7f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.4f, 0.4f to 0.6f, 0.7f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.66f, 0.4f to -0.99f, 0.7f to -0.94f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.6f, 0.4f to 0.8f, 0.7f to 0.6f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.5f, 0.4f to 0.7f, 0.7f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.3f, 0.4f to 0.5f, 0.7f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.15f to 0.5f, 0.4f to -1.0f, 0.7f to -0.5f, 1f to B),
-            headA = curve(0f to B, 0.15f to -1.2f, 0.4f to -1.5f, 0.7f to -1.2f, 1f to B),
-            headY = curve(0f to B, 0.15f to 1.5f, 0.4f to 7.0f, 0.7f to 12.0f, 1f to 12.5664f),
-            twist = curve(0f to B, 0.15f to 0.3f, 0.4f to 0.8f, 0.7f to 0.5f, 1f to B),
-            lean = curve(0f to B, 0.15f to -0.2f, 0.4f to -0.1f, 0.7f to -0.15f, 1f to B),
-            step = curve(0f to B, 0.15f to 0.1f, 0.4f to -0.2f, 0.7f to -0.1f, 1f to B),
-        ),
-        "SPELL:ARROW_STORM" to Pose(
-            pitch = curve(0f to B, 0.1f to -1.2f, 0.3f to -1.8f, 0.5f to -1.8f, 0.7f to -1.6f, 0.85f to -1.4f, 1f to B),
-            across = curve(0f to B, 0.1f to 0.1f, 0.3f to 0.4f, 0.5f to 0.3f, 0.7f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.1f to 0.2f, 0.3f to 0.4f, 0.5f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.1f to -0.48f, 0.3f to -0.72f, 0.5f to -0.72f, 0.7f to -0.64f, 0.85f to -0.56f, 1f to B),
-            offAcross = curve(0f to B, 0.1f to 0.6f, 0.3f to 0.9f, 0.5f to 0.8f, 0.7f to 0.7f, 1f to B),
-            offAbduct = curve(0f to B, 0.1f to 0.3f, 0.3f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.1f to 0.4f, 0.3f to 0.6f, 0.5f to 0.4f, 0.7f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.1f to -0.5f, 0.2f to 0.5f, 0.3f to -0.5f, 0.4f to 0.5f, 0.5f to -0.5f, 0.6f to 0.5f, 0.7f to -0.5f, 0.85f to -0.5f, 1f to B),
-            headA = curve(0f to B, 0.1f to -0.16f, 0.3f to -0.28f, 0.5f to -0.24f, 0.7f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.1f to 0.2f, 0.3f to -0.3f, 0.5f to 0.2f, 0.7f to -0.2f, 1f to B),
-            twist = curve(0f to B, 0.1f to 0.1f, 0.3f to 0.3f, 0.5f to 0.1f, 0.7f to 0.2f, 1f to B),
-            lean = curve(0f to B, 0.1f to -0.15f, 0.3f to 0.1f, 0.5f to -0.1f, 0.7f to 0.1f, 1f to B),
-            step = curve(0f to B, 0.1f to 0.1f, 0.3f to -0.2f, 0.5f to 0.1f, 0.7f to -0.1f, 1f to B),
-        ),
-        "SPELL:ESCAPE" to Pose(
-            pitch = curve(0f to B, 0.3f to -0.32f, 0.6f to -0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -0.7f, 0.6f to -0.9f, 1f to B),
-            turn = curve(0f to B, 0.3f to 0.4f, 0.6f to 0.2f, 1f to B),
-            headA = curve(0f to B, 0.3f to 0.16f, 0.6f to 0.04f, 1f to B),
-            lean = curve(0f to B, 0.3f to -0.5f, 0.6f to -0.2f, 1f to B),
-            step = curve(0f to B, 0.3f to -0.8f, 0.6f to -0.4f, 1f to B),
-            twist = KEEP,
-        ),
-        "SPELL:ARROW_BOMB" to Pose(
-            pitch = curve(0f to B, 0.25f to -0.68f, 0.55f to -0.76f, 0.7f to -0.68f, 1f to B),
-            across = curve(0f to B, 0.25f to 0.25f, 0.7f to 0.25f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -1.5f, 0.55f to -1.7f, 0.7f to -1.5f, 1f to B),
-            offAcross = curve(0f to B, 0.25f to 0.7f, 0.55f to -0.1f, 0.7f to -0.4f, 1f to B),
-            turn = curve(0f to B, 0.25f to 0.35f, 0.7f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.25f to -0.6f, 0.55f to -0.6f, 1f to B),
-            headA = curve(0f to B, 0.25f to -0.2f, 0.55f to -0.28f, 1f to B),
-            lean = curve(0f to B, 0.55f to -0.2f, 1f to B),
-            twist = KEEP,
-        ),
-        "SPELL:ARROW_SHIELD" to Pose(
-            pitch = curve(0f to B, 0.3f to -0.48f, 0.6f to -0.56f, 1f to B),
-            across = curve(0f to B, 0.3f to 0.8f, 0.6f to 0f, 1f to B),
-            abduct = curve(0f to B, 0.6f to 0.5f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -1.2f, 0.6f to -1.4f, 1f to B),
-            offAcross = curve(0f to B, 0.3f to 0.8f, 0.6f to 0f, 1f to B),
-            offAbduct = curve(0f to B, 0.6f to 0.5f, 1f to B),
-            headA = curve(0f to B, 0.3f to -0.36f, 0.6f to -0.2f, 1f to B),
-            twist = KEEP,
-        ),
-        "SPELL:PHANTOM_RAY" to Pose(
-            pitch = curve(0f to B, 0.15f to -1.2f, 0.4f to -1.8f, 0.7f to -1.8f, 0.9f to -1.6f, 1f to B),
-            across = curve(0f to B, 0.15f to 0.1f, 0.4f to 0.4f, 0.7f to 0.3f, 0.9f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.2f, 0.4f to 0.4f, 0.7f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.48f, 0.4f to -0.72f, 0.7f to -0.72f, 0.9f to -0.64f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.8f, 0.4f to 0.9f, 0.7f to 0.8f, 0.9f to 0.7f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.3f, 0.4f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.15f to 0.4f, 0.4f to 0.6f, 0.7f to 0.4f, 0.9f to 0.3f, 1f to B),
-            reach = curve(0f to B, 0.15f to -0.5f, 0.4f to -0.8f, 0.7f to -0.8f, 0.9f to -0.6f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.16f, 0.4f to -0.24f, 0.7f to -0.2f, 0.9f to -0.16f, 1f to B),
-            headY = curve(0f to B, 0.15f to 0.2f, 0.4f to -0.3f, 0.7f to 0.2f, 0.9f to -0.1f, 1f to B),
-            twist = curve(0f to B, 0.15f to 0.1f, 0.4f to 0.3f, 0.7f to 0.1f, 1f to B),
-            lean = curve(0f to B, 0.15f to 0.2f, 0.4f to 0.2f, 0.7f to 0.15f, 1f to B),
-            step = curve(0f to B, 0.15f to 0.2f, 0.4f to 0.3f, 0.7f to 0.2f, 1f to B),
-        ),
-        "SPELL:GRAPPLING_HOOK" to Pose(
-            pitch = curve(0f to B, 0.2f to -0.82f, 0.45f to -0.82f, 0.8f to -0.66f, 1f to B),
-            across = curve(0f to B, 0.2f to 0.25f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -1.5f, 0.45f to -1.3f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.7f, 0.7f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.2f to 0.3f, 0.7f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.2f to -0.8f, 0.45f to -1.5f, 0.7f to 0.5f, 1f to B),
-            lean = curve(0f to B, 0.45f to 0.1f, 0.7f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.7f to 0.6f, 1f to B),
-            twist = KEEP,
-        ),
-        "SPELL:GUARDIAN_ANGELS" to Pose(
-            pitch = curve(0f to B, 0.2f to -0.72f, 0.5f to -0.96f, 0.8f to -0.92f, 1f to B),
-            across = curve(0f to B, 0.2f to -0.1f, 0.5f to 0.3f, 0.8f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.2f to 1.0f, 0.5f to 1.2f, 0.8f to 1.0f, 1f to B),
-            offPitch = curve(0f to B, 0.2f to -0.72f, 0.5f to -0.92f, 0.8f to -0.88f, 1f to B),
-            offAcross = curve(0f to B, 0.2f to 0.9f, 0.5f to 1.1f, 0.8f to 1.0f, 1f to B),
-            offAbduct = curve(0f to B, 0.2f to 1.1f, 0.5f to 1.3f, 0.8f to 1.1f, 1f to B),
-            turn = curve(0f to B, 0.2f to -0.2f, 0.5f to 0.3f, 0.8f to 0.1f, 1f to B),
-            reach = curve(0f to B, 0.2f to -0.5f, 0.5f to -1.5f, 0.8f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.2f to -0.48f, 0.5f to -0.6f, 0.8f to -0.48f, 1f to B),
-            headY = curve(0f to B, 0.2f to -0.2f, 0.5f to 0.4f, 0.8f to 0.2f, 1f to B),
-            twist = curve(0f to B, 0.2f to 0.1f, 0.5f to -0.2f, 1f to B),
-            lean = curve(0f to B, 0.2f to -0.3f, 0.5f to -0.1f, 1f to B),
-            step = curve(0f to B, 0.2f to 0.2f, 0.5f to 0.4f, 0.8f to 0.3f, 1f to B),
-        ),
-        "SPELL:SPIN_ATTACK" to Pose(
-            pitch = curve(0f to B, 0.08f to -1.0f, 0.25f to -1.5f, 0.5f to -1.5f, 0.75f to -1.3f, 0.9f to -1.1f, 1f to B),
-            across = curve(0f to B, 0.08f to -0.8f, 0.25f to -0.2f, 0.5f to 0.6f, 0.75f to 0.3f, 0.9f to 0.2f, 1f to B),
-            abduct = curve(0f to B, 0.08f to 0.3f, 0.25f to 0.5f, 0.5f to 0.4f, 1f to B),
-            offPitch = curve(0f to B, 0.08f to -0.5f, 0.25f to -0.8f, 0.5f to -0.8f, 0.75f to -0.6f, 1f to B),
-            offAcross = curve(0f to B, 0.08f to 0.5f, 0.25f to 0.8f, 0.5f to 0.7f, 0.75f to 0.6f, 1f to B),
-            offAbduct = curve(0f to B, 0.08f to 0.6f, 0.25f to 0.7f, 0.5f to 0.6f, 1f to B),
-            turn = curve(0f to B, 0.08f to -0.4f, 0.25f to 0.5f, 0.5f to 0.6f, 0.75f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.08f to 1.0f, 0.25f to -1.5f, 0.5f to -1.0f, 0.75f to -0.5f, 1f to B),
-            headA = curve(0f to B, 0.08f to -0.3f, 0.25f to -0.5f, 0.5f to -0.3f, 0.75f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.08f to -0.8f, 0.25f to 3.5f, 0.5f to 6.5f, 0.75f to 10.0f, 0.9f to 12.0f, 1f to 12.5664f),
-            twist = curve(0f to B, 0.08f to 0.4f, 0.25f to 0.8f, 0.5f to 1.0f, 0.75f to 0.7f, 1f to B),
-            lean = curve(0f to B, 0.08f to 0.2f, 0.25f to 0.3f, 0.5f to 0.25f, 0.75f to 0.2f, 1f to B),
-            step = curve(0f to B, 0.08f to 0.1f, 0.25f to -0.2f, 0.5f to 0.3f, 0.75f to 0.1f, 1f to B),
-        ),
-        "SPELL:DASH" to Pose(
-            pitch = curve(0f to B, 0.15f to 0.2f, 0.35f to 0.5f, 0.65f to 0.45f, 0.85f to 0.2f, 1f to B),
-            across = curve(0f to B, 0.15f to 0.1f, 0.35f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to 0.2f, 0.35f to 0.5f, 0.65f to 0.45f, 0.85f to 0.2f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.15f, 0.35f to 0.2f, 0.65f to 0.1f, 1f to B),
-            headA = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.45f, 0.65f to 0.4f, 0.85f to 0.2f, 1f to B),
-            lean = curve(0f to B, 0.15f to 0.3f, 0.35f to 0.65f, 0.65f to 0.6f, 0.85f to 0.3f, 1f to B),
-            step = curve(0f to B, 0.15f to 0.6f, 0.35f to -0.3f, 0.65f to -0.25f, 0.85f to 0.4f, 1f to B),
-        ),
-        "SPELL:MULTIHIT" to Pose(
-            pitch = curve(0f to B, 0.08f to -0.55f, 0.2f to -0.88f, 0.35f to -0.88f, 0.5f to -0.77f, 0.65f to -0.88f, 0.8f to -0.71f, 0.9f to -0.6f, 1f to B),
-            across = curve(0f to B, 0.08f to -0.7f, 0.2f to 0.9f, 0.35f to -0.7f, 0.5f to 0.9f, 0.65f to -0.6f, 0.8f to 0.8f, 0.9f to -0.4f, 1f to B),
-            abduct = curve(0f to B, 0.08f to 0.3f, 0.2f to 0.5f, 0.35f to 0.4f, 0.5f to 0.5f, 1f to B),
-            offPitch = curve(0f to B, 0.08f to -0.22f, 0.2f to -0.39f, 0.35f to -0.39f, 0.5f to -0.28f, 0.65f to -0.39f, 0.8f to -0.28f, 1f to B),
-            offAcross = curve(0f to B, 0.08f to 0.5f, 0.2f to 0.8f, 0.35f to 0.6f, 0.5f to 0.8f, 0.65f to 0.6f, 0.8f to 0.7f, 1f to B),
-            offAbduct = curve(0f to B, 0.08f to 0.4f, 0.2f to 0.5f, 0.35f to 0.4f, 1f to B),
-            turn = curve(0f to B, 0.08f to -0.4f, 0.2f to 0.6f, 0.35f to -0.5f, 0.5f to 0.5f, 0.65f to -0.3f, 0.8f to 0.4f, 0.9f to -0.1f, 1f to B),
-            reach = curve(0f to B, 0.08f to 1.0f, 0.2f to -1.5f, 0.35f to -1.2f, 0.5f to -1.5f, 0.65f to -1.2f, 0.8f to -1.0f, 1f to B),
-            headA = curve(0f to B, 0.08f to -0.3f, 0.2f to -0.5f, 0.35f to -0.3f, 0.5f to -0.4f, 0.65f to -0.3f, 0.8f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.08f to -0.8f, 0.2f to 0.9f, 0.35f to -0.8f, 0.5f to 0.9f, 0.65f to -0.6f, 0.8f to 0.8f, 0.9f to -0.3f, 1f to B),
-            twist = curve(0f to B, 0.08f to 0.2f, 0.2f to 0.5f, 0.35f to -0.3f, 0.5f to 0.4f, 0.65f to -0.2f, 0.8f to 0.3f, 1f to B),
-            lean = curve(0f to B, 0.08f to 0.15f, 0.2f to -0.1f, 0.35f to 0.2f, 0.5f to -0.1f, 0.65f to 0.15f, 1f to B),
-            step = curve(0f to B, 0.08f to 0.2f, 0.2f to -0.3f, 0.35f to 0.3f, 0.5f to -0.2f, 0.65f to 0.2f, 1f to B),
-        ),
-        "SPELL:SMOKE_BOMB" to Pose(
-            pitch = curve(0f to B, 0.25f to -2.0f, 0.5f to -0.8f, 0.8f to -0.9f, 1f to B),
-            across = curve(0f to B, 0.5f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -0.5f, 1f to B),
-            turn = curve(0f to B, 0.25f to -0.3f, 0.5f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.5f to -1f, 1f to B),
-            headA = curve(0f to B, 0.25f to -1.0f, 0.5f to 0.8f, 0.8f to 0.5f, 1f to B),
-            lean = curve(0f to B, 0.25f to -0.2f, 0.5f to 0.6f, 0.8f to 0.4f, 1f to B),
-        ),
-        "SPELL:LACERATE" to Pose(
-            pitch = curve(0f to B, 0.12f to -1.1f, 0.85f to -1.1f, 1f to B),
-            across = curve(0f to B, 0.12f to -0.9f, 0.4f to 0.9f, 0.7f to -0.5f, 0.9f to 0.3f, 1f to B),
-            abduct = curve(0f to B, 0.12f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.12f to -0.5f, 0.85f to -0.5f, 1f to B),
-            offAbduct = curve(0f to B, 0.12f to 0.5f, 0.85f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.12f to -0.4f, 0.4f to 0.5f, 0.7f to -0.3f, 1f to B),
-            headA = curve(0f to B, 0.12f to -0.2f, 0.85f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.12f to -0.9f, 0.4f to 3.0f, 0.7f to 5.0f, 1f to 6.2832f),
-            twist = curve(0f to B, 0.12f to -0.6f, 0.4f to 0.8f, 1f to B),
-            lean = curve(0f to B, 0.12f to 0.2f, 0.85f to 0.2f, 1f to B),
-        ),
-        "SPELL:BACKSTAB" to Pose(
-            pitch = curve(0f to B, 0.25f to -0.9f, 0.5f to 0.2f, 0.8f to 0f, 1f to B),
-            across = curve(0f to B, 0.25f to -0.3f, 0.5f to 0.3f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -0.6f, 0.5f to -0.4f, 1f to B),
-            turn = curve(0f to B, 0.25f to 0.4f, 0.5f to 0.8f, 0.8f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.5f to 1.5f, 1f to B),
-            headA = curve(0f to B, 0.25f to -0.5f, 0.5f to -0.3f, 1f to B),
-            lean = curve(0f to B, 0.5f to 0.3f, 1f to B),
-            step = curve(0f to B, 0.25f to -0.3f, 0.5f to 0.8f, 1f to B),
-        ),
-        "SPELL:BAMBOOZLE" to Pose(
-            pitch = curve(0f to B, 0.15f to -0.9f, 0.4f to -0.8f, 0.7f to -0.7f, 1f to B),
-            across = curve(0f to B, 0.15f to -1.0f, 0.4f to 1.0f, 0.7f to 0.5f, 1f to B),
-            abduct = curve(0f to B, 0.15f to 0.4f, 0.4f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -0.9f, 0.4f to -0.9f, 0.7f to -0.6f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 1.0f, 0.4f to -0.7f, 0.7f to -0.3f, 1f to B),
-            offAbduct = curve(0f to B, 0.15f to 0.4f, 0.4f to 0.3f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.5f, 0.4f to 0.6f, 0.7f to 0.2f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.2f, 0.4f to -0.2f, 1f to B),
-            headY = curve(0f to B, 0.15f to -1.1f, 0.4f to 1.1f, 0.7f to 0.5f, 1f to B),
-            twist = curve(0f to B, 0.15f to -0.8f, 0.4f to 1.0f, 0.7f to 0.4f, 1f to B),
-        ),
-        "SPELL:TOTEM" to Pose(
-            pitch = curve(0f to B, 0.3f to -1.8f, 0.55f to -0.8f, 0.85f to -0.9f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -1.5f, 0.55f to -0.9f, 0.85f to -0.9f, 1f to B),
-            offAcross = curve(0f to B, 0.3f to 0.5f, 0.55f to 0.5f, 1f to B),
-            reach = curve(0f to B, 0.55f to -1.5f, 1f to B),
-            headA = curve(0f to B, 0.3f to -0.6f, 0.55f to 0.8f, 0.85f to 0.6f, 1f to B),
-            lean = curve(0f to B, 0.3f to -0.1f, 0.55f to 0.7f, 0.85f to 0.5f, 1f to B),
-            step = curve(0f to B, 0.55f to 0.5f, 1f to B),
-        ),
-        "SPELL:HAUL" to Pose(
-            pitch = curve(0f to B, 0.15f to -1.2f, 0.3f to -1.8f, 0.55f to -1.6f, 0.8f to -1.2f, 1f to B),
-            across = curve(0f to B, 0.15f to 0.1f, 0.3f to 0.2f, 1f to B),
-            offPitch = curve(0f to B, 0.15f to -1.0f, 0.3f to -1.5f, 0.55f to -1.3f, 0.8f to -1.0f, 1f to B),
-            offAcross = curve(0f to B, 0.15f to 0.2f, 0.3f to 0.4f, 0.55f to 0.35f, 1f to B),
-            turn = curve(0f to B, 0.15f to -0.15f, 0.3f to 0.25f, 0.55f to 0.15f, 1f to B),
-            reach = curve(0f to B, 0.15f to -1.0f, 0.3f to -2.2f, 0.55f to -2.0f, 0.8f to -1.2f, 1f to B),
-            headA = curve(0f to B, 0.15f to -0.2f, 0.3f to -0.3f, 0.55f to 0.0f, 0.8f to 0.3f, 1f to B),
-            lean = curve(0f to B, 0.15f to 0.2f, 0.3f to 0.7f, 0.55f to 0.7f, 0.8f to 0.4f, 1f to B),
-            step = curve(0f to B, 0.15f to -0.3f, 0.3f to -0.35f, 0.55f to -0.25f, 0.7f to 0.8f, 0.9f to 0.5f, 1f to B),
-        ),
-        "SPELL:AURA" to Pose(
-            pitch = curve(0f to B, 0.3f to -1.1f, 0.5f to -1.04f, 0.7f to -1.1f, 1f to B),
-            abduct = curve(0f to B, 0.3f to 0.7f, 0.5f to 0.5f, 0.7f to 0.7f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -1.1f, 0.5f to -1.04f, 0.7f to -1.1f, 1f to B),
-            offAbduct = curve(0f to B, 0.3f to 0.7f, 0.5f to 0.5f, 0.7f to 0.7f, 1f to B),
-            headA = curve(0f to B, 0.3f to -1.2f, 0.5f to -1.0f, 0.7f to -1.2f, 1f to B),
-            lean = curve(0f to B, 0.3f to -0.15f, 0.7f to -0.15f, 1f to B),
-        ),
-        "SPELL:UPROOT" to Pose(
-            pitch = curve(0f to B, 0.3f to -0.26f, 0.6f to -1.87f, 0.85f to -1.53f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -0.34f, 0.6f to -1.61f, 0.85f to -1.36f, 1f to B),
-            offAcross = curve(0f to B, 0.3f to 0.4f, 0.6f to 0.4f, 1f to B),
-            reach = curve(0f to B, 0.6f to -1f, 1f to B),
-            headA = curve(0f to B, 0.3f to 0.9f, 0.6f to -1.5f, 0.85f to -1.0f, 1f to B),
-            lean = curve(0f to B, 0.3f to 0.5f, 0.6f to -0.2f, 1f to B),
-        ),
-        "SPELL:SWITCH_MASKS" to Pose(
-            pitch = curve(0f to B, 0.3f to -1.32f, 0.65f to -1.32f, 1f to B),
-            across = curve(0f to B, 0.3f to 0.9f, 0.65f to 0.9f, 1f to B),
-            offPitch = curve(0f to B, 0.3f to -1.1f, 0.65f to -1.1f, 1f to B),
-            offAcross = curve(0f to B, 0.3f to 0.5f, 1f to B),
-            headA = curve(0f to B, 0.3f to -0.66f, 0.65f to -0.66f, 1f to B),
-            lean = curve(0f to B, 0.3f to -0.1f, 0.65f to -0.1f, 1f to B),
-        ),
-        "SPELL:CAST" to Pose(
-            pitch = curve(0f to B, 0.25f to -1.8f, 0.5f to -1.5f, 0.8f to -1.4f, 1f to B),
-            offPitch = curve(0f to B, 0.25f to -1.4f, 0.5f to -1.2f, 1f to B),
-            offAcross = curve(0f to B, 0.25f to 0.4f, 0.5f to 0.5f, 1f to B),
-            turn = curve(0f to B, 0.25f to -0.2f, 0.5f to 0.2f, 1f to B),
-            reach = curve(0f to B, 0.25f to 0.5f, 0.5f to -2f, 0.8f to -1.5f, 1f to B),
-            headA = curve(0f to B, 0.25f to -0.9f, 0.5f to -0.2f, 1f to B),
-            lean = curve(0f to B, 0.5f to 0.3f, 1f to B),
-        ),
-    ) + toolPoses()
-
-    private val SECONDS = mapOf(
-        "SPEAR" to 0.3f,
-        "SPEAR:SWEEP" to 0.36f,
-        "SPEAR:SCYTHE" to 0.38f,
-        "SPEAR:RUBY" to 0.34f,
-        "SPEAR:RUBY_VAULT" to 0.44f,
-        "SPEAR:RUBY_SPIN" to 0.5f,
-        "SPEAR:SLAM" to 0.42f,
-        "SPEAR:TWIRL" to 0.44f,
-        "DAGGER" to 0.26f,
-        "DAGGER:STAB" to 0.24f,
-        "DAGGER:WHIRL" to 0.36f,
-        "WAND" to 0.3f,
-        "WAND:STAFF" to 0.36f,
-        "RELIK" to 0.34f,
-        "BOW" to 0.4f,
-        "BOW:FIREARM" to 0.34f,
-        "DAGGER:UPPER" to 0.28f,
-        "DAGGER:CROSS" to 0.3f,
-        "WAND:FLICK" to 0.26f,
-        "WAND:ORBIT" to 0.4f,
-        "WAND:STAFF_SWEEP" to 0.38f,
-        "WAND:STAFF_RAISE" to 0.4f,
-        "RELIK:PULSE" to 0.36f,
-        "RELIK:WAVE" to 0.4f,
-        "SPELL:BASH" to 0.75f,
-        "SPELL:CHARGE" to 0.7f,
-        "SPELL:UPPERCUT" to 0.7f,
-        "SPELL:WAR_SCREAM" to 0.9f,
-        "SPELL:HEAL" to 0.9f,
-        "SPELL:TELEPORT" to 0.55f,
-        "SPELL:METEOR" to 0.9f,
-        "SPELL:ICE_SNAKE" to 0.65f,
-        "SPELL:ARCANE_TRANSFER" to 0.8f,
-        "SPELL:OPHANIM" to 1.0f,
-        "SPELL:ARROW_STORM" to 0.9f,
-        "SPELL:ESCAPE" to 0.6f,
-        "SPELL:ARROW_BOMB" to 0.8f,
-        "SPELL:ARROW_SHIELD" to 0.7f,
-        "SPELL:PHANTOM_RAY" to 1.0f,
-        "SPELL:GRAPPLING_HOOK" to 0.8f,
-        "SPELL:GUARDIAN_ANGELS" to 0.9f,
-        "SPELL:SPIN_ATTACK" to 0.7f,
-        "SPELL:DASH" to 0.55f,
-        "SPELL:MULTIHIT" to 0.8f,
-        "SPELL:SMOKE_BOMB" to 0.65f,
-        "SPELL:LACERATE" to 0.8f,
-        "SPELL:BACKSTAB" to 0.6f,
-        "SPELL:BAMBOOZLE" to 0.7f,
-        "SPELL:TOTEM" to 0.8f,
-        "SPELL:HAUL" to 0.75f,
-        "SPELL:AURA" to 0.9f,
-        "SPELL:UPROOT" to 0.8f,
-        "SPELL:SWITCH_MASKS" to 0.8f,
-        "SPELL:CAST" to 0.7f,
-        "TOOL:PICKAXE" to 0.34f,
-        "TOOL:AXE" to 0.36f,
-        "TOOL:SCYTHE" to 0.38f,
-        "TOOL:ROD" to 0.5f,
-        "TOOL:ROD_REEL" to 0.42f,
-    )
-
-    private val HITS = mapOf(
-        "SPEAR" to 0.3f,
-        "SPEAR:SWEEP" to 0.42f,
-        "SPEAR:SCYTHE" to 0.42f,
-        "SPEAR:RUBY" to 0.42f,
-        "SPEAR:RUBY_VAULT" to 0.4f,
-        "SPEAR:RUBY_SPIN" to 0.5f,
-        "SPEAR:SLAM" to 0.38f,
-        "SPEAR:TWIRL" to 0.5f,
-        "DAGGER" to 0.28f,
-        "DAGGER:STAB" to 0.2f,
-        "DAGGER:WHIRL" to 0.38f,
-        "WAND" to 0.3f,
-        "WAND:STAFF" to 0.32f,
-        "RELIK" to 0.2f,
-        "BOW" to 0.84f,
-        "BOW:FIREARM" to 0.2f,
-        "DAGGER:UPPER" to 0.28f,
-        "DAGGER:CROSS" to 0.26f,
-        "WAND:FLICK" to 0.26f,
-        "WAND:ORBIT" to 0.42f,
-        "WAND:STAFF_SWEEP" to 0.42f,
-        "WAND:STAFF_RAISE" to 0.4f,
-        "RELIK:PULSE" to 0.3f,
-        "RELIK:WAVE" to 0.55f,
-        "SPELL:BASH" to 0.5f,
-        "SPELL:CHARGE" to 0.55f,
-        "SPELL:UPPERCUT" to 0.5f,
-        "SPELL:WAR_SCREAM" to 0.3f,
-        "SPELL:HEAL" to 0.35f,
-        "SPELL:TELEPORT" to 0.4f,
-        "SPELL:METEOR" to 0.6f,
-        "SPELL:ICE_SNAKE" to 0.45f,
-        "SPELL:ARCANE_TRANSFER" to 0.6f,
-        "SPELL:OPHANIM" to 0.3f,
-        "SPELL:ARROW_STORM" to 0.15f,
-        "SPELL:ESCAPE" to 0.3f,
-        "SPELL:ARROW_BOMB" to 0.55f,
-        "SPELL:ARROW_SHIELD" to 0.6f,
-        "SPELL:PHANTOM_RAY" to 0.2f,
-        "SPELL:GRAPPLING_HOOK" to 0.45f,
-        "SPELL:GUARDIAN_ANGELS" to 0.35f,
-        "SPELL:SPIN_ATTACK" to 0.5f,
-        "SPELL:DASH" to 0.3f,
-        "SPELL:MULTIHIT" to 0.3f,
-        "SPELL:SMOKE_BOMB" to 0.5f,
-        "SPELL:LACERATE" to 0.4f,
-        "SPELL:BACKSTAB" to 0.5f,
-        "SPELL:BAMBOOZLE" to 0.4f,
-        "SPELL:TOTEM" to 0.55f,
-        "SPELL:HAUL" to 0.25f,
-        "SPELL:AURA" to 0.3f,
-        "SPELL:UPROOT" to 0.6f,
-        "SPELL:SWITCH_MASKS" to 0.3f,
-        "SPELL:CAST" to 0.5f,
-        "TOOL:PICKAXE" to 0.4f,
-        "TOOL:AXE" to 0.42f,
-        "TOOL:SCYTHE" to 0.42f,
-        "TOOL:ROD" to 0.5f,
-        "TOOL:ROD_REEL" to 0.4f,
-    )
-
-    private val BODY_MOTION: Map<String, Pair<Curve, Curve>> = mapOf(
-        "SPEAR" to (curve(0f to B, 0.14f to -0.12f, 0.3f to 0.3f, 0.5f to 0.22f, 1f to B) to curve(0f to B, 0.14f to -0.15f, 0.3f to 1f, 0.5f to 0.8f, 1f to B)),
-        "SPEAR:SWEEP" to (curve(0f to B, 0.16f to -0.1f, 0.42f to 0.2f, 0.72f to 0.12f, 1f to B) to curve(0f to B, 0.16f to -0.1f, 0.42f to 0.6f, 0.72f to 0.4f, 1f to B)),
-        "SPEAR:SCYTHE" to (curve(0f to B, 0.2f to -0.25f, 0.42f to 0.25f, 0.72f to 0.15f, 1f to B) to curve(0f to B, 0.2f to -0.1f, 0.42f to 0.5f, 0.72f to 0.3f, 1f to B)),
-        "SPEAR:TWIRL" to (curve(0f to B, 0.14f to -0.05f, 0.5f to 0.1f, 0.86f to 0.1f, 1f to B) to curve(0f to B, 0.5f to 0.4f, 0.86f to 0.3f, 1f to B)),
-        "SPEAR:SLAM" to (curve(0f to B, 0.22f to -0.4f, 0.38f to 0.7f, 0.55f to 0.6f, 1f to B) to curve(0f to B, 0.22f to -0.2f, 0.38f to 0.9f, 0.55f to 0.8f, 1f to B)),
-        "DAGGER" to (curve(0f to B, 0.1f to -0.1f, 0.28f to 0.2f, 0.55f to 0.1f, 1f to B) to curve(0f to B, 0.1f to -0.1f, 0.28f to 0.5f, 0.55f to 0.3f, 1f to B)),
-        "DAGGER:STAB" to (curve(0f to B, 0.08f to -0.1f, 0.2f to 0.4f, 0.42f to 0.3f, 1f to B) to curve(0f to B, 0.08f to -0.2f, 0.2f to 1f, 0.42f to 0.8f, 1f to B)),
-        "DAGGER:WHIRL" to (curve(0f to B, 0.12f to 0.1f, 0.7f to 0.1f, 1f to B) to KEEP),
-        "WAND" to (curve(0f to B, 0.14f to -0.1f, 0.3f to 0.15f, 0.6f to 0.1f, 1f to B) to curve(0f to B, 0.3f to 0.3f, 0.6f to 0.2f, 1f to B)),
-        "WAND:STAFF" to (curve(0f to B, 0.14f to -0.3f, 0.32f to 0.5f, 0.6f to 0.4f, 1f to B) to curve(0f to B, 0.14f to -0.2f, 0.32f to 0.8f, 0.6f to 0.7f, 1f to B)),
-        "RELIK" to (curve(0f to B, 0.2f to -0.05f, 0.5f to 0.1f, 0.75f to 0.05f, 1f to B) to KEEP),
-        "BOW" to (curve(0f to B, 0.16f to -0.08f, 0.7f to -0.12f, 0.84f to 0.05f, 1f to B) to curve(0f to B, 0.16f to 0.6f, 0.7f to 0.6f, 0.84f to 0.3f, 1f to B)),
-        "BOW:FIREARM" to (curve(0f to B, 0.1f to -0.03f, 0.2f to -0.3f, 0.4f to -0.05f, 0.8f to -0.03f, 1f to B) to KEEP),
-        "TOOL:PICKAXE" to (curve(0f to B, 0.2f to -0.3f, 0.4f to 0.55f, 0.6f to 0.45f, 1f to B) to curve(0f to B, 0.2f to -0.15f, 0.4f to 0.7f, 0.6f to 0.55f, 1f to B)),
-        "TOOL:AXE" to (curve(0f to B, 0.2f to -0.25f, 0.42f to 0.35f, 0.7f to 0.2f, 1f to B) to curve(0f to B, 0.2f to -0.1f, 0.42f to 0.6f, 0.7f to 0.4f, 1f to B)),
-        "TOOL:SCYTHE" to (curve(0f to B, 0.16f to -0.1f, 0.42f to 0.2f, 0.72f to 0.12f, 1f to B) to curve(0f to B, 0.16f to -0.1f, 0.42f to 0.6f, 0.72f to 0.4f, 1f to B)),
-        "TOOL:ROD" to (curve(0f to B, 0.25f to -0.1f, 0.5f to 0.2f, 0.75f to 0.1f, 1f to B) to curve(0f to B, 0.5f to 0.3f, 0.75f to 0.2f, 1f to B)),
-    )
-
-    init {
-        BODY_MOTION.forEach { (key, motion) ->
-            POSES[key]?.curves?.let {
-                it[LEAN] = motion.first
-                it[STEP] = motion.second
-            }
-        }
-        POSES["SPEAR:TWIRL"]?.spin = true
-        POSES["SPEAR:RUBY_SPIN"]?.spin = true
-        listOf("SPELL:SPIN_ATTACK", "SPELL:LACERATE", "SPELL:OPHANIM").forEach { POSES[it]?.spin = true }
-        POSES.forEach { (key, value) -> if (!key.startsWith("BOW") && !key.startsWith("SPELL:")) value.curves[TURN] = value.curves[TURN].scaled(TURN_BOOST) }
-        SECONDS.forEach { (key, value) -> POSES[key]?.seconds = value }
-        HITS.forEach { (key, value) -> POSES[key]?.hit = value }
-        POSES.forEach { (key, value) -> value.key = key }
-        val gripOn = curve(0f to B, 0.12f to 1f, 0.65f to 1f, 1f to B)
-        listOf("SPELL:BASH", "SPELL:CHARGE", "SPELL:UPPERCUT", "SPELL:WAR_SCREAM", "SPEAR", "SPEAR:SWEEP", "SPEAR:SCYTHE", "SPEAR:RUBY", "SPEAR:RUBY_VAULT", "SPEAR:RUBY_SPIN", "SPEAR:SLAM", "SPEAR:TWIRL", "WAND:STAFF", "WAND:STAFF_SWEEP", "WAND:STAFF_RAISE", "BOW:FIREARM", "TOOL:PICKAXE", "TOOL:AXE", "TOOL:SCYTHE").forEach { key ->
-            POSES[key]?.curves?.set(GRIP, gripOn)
-        }
-        POSES["BOW:FIREARM"]?.gripOffset = 9f
-    }
-
-    private class ComboStep(val key: String, val mirror: Boolean = false, val finisher: Boolean = false)
-
-    private fun step(key: String, mirror: Boolean = false, finisher: Boolean = false) = ComboStep(key, mirror, finisher)
-
-    private val COMBOS: Map<String, List<ComboStep>> = mapOf(
-        "SPEAR" to listOf(step("SPEAR"), step("SPEAR:SWEEP"), step("SPEAR", true), step("SPEAR:SLAM", finisher = true)),
-        "SPEAR:SWEEP" to listOf(step("SPEAR:SWEEP"), step("SPEAR:SWEEP", true), step("SPEAR"), step("SPEAR:TWIRL", finisher = true)),
-        "SPEAR:SCYTHE" to listOf(step("SPEAR:SCYTHE"), step("SPEAR:SCYTHE", true), step("SPEAR:SLAM"), step("SPEAR:TWIRL", finisher = true)),
-        "SPEAR:RUBY" to listOf(step("SPEAR:RUBY"), step("SPEAR:RUBY", true), step("SPEAR:RUBY_VAULT"), step("SPEAR:RUBY_SPIN", finisher = true)),
-        "DAGGER" to listOf(step("DAGGER"), step("DAGGER", true), step("DAGGER:UPPER"), step("DAGGER:WHIRL", finisher = true)),
-        "DAGGER:STAB" to listOf(step("DAGGER:STAB"), step("DAGGER:STAB", true), step("DAGGER:CROSS"), step("DAGGER:UPPER", finisher = true)),
-        "DAGGER:WHIRL" to listOf(step("DAGGER:WHIRL"), step("DAGGER:CROSS"), step("DAGGER:UPPER", true), step("DAGGER:WHIRL", true, finisher = true)),
-        "WAND" to listOf(step("WAND:FLICK"), step("WAND"), step("WAND:FLICK", true), step("WAND:ORBIT", finisher = true)),
-        "WAND:STAFF" to listOf(step("WAND:STAFF"), step("WAND:STAFF_SWEEP"), step("WAND:STAFF_SWEEP", true), step("WAND:STAFF_RAISE", finisher = true)),
-        "RELIK" to listOf(step("RELIK"), step("RELIK:PULSE"), step("RELIK", true), step("RELIK:WAVE", finisher = true)),
-        "TOOL:AXE" to listOf(step("TOOL:AXE"), step("TOOL:AXE", true)),
-        "TOOL:SCYTHE" to listOf(step("TOOL:SCYTHE"), step("TOOL:SCYTHE", true)),
-    )
+    internal class ComboStep(val key: String, val mirror: Boolean = false, val finisher: Boolean = false)
 
     private val mirrorCache = HashMap<String, Pose>()
 
@@ -1307,97 +348,7 @@ object WeaponAnimations {
         return mirrorCache.getOrPut(step.key) { base.mirrored().also { it.key = base.key } }
     }
 
-    private class Cue(val at: Float, val sound: SoundEvent, val pitch: Float, val volume: Float)
-
-    private fun cue(at: Float, sound: SoundEvent, pitch: Float, volume: Float) = Cue(at, sound, pitch, volume)
-
-    private val SFX: Map<String, List<Cue>> by lazy {
-        mapOf(
-            "SPEAR" to listOf(cue(0.1f, SoundEvents.SPEAR_ATTACK.value(), 1.2f, 0.55f)),
-            "SPEAR:SWEEP" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.9f, 0.7f)),
-            "SPEAR:SCYTHE" to listOf(cue(0.12f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.7f, 0.8f)),
-            "SPEAR:RUBY" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.8f)),
-            "SPEAR:RUBY_VAULT" to listOf(cue(0.15f, SoundEvents.MACE_SMASH_AIR, 1.0f, 0.5f), cue(0.34f, SoundEvents.MACE_SMASH_GROUND, 0.9f, 0.5f)),
-            "SPEAR:RUBY_SPIN" to listOf(
-                cue(0.4f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.6f),
-                cue(0.75f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.5f),
-            ),
-            "SPEAR:SLAM" to listOf(cue(0.15f, SoundEvents.MACE_SMASH_AIR, 1.0f, 0.5f), cue(0.38f, SoundEvents.MACE_SMASH_GROUND, 1.1f, 0.5f)),
-            "SPEAR:TWIRL" to listOf(
-                cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2f, 0.6f),
-                cue(0.5f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.6f),
-                cue(0.8f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.35f, 0.5f),
-            ),
-            "DAGGER" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.5f, 0.5f)),
-            "DAGGER:STAB" to listOf(cue(0.08f, SoundEvents.SPEAR_ATTACK.value(), 1.7f, 0.45f)),
-            "DAGGER:WHIRL" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.4f, 0.5f), cue(0.5f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2f, 0.5f)),
-            "WAND" to listOf(cue(0.14f, SoundEvents.WIND_CHARGE_THROW, 1.6f, 0.35f), cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.7f, 0.35f)),
-            "WAND:STAFF" to listOf(cue(0.2f, SoundEvents.MACE_SMASH_GROUND, 1.5f, 0.35f), cue(0.32f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2f, 0.4f)),
-            "RELIK" to listOf(cue(0.15f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.9f, 0.55f), cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 0.9f, 0.35f)),
-            "DAGGER:UPPER" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.7f, 0.5f)),
-            "DAGGER:CROSS" to listOf(cue(0.1f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.5f), cue(0.26f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.5f, 0.45f)),
-            "WAND:FLICK" to listOf(cue(0.12f, SoundEvents.WIND_CHARGE_THROW, 1.9f, 0.3f)),
-            "WAND:ORBIT" to listOf(cue(0.15f, SoundEvents.WIND_CHARGE_THROW, 1.3f, 0.35f), cue(0.42f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4f, 0.4f)),
-            "WAND:STAFF_SWEEP" to listOf(cue(0.18f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.55f)),
-            "WAND:STAFF_RAISE" to listOf(cue(0.22f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 0.45f), cue(0.4f, SoundEvents.MACE_SMASH_GROUND, 1.3f, 0.4f)),
-            "RELIK:PULSE" to listOf(cue(0.12f, SoundEvents.WIND_CHARGE_THROW, 1.0f, 0.4f), cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 0.8f, 0.35f)),
-            "RELIK:WAVE" to listOf(cue(0.22f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.55f), cue(0.55f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.1f, 0.4f)),
-            "BOW" to listOf(cue(0.84f, SoundEvents.CROSSBOW_SHOOT, 1.4f, 0.45f)),
-            "BOW:FIREARM" to listOf(cue(0.18f, SoundEvents.CROSSBOW_SHOOT, 0.85f, 0.5f)),
-            "SPELL:BASH" to listOf(cue(0.3f, SoundEvents.MACE_SMASH_AIR, 0.9f, 0.5f), cue(0.5f, SoundEvents.MACE_SMASH_GROUND, 0.9f, 0.6f)),
-            "SPELL:CHARGE" to listOf(cue(0.35f, SoundEvents.WIND_CHARGE_THROW, 0.8f, 0.6f)),
-            "SPELL:UPPERCUT" to listOf(cue(0.4f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.7f)),
-            "SPELL:WAR_SCREAM" to listOf(cue(0.3f, SoundEvents.RAVAGER_ROAR, 1.1f, 0.35f)),
-            "SPELL:HEAL" to listOf(cue(0.35f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.4f, 0.5f)),
-            "SPELL:TELEPORT" to listOf(cue(0.4f, SoundEvents.ENDERMAN_TELEPORT, 1.2f, 0.4f)),
-            "SPELL:METEOR" to listOf(cue(0.6f, SoundEvents.FIRECHARGE_USE, 0.8f, 0.6f)),
-            "SPELL:ICE_SNAKE" to listOf(cue(0.45f, SoundEvents.WIND_CHARGE_THROW, 1.3f, 0.5f)),
-            "SPELL:ARCANE_TRANSFER" to listOf(cue(0.5f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 0.5f)),
-            "SPELL:OPHANIM" to listOf(cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.6f, 0.5f)),
-            "SPELL:ARROW_STORM" to listOf(cue(0.2f, SoundEvents.CROSSBOW_SHOOT, 1.6f, 0.35f), cue(0.4f, SoundEvents.CROSSBOW_SHOOT, 1.5f, 0.35f), cue(0.6f, SoundEvents.CROSSBOW_SHOOT, 1.4f, 0.35f)),
-            "SPELL:ESCAPE" to listOf(cue(0.3f, SoundEvents.WIND_CHARGE_THROW, 1.4f, 0.5f)),
-            "SPELL:ARROW_BOMB" to listOf(cue(0.55f, SoundEvents.CROSSBOW_SHOOT, 0.9f, 0.5f)),
-            "SPELL:ARROW_SHIELD" to listOf(cue(0.5f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.3f, 0.45f)),
-            "SPELL:PHANTOM_RAY" to listOf(cue(0.2f, SoundEvents.CROSSBOW_SHOOT, 1.2f, 0.4f)),
-            "SPELL:GRAPPLING_HOOK" to listOf(cue(0.2f, SoundEvents.CROSSBOW_SHOOT, 1.0f, 0.4f)),
-            "SPELL:GUARDIAN_ANGELS" to listOf(cue(0.35f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.5f, 0.45f)),
-            "SPELL:SPIN_ATTACK" to listOf(cue(0.15f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2f, 0.6f), cue(0.5f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.6f)),
-            "SPELL:DASH" to listOf(cue(0.25f, SoundEvents.WIND_CHARGE_THROW, 1.5f, 0.5f)),
-            "SPELL:MULTIHIT" to listOf(cue(0.15f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.6f, 0.4f), cue(0.3f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.7f, 0.4f), cue(0.45f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.6f, 0.4f), cue(0.6f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.7f, 0.4f)),
-            "SPELL:SMOKE_BOMB" to listOf(cue(0.5f, SoundEvents.FIRECHARGE_USE, 1.3f, 0.4f)),
-            "SPELL:LACERATE" to listOf(cue(0.15f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.4f, 0.6f), cue(0.6f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.2f, 0.6f)),
-            "SPELL:BACKSTAB" to listOf(cue(0.5f, SoundEvents.SPEAR_ATTACK.value(), 1.6f, 0.5f)),
-            "SPELL:BAMBOOZLE" to listOf(cue(0.15f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.5f), cue(0.4f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.5f, 0.5f)),
-            "SPELL:TOTEM" to listOf(cue(0.55f, SoundEvents.MACE_SMASH_GROUND, 1.2f, 0.5f)),
-            "SPELL:HAUL" to listOf(cue(0.25f, SoundEvents.WIND_CHARGE_THROW, 0.9f, 0.5f)),
-            "SPELL:AURA" to listOf(cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 0.9f, 0.5f)),
-            "SPELL:UPROOT" to listOf(cue(0.6f, SoundEvents.MACE_SMASH_GROUND, 0.9f, 0.45f)),
-            "SPELL:SWITCH_MASKS" to listOf(cue(0.3f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.8f, 0.4f)),
-            "SPELL:CAST" to listOf(cue(0.5f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.2f, 0.4f)),
-            "TOOL:PICKAXE" to listOf(cue(0.18f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.8f, 0.3f)),
-            "TOOL:AXE" to listOf(cue(0.18f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.9f, 0.35f)),
-            "TOOL:SCYTHE" to listOf(cue(0.14f, SoundEvents.PLAYER_ATTACK_SWEEP, 0.75f, 0.4f)),
-            "TOOL:ROD" to listOf(cue(0.3f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.5f, 0.3f)),
-            "TOOL:ROD_REEL" to listOf(cue(0.25f, SoundEvents.PLAYER_ATTACK_SWEEP, 1.3f, 0.25f)),
-        )
-    }
-
-    private val FINISHER_CUE: Cue by lazy { cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.8f, 0.5f) }
-
-    private val IMPACT: Map<String, List<Cue>> by lazy {
-        mapOf(
-            "SPEAR" to listOf(cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.85f, 0.5f), cue(0f, SoundEvents.TRIDENT_HIT, 1.3f, 0.3f)),
-            "DAGGER" to listOf(cue(0f, SoundEvents.PLAYER_ATTACK_WEAK, 1.5f, 0.45f), cue(0f, SoundEvents.PLAYER_ATTACK_NODAMAGE, 1.8f, 0.2f)),
-            "WAND" to listOf(cue(0f, SoundEvents.AMETHYST_BLOCK_CHIME, 1.5f, 0.35f), cue(0f, SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.4f, 0.3f)),
-            "RELIK" to listOf(cue(0f, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 0.35f), cue(0f, SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.0f, 0.35f)),
-            "BOW" to listOf(cue(0f, SoundEvents.ARROW_HIT, 1.2f, 0.5f), cue(0f, SoundEvents.PLAYER_ATTACK_WEAK, 1.2f, 0.3f)),
-            "SPELL" to listOf(cue(0f, SoundEvents.MACE_SMASH_GROUND, 1.2f, 0.45f), cue(0f, SoundEvents.PLAYER_ATTACK_STRONG, 0.8f, 0.4f)),
-        )
-    }
-
-    private val IMPACT_THUMP: Cue by lazy { cue(0f, SoundEvents.MACE_SMASH_GROUND, 1.5f, 0.3f) }
-    private val IMPACT_TAIL: Cue by lazy { cue(0f, SoundEvents.AMETHYST_BLOCK_CHIME, 1.9f, 0.22f) }
-    private val IMPACT_SLAM: Cue by lazy { cue(0f, SoundEvents.MACE_SMASH_GROUND_HEAVY, 1.3f, 0.35f) }
+    internal class Cue(val at: Float, val sound: SoundEvent, val pitch: Float, val volume: Float)
 
     private fun playCue(level: Level, x: Double, y: Double, z: Double, cue: Cue, pitchScale: Float, volumeScale: Float) {
         val jitter = 0.97f + ThreadLocalRandom.current().nextFloat() * 0.06f
@@ -1443,7 +394,6 @@ object WeaponAnimations {
         tails.clear()
     }
 
-    private val LUNGE_FAMILIES = setOf("SPEAR", "DAGGER")
     private const val LUNGE_LEAN = 0.12f
     private const val LUNGE_STEP = 0.55f
     private const val MOVE_LEAN_CUT = 0.6f
@@ -1451,7 +401,10 @@ object WeaponAnimations {
     private const val MOVE_TURN_CUT_RUN = 0.45f
     private const val DRIVE_LEAN_WALK = 0.07f
     private const val DRIVE_LEAN_RUN = 0.16f
-    private const val PLANT_CUT = 0.45f
+    private const val MOVE_BODY_CUT = 0.5f
+    private const val RECOVER_SHARE = 0.35f
+    private const val RECOVER_MOVE_CUT = 0.85f
+    private const val PLANT_CUT = 0.25f
     private const val STRIKE_FRESH_NANOS = 120_000_000L
     private const val MOVE_TAU = 0.06f
     private const val MOVE_DUST_MAX = 0.3f
@@ -1477,65 +430,7 @@ object WeaponAnimations {
     private const val IMPACT_PITCH_MIN = 0.8f
     private const val IMPACT_PITCH_MAX = 1.1f
 
-    private val HAND_SHIFT = mapOf(
-        "SPEAR:RUBY" to 12f,
-        "SPEAR:RUBY_VAULT" to 12f,
-        "SPEAR:RUBY_SPIN" to 12f,
-    )
-
-    private val HAND_SPRINT_EXTRA = mapOf(
-        "SPEAR:RUBY" to 6f,
-        "SPEAR:RUBY_VAULT" to 6f,
-        "SPEAR:RUBY_SPIN" to 6f,
-    )
-
-    private val TRAIL_SPANS = mapOf(
-        "SPEAR" to (-6f to 32f),
-        "SPEAR:SCYTHE" to (-6f to 34f),
-        "SPEAR:RUBY" to (-6f to 42f),
-        "SPEAR:RUBY_VAULT" to (-6f to 42f),
-        "SPEAR:RUBY_SPIN" to (-6f to 42f),
-        "WAND:STAFF" to (-6f to 32f),
-        "WAND:STAFF_SWEEP" to (-6f to 32f),
-        "WAND:STAFF_RAISE" to (-6f to 32f),
-        "DAGGER" to (-2f to 12f),
-        "WAND" to (-3f to 16f),
-        "RELIK" to (-3f to 18f),
-    )
-
     private fun trailSpan(key: String): Pair<Float, Float>? = TRAIL_SPANS[key] ?: TRAIL_SPANS[key.substringBefore(':')]
-
-    private val LABELS = mapOf(
-        "SPEAR" to "Spear: Thrust",
-        "SPEAR:SWEEP" to "Spear: Sweep",
-        "SPEAR:SCYTHE" to "Spear: Scythe reap",
-        "SPEAR:RUBY" to "Scythe: Crescent reap (Ruby Rose)",
-        "SPEAR:RUBY_VAULT" to "Scythe: Plant and vault",
-        "SPEAR:RUBY_SPIN" to "Scythe: Recoil spin",
-        "SPEAR:SLAM" to "Spear: Overhead slam",
-        "SPEAR:TWIRL" to "Spear: Twirl",
-        "DAGGER" to "Dagger: Slash",
-        "DAGGER:STAB" to "Dagger: Stab",
-        "DAGGER:WHIRL" to "Dagger: Whirl",
-        "WAND" to "Wand: Cast",
-        "WAND:STAFF" to "Wand: Staff plant",
-        "RELIK" to "Relik: Sweep",
-        "DAGGER:UPPER" to "Dagger: Rising slash",
-        "DAGGER:CROSS" to "Dagger: Cross slash",
-        "WAND:FLICK" to "Wand: Flick",
-        "WAND:ORBIT" to "Wand: Orbit",
-        "WAND:STAFF_SWEEP" to "Wand: Staff sweep",
-        "WAND:STAFF_RAISE" to "Wand: Staff raise",
-        "RELIK:PULSE" to "Relik: Pulse",
-        "RELIK:WAVE" to "Relik: Wave",
-        "BOW" to "Bow: Draw and release",
-        "BOW:FIREARM" to "Bow: Firearm recoil",
-        "TOOL:PICKAXE" to "Tool: Pickaxe overhead strike",
-        "TOOL:AXE" to "Tool: Axe chop",
-        "TOOL:SCYTHE" to "Tool: Scythe reap",
-        "TOOL:ROD" to "Tool: Fishing rod cast",
-        "TOOL:ROD_REEL" to "Tool: Fishing rod reel",
-    )
 
     private val CLASS_KINDS = mapOf(
         "warrior" to GearSlotKind.SPEAR,
@@ -1563,7 +458,8 @@ object WeaponAnimations {
         var suppress = false
         private var previewing = false
         private var previewStack: ItemStack? = null
-        private var previewCached: Pose? = null
+        private var previewCached: List<Pose> = emptyList()
+        private var previewLocal = 0f
         private var startNanos = 0L
         private var pauseStart = 0L
         private var pauseEnd = 0L
@@ -1574,7 +470,10 @@ object WeaponAnimations {
         private var blendSeconds = BLEND_SECONDS
         private var hitSeconds = 0.09f
         private var amp = 1f
+        private var swingBody = 1f
+        private var swingArc = 1f
         private var carry: FloatArray? = null
+        private var pace = 0f
         private var lastBeginNanos = 0L
         private var comboKey: String? = null
         private var comboIndex = 0
@@ -1715,7 +614,23 @@ object WeaponAnimations {
             idleTable = stanceFor(idleStackKey)
         }
 
+        private var seenRevision = 0
+
+        private fun applyReload() {
+            if (seenRevision == AnimationLibrary.revision) return
+            seenRevision = AnimationLibrary.revision
+            mirrorCache.clear()
+            pose = null
+            carry = null
+            previewStack = null
+            previewCached = emptyList()
+            idleStack = null
+            idleStackKey = null
+            comboKey = null
+        }
+
         fun tick(client: Minecraft) {
+            applyReload()
             val player = client.player
             if (player == null) {
                 pose = null
@@ -1731,10 +646,20 @@ object WeaponAnimations {
             val config = WynnOverhaulConfig.current
             if (config.weaponAnimationPreview && enabled()) {
                 val stack = player.mainHandItem
-                pose = if (stack.isEmpty) null else previewPose(stack)
+                val chain = if (stack.isEmpty) emptyList() else previewChain(stack)
+                if (chain.isEmpty()) {
+                    pose = null
+                    previewLocal = 0f
+                } else {
+                    val scaled = config.weaponAnimationPreviewT.toFloat().coerceIn(0f, 1f) * chain.size
+                    val index = minOf(scaled.toInt(), chain.size - 1)
+                    pose = chain[index]
+                    previewLocal = (scaled - index).coerceIn(0f, 0.999f)
+                }
                 right = player.mainArm == HumanoidArm.RIGHT
                 carry = null
                 amp = 1f
+                readyUntil = System.nanoTime() + READY_NANOS
                 previewing = true
                 if (debugLine.isNotEmpty()) player.sendOverlayMessage(Component.literal(debugLine))
                 return
@@ -1761,7 +686,7 @@ object WeaponAnimations {
             val arm = if (hand == InteractionHand.MAIN_HAND) player.mainArm else player.mainArm.opposite
             val stack = player.getItemInHand(hand)
             val styleKey = resolveKey(stack)?.let { if (it == "TOOL:ROD" && player.fishing != null) "TOOL:ROD_REEL" else it }
-            val styleBase = styleKey?.let { POSES[it] }
+            val styleBase = styleKey?.let { basePose(it) }
             if (styleKey == null || styleBase == null) {
                 pose = null
                 carry = null
@@ -1774,6 +699,7 @@ object WeaponAnimations {
             val aps = WynnWeapons.attacksPerSecond(stack)
             val minGap = if (aps != null) (MIN_GAP_FRACTION / aps.toFloat()).coerceIn(MIN_GAP_LOW, MIN_GAP_HIGH) else FALLBACK_GAP
             suppress = true
+            val wasReady = now < readyUntil
             readyUntil = now + READY_NANOS
             if (gathering) {
                 noteGatherSwing(now)
@@ -1783,7 +709,8 @@ object WeaponAnimations {
             }
             val config = WynnOverhaulConfig.current
             val combo = advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
-            val standard = stepPose(combo) ?: styleBase
+            val opener = if (!wasReady && comboIndex == 0 && config.weaponAnimationCombo) OPENERS[styleKey] else null
+            val standard = (if (opener != null) stepPose(opener) else null) ?: stepPose(combo) ?: styleBase
             val chosen = standard
             cues = buildList {
                 addAll(SFX[standard.key] ?: emptyList())
@@ -1794,6 +721,7 @@ object WeaponAnimations {
             trailStrength = if (combo.finisher) 1.25f else 1f
             carry = captureCarry()
             val chained = carry != null
+            if (!chained) carry = idleEntryCarry()
             pose = chosen
             right = arm == HumanoidArm.RIGHT
             startNanos = now
@@ -1802,11 +730,18 @@ object WeaponAnimations {
             startP = if (chained) chosen.hit * CHAIN_SKIP else 0f
             lastBeginNanos = now
             if (config.weaponAnimationLunge && chosen.key.substringBefore(':') in LUNGE_FAMILIES && moveAmt < MOVE_DUST_MAX) WynnHitFeedback.stepDust(player)
-            val total = if (gathering) gatherStrokeSeconds(chosen) else minOf(chosen.seconds, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
+            val style = swingStyle()
+            swingBody = style.body
+            swingArc = style.arc
+            val styled = chosen.seconds * style.speed
+            pace = if (gap < PACE_MAX) (if (pace == 0f) gap else pace + (gap - pace) * PACE_SMOOTH) else 0f
+            val expected = if (pace > 0f) pace else aps?.let { 1f / it.toFloat() } ?: 0f
+            val stretched = if (expected > 0f) maxOf(styled, minOf(expected * GAP_FRACTION, styled * STRETCH_MAX)) else styled
+            val total = if (gathering) gatherStrokeSeconds(chosen) else minOf(stretched, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
             totalSeconds = total
             hitSeconds = if (gathering) total * chosen.hit else minOf(HIT_SECONDS, total * HIT_SHARE)
-            blendSeconds = if (chained) hitSeconds else BLEND_SECONDS
-            val span = chosen.seconds - MIN_SECONDS
+            blendSeconds = if (chained) hitSeconds else maxOf(chosen.blend * style.blend, if (carry != null) IDLE_ENTRY_BLEND else 0f)
+            val span = styled - MIN_SECONDS
             val target = if (span <= 0f) 1f else AMP_MIN + (1f - AMP_MIN) * ((total - MIN_SECONDS) / span).coerceIn(0f, 1f)
             val settle = MathX.expApproach(gap, AMP_SMOOTH_TAU)
             amp += (target - amp) * settle.coerceIn(0f, 1f)
@@ -1854,9 +789,12 @@ object WeaponAnimations {
             reboundStart = 0L
             startP = 0f
             lastBeginNanos = now
-            totalSeconds = chosen.seconds
-            hitSeconds = chosen.seconds * chosen.hit
-            blendSeconds = if (carry != null) SPELL_BLEND_SECONDS else BLEND_SECONDS
+            val style = swingStyle()
+            swingBody = style.body
+            swingArc = style.arc
+            totalSeconds = chosen.seconds * style.speed
+            hitSeconds = totalSeconds * chosen.hit
+            blendSeconds = if (carry != null) SPELL_BLEND_SECONDS else chosen.blend * style.blend
             amp = 1f
         }
 
@@ -1983,11 +921,12 @@ object WeaponAnimations {
 
         fun runShare(): Float = runAmt
 
-        private fun previewPose(stack: ItemStack): Pose? {
+        private fun previewChain(stack: ItemStack): List<Pose> {
             if (stack !== previewStack) {
                 previewStack = stack
-                val assigned = WeaponAnimationRegistry.styleFor(stack)
-                previewCached = if (assigned != null) POSES[assigned] else (autoStyleKey(stack) ?: toolKey(stack))?.let { POSES[it] }
+                val key = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack) ?: toolKey(stack)
+                val steps = key?.let { COMBOS[it] }
+                previewCached = if (steps != null) steps.mapNotNull { stepPose(it) } else listOfNotNull(key?.let { basePose(it) })
             }
             return previewCached
         }
@@ -2003,7 +942,7 @@ object WeaponAnimations {
                 carry = null
                 return -1f
             }
-            if (previewing) return WynnOverhaulConfig.current.weaponAnimationPreviewT.toFloat().coerceIn(0f, 0.999f)
+            if (previewing) return previewLocal
             val current = pose ?: return -1f
             val tau = elapsedSeconds()
             if (tau >= totalSeconds) {
@@ -2025,6 +964,17 @@ object WeaponAnimations {
             }
         }
 
+        private fun idleEntryCarry(): FloatArray? {
+            val table = idleTable ?: return null
+            if (idleAmt < 0.5f) return null
+            val out = FloatArray(CHANNELS) { Float.NaN }
+            for (i in intArrayOf(HEAD_Y, TWIST)) {
+                out[i] = idleCur[i]
+                idleCur[i] = table.ready[i]
+            }
+            return out
+        }
+
         private fun captureCarry(): FloatArray? {
             val previous = pose ?: return null
             val previousT = progress()
@@ -2032,6 +982,13 @@ object WeaponAnimations {
             val out = FloatArray(CHANNELS)
             sample(previous, previousT, REST_BASE, 1f, out)
             return out
+        }
+
+        private fun recoveryFade(p: Pose, t: Float): Float {
+            if (moveAmt <= 0.001f) return 1f
+            val start = if (p.recover > p.hit && p.recover < 1f) p.recover else p.hit + (1f - p.hit) * RECOVER_SHARE
+            val r = ((t - start) / (1f - start)).coerceIn(0f, 1f)
+            return 1f - RECOVER_MOVE_CUT * moveAmt * smooth(r)
         }
 
         private fun sampleRaw(p: Pose, t: Float, base: FloatArray, out: FloatArray) {
@@ -2045,11 +1002,20 @@ object WeaponAnimations {
             val from = carry
             if (from != null) {
                 val w = smooth(elapsedSeconds() / blendSeconds)
-                for (i in 0 until CHANNELS) raw[i] = from[i] + (raw[i] - from[i]) * w
+                for (i in 0 until CHANNELS) {
+                    val f = from[i]
+                    if (f.isNaN()) continue
+                    val yawLike = (i == HEAD_Y || i == TWIST) && !p.spin
+                    raw[i] = f + (if (yawLike) wrapPi(raw[i] - f) else raw[i] - f) * w
+                }
             }
-            val scale = k * amp * relaxWeight()
+            val scale = k * amp * relaxWeight() * recoveryFade(p, t)
             for (i in 0 until CHANNELS) {
-                val sc = if ((i == HEAD_Y || i == TWIST) && p.spin) 1f else scale
+                val sc = if ((i == HEAD_Y || i == TWIST) && p.spin) 1f else scale * when (CHANNEL_KIND[i]) {
+                    1 -> swingBody
+                    2 -> 1f
+                    else -> swingArc
+                }
                 out[i] = base[i] + (raw[i] - base[i]) * sc
             }
             out[REACH] += rebound()
@@ -2090,18 +1056,6 @@ object WeaponAnimations {
         SwingClock.begin(player)
     }
 
-    private val SPELL_KEYS = mapOf(
-        "bash" to "SPELL:BASH", "charge" to "SPELL:CHARGE", "uppercut" to "SPELL:UPPERCUT", "warscream" to "SPELL:WAR_SCREAM",
-        "heal" to "SPELL:HEAL", "teleport" to "SPELL:TELEPORT", "meteor" to "SPELL:METEOR", "icesnake" to "SPELL:ICE_SNAKE",
-        "arcanetransfer" to "SPELL:ARCANE_TRANSFER", "ophanim" to "SPELL:OPHANIM",
-        "arrowstorm" to "SPELL:ARROW_STORM", "escape" to "SPELL:ESCAPE", "arrowbomb" to "SPELL:ARROW_BOMB", "bombarrow" to "SPELL:ARROW_BOMB",
-        "arrowshield" to "SPELL:ARROW_SHIELD", "phantomray" to "SPELL:PHANTOM_RAY", "grapplinghook" to "SPELL:GRAPPLING_HOOK",
-        "guardianangels" to "SPELL:GUARDIAN_ANGELS",
-        "spinattack" to "SPELL:SPIN_ATTACK", "dash" to "SPELL:DASH", "multihit" to "SPELL:MULTIHIT", "smokebomb" to "SPELL:SMOKE_BOMB",
-        "lacerate" to "SPELL:LACERATE", "backstab" to "SPELL:BACKSTAB", "bamboozle" to "SPELL:BAMBOOZLE",
-        "totem" to "SPELL:TOTEM", "haul" to "SPELL:HAUL", "aura" to "SPELL:AURA", "uproot" to "SPELL:UPROOT", "switchmasks" to "SPELL:SWITCH_MASKS",
-    )
-
     @JvmStatic
     fun onSpellCast(name: String) {
         val config = WynnOverhaulConfig.current
@@ -2112,7 +1066,13 @@ object WeaponAnimations {
         SwingClock.beginSpell(player, chosen)
     }
 
-    fun styleKeys(): List<String> = listOf(WeaponAnimationRegistry.AUTO) + POSES.keys.filter { !it.startsWith("SPELL:") }
+    fun styleKeys(): List<String> {
+        val combos = COMBOS
+        val steps = combos.values.flatMapTo(HashSet()) { chain -> chain.map { it.key } }
+        val movesets = combos.keys.filter { !it.startsWith("SPELL:") }
+        val loose = POSES.keys.filter { !it.startsWith("SPELL:") && it !in combos && it !in steps }
+        return listOf(WeaponAnimationRegistry.AUTO) + movesets + loose
+    }
 
     fun styleLabel(key: String): String =
         if (key == WeaponAnimationRegistry.AUTO) "Auto" else LABELS[key] ?: key
@@ -2134,18 +1094,15 @@ object WeaponAnimations {
     private fun enabled(): Boolean =
         WynnOverhaulConfig.current.weaponAnimationsEnabled && WynnOverhaulGate.isInGame()
 
-    private val TOOL_NAME = Regex("""\b(Pickaxe|Axe|Scythe|Rod)\s+T\d+""")
-
     private fun toolKey(stack: ItemStack): String? {
         if (!WynnOverhaulConfig.current.weaponAnimationTools) return null
-        val match = TOOL_NAME.find(TextClean.clean(stack.hoverName.string)) ?: return null
-        return "TOOL:" + match.groupValues[1].uppercase()
+        return GatheringTool.kind(stack)?.let { "TOOL:$it" }
     }
 
     private fun resolveKey(stack: ItemStack): String? {
         if (stack.isEmpty) return null
         val assigned = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack) ?: toolKey(stack)
-        return assigned?.takeIf { it in POSES }
+        return assigned?.takeIf { it in POSES || it in COMBOS }
     }
 
     private val HEAD_REST = Vector3f(0f, 0f, -1f)
@@ -2249,6 +1206,10 @@ object WeaponAnimations {
         base[GRIP] = 0f
         base[LEAN] = 0f
         base[STEP] = 0f
+        base[LEG_L] = 0f
+        base[LEG_R] = 0f
+        base[BODY_Y] = 0f
+        base[BODY_R] = 0f
 
         restQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
         restDir.set(HEAD_REST).rotate(restQuat)
@@ -2267,11 +1228,19 @@ object WeaponAnimations {
 
         val out = outBuffer
         if (pose != null && swinging) SwingClock.sample(pose, t, base, k, out) else base.copyInto(out)
+        if (!swinging && FirstPersonBody.relaxArms(state)) {
+            out[PITCH] += FirstPersonBody.ARM_DROP
+            out[OFF_PITCH] += FirstPersonBody.ARM_DROP
+        }
         SwingClock.applyFlinch(out)
         val moving = SwingClock.moveAmount()
         val drive = SwingClock.moveStrike()
         val run = SwingClock.runShare()
         out[STEP] *= 1f - moving
+        out[LEG_L] *= 1f - moving
+        out[LEG_R] *= 1f - moving
+        out[BODY_Y] *= 1f - moving * MOVE_BODY_CUT
+        out[BODY_R] *= 1f - moving * MOVE_BODY_CUT
         out[LEAN] = out[LEAN] * (1f - moving * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
         out[TURN] *= 1f - moving * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
         springTip(out)
@@ -2290,6 +1259,7 @@ object WeaponAnimations {
         main.z += out[REACH]
         applyBody(model, right, yaw, out[LEAN], out[STEP])
         plantLegs(model, drive)
+        applyLegs(model, out)
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
         val guardKey = if (swinging) pose.key else SwingClock.idleKey()
@@ -2372,7 +1342,7 @@ object WeaponAnimations {
         armQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
         gripPoint.set(0f, GRIP_Y, GRIP_Z).rotate(armQuat).add(main.x, main.y, main.z)
         val outward = if (cos(out[HEAD_Y]) >= 0f) -1f else 1f
-        val from = span.first + shift
+        val from = minOf(span.first + shift, -SHAFT_TAIL)
         val to = span.second + shift
         repeat(SHAFT_GUARD_STEPS) {
             val cosA = cos(out[HEAD_A])
@@ -2400,6 +1370,7 @@ object WeaponAnimations {
     private const val SHAFT_GUARD_STEPS = 30
     private const val SHAFT_GUARD_STEP = 0.04f
     private const val SHAFT_SAMPLE = 3f
+    private const val SHAFT_TAIL = 14f
     private const val SHAFT_MARGIN = 1.5f
     private const val SHAFT_BLADE_MARGIN = 4f
     private const val SHAFT_BLADE_LENGTH = 20f
@@ -2416,6 +1387,13 @@ object WeaponAnimations {
         val keep = 1f - PLANT_CUT * drive
         model.rightLeg.xRot *= keep
         model.leftLeg.xRot *= keep
+    }
+
+    private fun applyLegs(model: HumanoidModel<*>, out: FloatArray) {
+        model.leftLeg.xRot += out[LEG_L]
+        model.rightLeg.xRot += out[LEG_R]
+        model.body.yRot += out[BODY_Y]
+        model.body.zRot += out[BODY_R]
     }
 
     private fun applyBody(model: HumanoidModel<*>, right: Boolean, yaw: Float, lean: Float, step: Float) {

@@ -1,0 +1,515 @@
+styleDefaults:
+  walkArm: 1
+  walkLeg: 1
+  walkBob: 0
+  walkLean: 0
+  walkSway: 0
+  walkDrop: 0
+  roll: 0
+  swagger: 0
+  headBob: 0
+  headRoll: 0
+  armFlare: 0
+  stomp: 0
+  bobSharp: 1
+  launchDip: 1.5
+  launchStretch: 0.6
+  launchArms: 0.8
+  launchKnee: 0.7
+  sprintArm: 1
+  sprintLeg: 1
+  sprintBob: 0
+  sprintLean: 0
+  sprintSway: 0
+  posture: 0
+  idleBreath: 0
+  idleRate: 0.06
+  idleSway: 0
+  idleArmOpen: 0
+  idleHeadDrop: 0
+  jumpArms: 0
+  jumpLegs: 0
+  fallSpread: 0
+  fallLegs: 0
+  landDip: 0
+  landLean: 0
+  crouchLean: 0
+  crouchArm: 0
+  crouchLeg: 0
+  swimKick: 0
+  swimArm: 0
+  climbArm: 0
+  climbLeg: 0
+  rideSpread: 0
+  rideArm: 0
+  rideLean: 0
+  elytraArm: 0
+  elytraLeg: 0
+  useBrace: 0
+  useChew: 0
+  hurtRecoil: 0
+  hurtFlail: 0
+  deathFlop: 0
+  swingSpeed: 1
+  swingBody: 1
+  swingArc: 1
+  swingBlend: 1
+styles:
+  "HEROIC":
+    label: "Heroic"
+    walkArm: 1.3
+    walkLeg: 1.2
+    walkBob: 0.5
+    walkSway: 0.05
+    roll: 0.02
+    swagger: 0.07
+    headBob: 0.01
+    headRoll: 0.02
+    armFlare: 0.12
+    sprintArm: 1.6
+    sprintLeg: 1.4
+    sprintBob: 0.9
+    sprintLean: 0.24
+    sprintSway: 0.08
+    posture: -0.06
+    idleBreath: 0.35
+    idleRate: 0.05
+    idleSway: 0.02
+    idleArmOpen: 0.16
+    idleHeadDrop: -0.04
+    jumpArms: 1
+    jumpLegs: 0.8
+    fallSpread: 0.9
+    fallLegs: 0.25
+    landDip: 1.8
+    landLean: 0.25
+    crouchLean: 0.9
+    crouchArm: 0.5
+    crouchLeg: 0.3
+    swimKick: 0.6
+    swimArm: 0.5
+    climbArm: 0.6
+    climbLeg: 0.55
+    rideSpread: 0.2
+    rideArm: 0.8
+    rideLean: -0.05
+    elytraArm: 0.5
+    elytraLeg: 0.15
+    useBrace: 0.25
+    useChew: 0.1
+    hurtRecoil: 0.3
+    hurtFlail: 0.6
+    deathFlop: 0.9
+    swingSpeed: 1
+    swingBody: 1.15
+    swingArc: 1.08
+    swingBlend: 1
+  "STEALTH":
+    label: "Stealth"
+    walkArm: 0.45
+    walkLeg: 0.8
+    walkBob: 0.1
+    walkLean: 0.2
+    walkSway: 0.015
+    walkDrop: 1.4
+    roll: 0.01
+    swagger: -0.05
+    armFlare: -0.05
+    sprintArm: 0.8
+    sprintBob: 0.3
+    sprintLean: 0.42
+    sprintSway: 0.03
+    posture: 0.12
+    idleBreath: 0.12
+    idleRate: 0.04
+    idleArmOpen: -0.05
+    idleHeadDrop: 0.08
+    jumpArms: 0.4
+    jumpLegs: 0.5
+    fallSpread: 0.25
+    fallLegs: 0.05
+    landDip: 2.6
+    landLean: 0.35
+    crouchLean: 1.5
+    crouchArm: 1
+    crouchLeg: 0.6
+    swimKick: 0.35
+    swimArm: 0.25
+    climbArm: 0.35
+    climbLeg: 0.35
+    rideSpread: 0.08
+    rideArm: 0.5
+    rideLean: 0.18
+    elytraArm: 0.25
+    elytraLeg: 0.05
+    useBrace: 0.3
+    useChew: 0.05
+    hurtRecoil: 0.2
+    hurtFlail: 0.3
+    deathFlop: 0.5
+    swingSpeed: 0.92
+    swingBody: 0.85
+    swingArc: 0.92
+    swingBlend: 0.85
+  "LIGHT":
+    label: "Lightfoot"
+    walkArm: 1.35
+    walkLeg: 1.25
+    walkBob: 0.9
+    walkLean: 0.05
+    walkSway: 0.02
+    headBob: 0.03
+    headRoll: 0.02
+    armFlare: 0.03
+    bobSharp: 2
+    launchDip: 1
+    launchStretch: 1.3
+    launchArms: 1.3
+    launchKnee: 0.6
+    sprintArm: 1.6
+    sprintLeg: 1.4
+    sprintBob: 1.2
+    sprintLean: 0.2
+    sprintSway: 0.04
+    posture: -0.02
+    idleBreath: 0.4
+    idleRate: 0.1
+    idleSway: 0.05
+    idleArmOpen: 0.04
+    jumpArms: 1.2
+    jumpLegs: 1
+    fallSpread: 0.9
+    fallLegs: 0.3
+    landDip: 0.9
+    landLean: 0.08
+    crouchLean: 0.6
+    crouchArm: 0.35
+    crouchLeg: 0.2
+    swimKick: 0.8
+    swimArm: 0.6
+    climbArm: 0.8
+    climbLeg: 0.7
+    rideSpread: 0.22
+    rideArm: 0.9
+    rideLean: 0.05
+    elytraArm: 0.7
+    elytraLeg: 0.25
+    useBrace: 0.12
+    useChew: 0.2
+    hurtRecoil: 0.4
+    hurtFlail: 0.8
+    deathFlop: 1.1
+    swingSpeed: 0.86
+    swingBody: 0.8
+    swingArc: 0.95
+    swingBlend: 0.8
+  "HEAVY":
+    label: "Heavy"
+    walkArm: 0.45
+    walkLeg: 0.8
+    walkBob: 0.12
+    walkLean: 0.1
+    walkSway: 0.03
+    walkDrop: 1.1
+    roll: 0.05
+    swagger: 0.02
+    headBob: 0.04
+    headRoll: 0.03
+    armFlare: 0.02
+    stomp: 1.2
+    launchDip: 2.4
+    launchStretch: 0.25
+    launchArms: 0.25
+    launchKnee: 0.9
+    sprintArm: 0.7
+    sprintLeg: 0.95
+    sprintBob: 0.2
+    sprintLean: 0.3
+    sprintSway: 0.05
+    posture: 0.11
+    idleBreath: 0.4
+    idleRate: 0.035
+    idleSway: 0.02
+    idleArmOpen: 0.03
+    idleHeadDrop: 0.09
+    jumpArms: 0.2
+    jumpLegs: 0.2
+    fallSpread: 0.15
+    fallLegs: 0.02
+    landDip: 3
+    landLean: 0.4
+    crouchLean: 0.9
+    crouchArm: 0.5
+    crouchLeg: 0.3
+    swimKick: 0.35
+    swimArm: 0.25
+    climbArm: 0.45
+    climbLeg: 0.4
+    rideSpread: 0.06
+    rideArm: 0.5
+    rideLean: 0.2
+    elytraArm: 0.25
+    elytraLeg: 0.05
+    useBrace: 0.55
+    useChew: 0.08
+    hurtRecoil: 0.5
+    hurtFlail: 0.2
+    deathFlop: 0.5
+    swingSpeed: 1.12
+    swingBody: 1.35
+    swingArc: 1.1
+    swingBlend: 1.25
+  "WEARY":
+    label: "Weary"
+    walkArm: 0.35
+    walkLeg: 0.65
+    walkBob: 0.3
+    walkLean: 0.16
+    walkSway: 0.08
+    walkDrop: 0.9
+    roll: 0.05
+    swagger: 0.03
+    headBob: 0.06
+    headRoll: 0.05
+    armFlare: 0.08
+    sprintArm: 0.7
+    sprintLeg: 0.9
+    sprintBob: 0.8
+    sprintLean: 0.34
+    sprintSway: 0.12
+    posture: 0.14
+    idleBreath: 0.7
+    idleRate: 0.03
+    idleSway: 0.05
+    idleArmOpen: 0.1
+    idleHeadDrop: 0.16
+    jumpArms: 0.3
+    jumpLegs: 0.3
+    fallSpread: 0.4
+    fallLegs: 0.1
+    landDip: 2.2
+    landLean: 0.32
+    crouchLean: 1.1
+    crouchArm: 0.6
+    crouchLeg: 0.4
+    swimKick: 0.3
+    swimArm: 0.2
+    climbArm: 0.3
+    climbLeg: 0.3
+    rideSpread: 0.1
+    rideArm: 0.4
+    rideLean: 0.2
+    elytraArm: 0.2
+    elytraLeg: 0.05
+    useBrace: 0.4
+    useChew: 0.16
+    hurtRecoil: 0.4
+    hurtFlail: 0.4
+    deathFlop: 0.6
+    swingSpeed: 1.1
+    swingBody: 0.7
+    swingArc: 0.82
+    swingBlend: 1.3
+
+states:
+  - name: walk
+    toggle: locomotionWalk
+    vars:
+      wSprintG: "wSprint * grounded"
+      wWalk: "wMove * grounded * (1 - wSprint)"
+      armMul: "(style.walkArm - 1) * wWalk + (style.sprintArm - 1) * wSprintG"
+      legMul: "(style.walkLeg - 1) * wWalk + (style.sprintLeg - 1) * wSprintG"
+      gr: "grounded * (1 - wCrouch)"
+      bank: "turnRate * (wWalk + wSprintG) * grounded"
+      idle: "gr * (1 - wMove)"
+      bob: "style.walkBob * wWalk + style.sprintBob * wSprintG"
+      sway: "style.walkSway * wWalk + style.sprintSway * wSprintG"
+      leanAmt: "style.walkLean * wWalk + style.sprintLean * wSprintG"
+      stride: "pow(1 - abs(gait), style.bobSharp)"
+      footfall: "abs(gait) * abs(gait) * abs(gait)"
+      breath: "sin(age * style.idleRate * 6.2832)"
+    effects:
+      - {to: rightLeg.x, add: "gait * 1.4 * (sp * legMul + boost) * k"}
+      - {to: leftLeg.x, add: "gaitOpp * 1.4 * (sp * legMul + boost) * k"}
+      - {to: rightLeg.z, add: "style.swagger * sp * gr * k"}
+      - {to: leftLeg.z, sub: "style.swagger * sp * gr * k"}
+      - {to: torso.roll, sub: "bank * 0.1 * k"}
+      - {to: torso.yaw, add: "bank * 0.08 * k"}
+      - {to: torso.pitch, add: "slopePitch * (wWalk + wSprintG) * k"}
+      - {to: rightArm.x, add: "gaitOpp * (sp * armMul + boost) * k", freeArms: true}
+      - {to: leftArm.x, add: "gait * (sp * armMul + boost) * k", freeArms: true}
+      - {to: rightArm.z, add: "style.armFlare * sp * gr * k", freeArms: true}
+      - {to: leftArm.z, sub: "style.armFlare * sp * gr * k", freeArms: true}
+      - {to: torso.shift, add: "-stride * sp * bob * k + style.walkDrop * wWalk * k + footfall * sp * style.stomp * (wWalk + 1.5 * wSprintG) * k", freeArms: true}
+      - {to: torso.pitch, add: "footfall * sp * style.stomp * 0.03 * (wWalk + wSprintG) * k", freeArms: true}
+      - {to: torso.yaw, add: "sin(phase) * sp * sway * k", freeArms: true}
+      - {to: torso.roll, add: "gait * sp * style.roll * gr * k", freeArms: true}
+      - {to: torso.pitch, add: "leanAmt * k * clamp(sp * 2, 0, 1)", freeArms: true}
+      - {to: head.z, sub: "gait * sp * style.headRoll * gr * k", freeArms: true}
+      - {to: head.y, sub: "bank * 0.12 * k", freeArms: true}
+      - {to: head.x, add: "sin(phase * 2) * sp * style.headBob * gr * k", freeArms: true}
+      - {to: torso.pitch, add: "style.posture * gr * k", freeArms: true}
+      - {to: head.x, add: "style.idleHeadDrop * idle * k", freeArms: true}
+      - {to: torso.shift, add: "sin(age * style.idleRate * 6.2832) * style.idleBreath * idle * k", freeArms: true}
+      - {to: torso.yaw, add: "sin(age * style.idleRate * 2.3) * style.idleSway * idle * k", freeArms: true}
+      - {to: torso.roll, add: "sin(age * style.idleRate * 1.7) * style.idleSway * 0.6 * idle * k", freeArms: true}
+      - {to: rightArm.z, add: "style.idleArmOpen * idle * k", freeArms: true}
+      - {to: leftArm.z, sub: "style.idleArmOpen * idle * k", freeArms: true}
+      - {to: rightArm.x, add: "breath * style.idleBreath * 0.4 * idle * k", freeArms: true}
+      - {to: leftArm.x, add: "breath * style.idleBreath * 0.4 * idle * k", freeArms: true}
+
+  - name: jump
+    toggle: locomotionJump
+    effects:
+      - {to: rightArm.x, add: "-style.jumpArms * wRise * wAir * k", freeArms: true}
+      - {to: leftArm.x, add: "-style.jumpArms * wRise * wAir * k", freeArms: true}
+      - {to: rightArm.z, add: "style.fallSpread * wFall * wAir * k", freeArms: true}
+      - {to: leftArm.z, sub: "style.fallSpread * wFall * wAir * k", freeArms: true}
+      - {to: rightLeg.x, add: "(-style.jumpLegs * wRise + 0.25 * wFall) * wAir * k"}
+      - {to: leftLeg.x, add: "(0.4 * style.jumpLegs * wRise + 0.1 * wFall) * wAir * k"}
+      - {to: rightLeg.z, add: "style.fallLegs * wFall * wAir * k"}
+      - {to: leftLeg.z, sub: "style.fallLegs * wFall * wAir * k"}
+
+  - name: launch
+    toggle: locomotionJump
+    gate: launch
+    vars:
+      u: "launchAge / 0.34"
+      compress: "clamp(1 - u / 0.4, 0, 1)"
+      stretch: "sin(clamp(u / 0.75, 0, 1) * pi)"
+      drive: "sin(clamp(u / 0.5, 0, 1) * pi * 0.5) * launch"
+      speedLean: "clamp(pace, 0, 1) * 0.1"
+      swing: "sin(clamp(u / 0.6, 0, 1) * pi) * style.launchArms"
+    effects:
+      - {to: torso.shift, add: "compress * compress * style.launchDip * k - stretch * style.launchStretch * k"}
+      - {to: torso.pitch, add: "(compress * 0.16 + speedLean * stretch) * k"}
+      - {to: rightLeg.x, sub: "drive * 0.9 * k * leadRight"}
+      - {to: leftLeg.x, sub: "drive * 0.9 * k * (1 - leadRight)"}
+      - {to: rightLeg.x, add: "(stretch * 0.6 + compress * 0.1) * k * (1 - leadRight)"}
+      - {to: leftLeg.x, add: "(stretch * 0.6 + compress * 0.1) * k * leadRight"}
+      - {to: leftArm.x, sub: "swing * (0.9 * leadRight + 0.6 * (1 - leadRight)) * k", freeArms: true}
+      - {to: rightArm.x, sub: "swing * (0.9 * (1 - leadRight) + 0.6 * leadRight) * k", freeArms: true}
+
+  - name: land
+    toggle: locomotionJump
+    gate: wLand
+    effects:
+      - {to: torso.shift, add: "style.landDip * wLand * k"}
+      - {to: torso.pitch, add: "style.landLean * wLand * k"}
+      - {to: rightLeg.x, sub: "0.5 * wLand * k"}
+      - {to: leftLeg.x, sub: "0.5 * wLand * k"}
+      - {to: rightArm.z, add: "0.35 * wLand * k", freeArms: true}
+      - {to: leftArm.z, sub: "0.35 * wLand * k", freeArms: true}
+
+  - name: crouch
+    toggle: locomotionCrouch
+    gate: wCrouch
+    effects:
+      - {to: torso.pitch, add: "style.crouchLean * 0.25 * wCrouch * k"}
+      - {to: rightArm.x, sub: "style.crouchArm * 0.4 * wCrouch * k", freeArms: true}
+      - {to: leftArm.x, sub: "style.crouchArm * 0.4 * wCrouch * k", freeArms: true}
+      - {to: rightArm.z, sub: "0.1 * style.crouchArm * wCrouch * k", freeArms: true}
+      - {to: leftArm.z, add: "0.1 * style.crouchArm * wCrouch * k", freeArms: true}
+      - {to: rightLeg.x, sub: "style.crouchLeg * wCrouch * k * (0.6 + 0.4 * gait * sp)"}
+      - {to: leftLeg.x, sub: "style.crouchLeg * wCrouch * k * (0.6 - 0.4 * gait * sp)"}
+      - {to: head.x, add: "0.1 * wCrouch * k"}
+
+  - name: swim
+    toggle: locomotionSwim
+    vars:
+      swim: "wSwim * (1 - wCrawl)"
+      tread: "wTread * (1 - wCrawl)"
+      rate: "0.75 + 0.45 * clamp(pace, 0, 1.3)"
+      beat: "age * 0.9 * rate"
+      kickAmp: "style.swimKick * (0.55 + 0.45 * clamp(pace * 2, 0, 1))"
+      stroke: "sin(age * 0.45 * rate)"
+    effects:
+      - {to: rightLeg.x, add: "sin(beat) * kickAmp * swim * k + sin(beat * 0.6) * 0.45 * tread * k"}
+      - {to: leftLeg.x, add: "sin(beat + pi) * kickAmp * swim * k - sin(beat * 0.6) * 0.45 * tread * k"}
+      - {to: rightLeg.x, add: "sin(beat * 0.5) * 0.18 * wCrawl * k"}
+      - {to: leftLeg.x, add: "sin(beat * 0.5 + pi) * 0.18 * wCrawl * k"}
+      - {to: rightArm.x, add: "sin(beat + pi) * 0.9 * style.swimArm * swim * k", freeArms: true}
+      - {to: leftArm.x, add: "sin(beat) * 0.9 * style.swimArm * swim * k", freeArms: true}
+      - {to: rightArm.z, add: "(stroke * style.swimArm * 0.25 * swim + (0.55 + 0.25 * stroke) * tread) * k", freeArms: true}
+      - {to: leftArm.z, sub: "(stroke * style.swimArm * 0.25 * swim + (0.55 - 0.25 * stroke) * tread) * k", freeArms: true}
+      - {to: rightArm.x, add: "-0.9 * wCrawl * k", freeArms: true}
+      - {to: leftArm.x, add: "-0.9 * wCrawl * k", freeArms: true}
+      - {to: rightArm.z, add: "0.15 * wCrawl * k", freeArms: true}
+      - {to: leftArm.z, sub: "0.15 * wCrawl * k", freeArms: true}
+
+  - name: climb
+    toggle: locomotionClimb
+    gate: wClimb
+    vars:
+      ph: "age * 0.4"
+      pull: "wClimb * min(k, 1)"
+    effects:
+      - {to: rightArm.x, approach: "-1.9 + sin(ph) * style.climbArm * climbMove", rate: "pull", freeArms: true}
+      - {to: leftArm.x, approach: "-1.9 - sin(ph) * style.climbArm * climbMove", rate: "pull", freeArms: true}
+      - {to: rightArm.z, add: "0.15 * wClimb * k", freeArms: true}
+      - {to: leftArm.z, sub: "0.15 * wClimb * k", freeArms: true}
+      - {to: rightLeg.x, add: "(-0.35 - sin(ph + pi) * style.climbLeg * climbMove) * wClimb * k"}
+      - {to: leftLeg.x, add: "(-0.35 - sin(ph) * style.climbLeg * climbMove) * wClimb * k"}
+      - {to: torso.pitch, add: "0.08 * wClimb * k"}
+
+  - name: ride
+    toggle: locomotionRide
+    gate: wRide
+    effects:
+      - {to: rightLeg.z, add: "style.rideSpread * wRide * k"}
+      - {to: leftLeg.z, sub: "style.rideSpread * wRide * k"}
+      - {to: rightArm.x, sub: "style.rideArm * wRide * k", freeArms: true}
+      - {to: leftArm.x, sub: "style.rideArm * wRide * k", freeArms: true}
+      - {to: rightArm.z, add: "0.1 * wRide * k", freeArms: true}
+      - {to: leftArm.z, sub: "0.1 * wRide * k", freeArms: true}
+      - {to: torso.pitch, add: "style.rideLean * wRide * k"}
+
+  - name: elytra
+    toggle: locomotionElytra
+    gate: wFly
+    effects:
+      - {to: rightArm.x, add: "style.elytraArm * wFly * k", freeArms: true}
+      - {to: leftArm.x, add: "style.elytraArm * wFly * k", freeArms: true}
+      - {to: rightArm.z, add: "0.12 * wFly * k", freeArms: true}
+      - {to: leftArm.z, sub: "0.12 * wFly * k", freeArms: true}
+      - {to: rightLeg.x, add: "style.elytraLeg * wFly * k"}
+      - {to: leftLeg.x, add: "style.elytraLeg * wFly * k"}
+      - {to: rightLeg.z, sub: "0.08 * wFly * k"}
+      - {to: leftLeg.z, add: "0.08 * wFly * k"}
+
+  - name: eat
+    toggle: locomotionUseItem
+    gate: wUse
+    vars:
+      chew: "sin(age * 1.6) * style.useChew * wUse * k"
+    effects:
+      - {to: head.x, add: "chew"}
+      - {to: head.posY, add: "chew * 0.5"}
+
+  - name: block
+    toggle: locomotionUseItem
+    gate: wBlock
+    effects:
+      - {to: torso.pitch, add: "-style.useBrace * wBlock * k"}
+      - {to: rightLeg.x, sub: "0.15 * wBlock * k"}
+      - {to: leftLeg.x, add: "0.25 * wBlock * k"}
+
+  - name: hurt
+    toggle: locomotionHurt
+    gate: wHurt
+    effects:
+      - {to: torso.pitch, add: "-style.hurtRecoil * wHurt * k"}
+      - {to: head.x, sub: "0.25 * wHurt * k"}
+      - {to: rightArm.z, add: "style.hurtFlail * wHurt * k", freeArms: true}
+      - {to: leftArm.z, sub: "style.hurtFlail * wHurt * k", freeArms: true}
+
+  - name: death
+    toggle: locomotionDeath
+    gate: wDead
+    effects:
+      - {to: rightArm.z, add: "style.deathFlop * wDead * k", freeArms: true}
+      - {to: leftArm.z, sub: "style.deathFlop * wDead * k", freeArms: true}
+      - {to: rightArm.x, approach: "-0.3", rate: "wDead * 0.5", freeArms: true}
+      - {to: leftArm.x, approach: "-0.3", rate: "wDead * 0.5", freeArms: true}
+      - {to: rightLeg.z, add: "0.3 * wDead * k"}
+      - {to: leftLeg.z, sub: "0.3 * wDead * k"}

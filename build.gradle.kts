@@ -55,6 +55,8 @@ dependencies {
 
     implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
 
+    shadowBundle("org.snakeyaml:snakeyaml-engine:2.9")
+
     compileOnly("com.terraformersmc:modmenu:${project.property("modmenu_version")}")
     runtimeOnly("com.terraformersmc:modmenu:${project.property("modmenu_version")}")
 
@@ -101,6 +103,7 @@ tasks.shadowJar {
     dependsOn(tasks.named("clientClasses"))
 
     archiveClassifier.set("")
+    relocate("org.snakeyaml.engine", "opal.dev.wynnoverhaul.shaded.snakeyaml")
 
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from("LICENSE.txt") {

@@ -63,6 +63,7 @@ data class WynnOverhaulConfig(
     var soulsCameraTurnSpeed: Double = 0.55,
     var soulsCameraFaceHoldMs: Double = 700.0,
     var soulsCameraReticle: Boolean = true,
+    var firstPersonBodyEnabled: Boolean = false,
     var debugItemCopyEnabled: Boolean = false,
     var debugActionBarLog: Boolean = false,
     var mythicAlertEnabled: Boolean = false,
@@ -253,7 +254,6 @@ data class WynnOverhaulConfig(
         weaponAnimationSfxVolume = weaponAnimationSfxVolume.coerceIn(0.0, 1.0)
         weaponTrueIdleDelaySeconds = weaponTrueIdleDelaySeconds.coerceIn(0.5, 15.0)
         weaponAnimationTrailIntensity = weaponAnimationTrailIntensity.coerceIn(0.2, 1.5)
-        if (LocomotionAnimations.styleNamed(locomotionStyle) == null) locomotionStyle = "HEROIC"
         mythicAlertVolume = mythicAlertVolume.coerceIn(0.0, 1.0)
         lootBeamIntensity = lootBeamIntensity.coerceIn(0.2, 1.5)
         trackerPingVolume = trackerPingVolume.coerceIn(0.0, 1.0)

@@ -592,6 +592,12 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             slider("Camera follow smoothing", 0.0, 1.0, config.soulsCameraSmoothing, "Lets the camera trail slightly behind your movement. 0 is rigid.") { config.soulsCameraSmoothing = it }
             slider("Character turn speed", 0.15, 1.0, config.soulsCameraTurnSpeed, "How quickly your character swings to face the way you run. 1 is instant.") { config.soulsCameraTurnSpeed = it }
             slider("Aim hold time (ms)", 0.0, 2000.0, config.soulsCameraFaceHoldMs, "How long your character keeps facing the crosshair after an attack or spell click before turning back to run. Raise it if spell combos get interrupted.") { config.soulsCameraFaceHoldMs = it }
+            rows += OwSectionHeader(left, 0, w, "First-person Body") to 18
+            checkbox(
+                "Show body in first person",
+                "Renders your third-person character model while in first person so you can see your arms, torso and legs when looking down. Hides your head, hat and helmet so they never block the camera, and hides the floating vanilla hands since your real hands hold your items.",
+                config.firstPersonBodyEnabled,
+            ) { config.firstPersonBodyEnabled = it }
         }
     }
 
@@ -702,10 +708,10 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             }
             checkbox(
                 "Freeze animation (preview)",
-                "Debug: holds your held weapon's animation at the progress below so you can inspect a single pose. Progress 0 and 1 are the standby pose.",
+                "Debug: holds your held weapon's animation at the progress below. The slider runs through the whole moveset, every stroke in order including mirrored ones, and the start and end of each stroke are the standby pose.",
                 config.weaponAnimationPreview,
             ) { config.weaponAnimationPreview = it }
-            val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress") { config.weaponAnimationPreviewT = it }
+            val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress (whole moveset)") { config.weaponAnimationPreviewT = it }
             rows += previewSlider to OwTheme.ROW_H
         }
     }

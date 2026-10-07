@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.model.HumanoidModel
 import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.player.PlayerModel
+import net.minecraft.client.player.LocalPlayer
 import net.minecraft.client.renderer.entity.state.AvatarRenderState
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState
 import net.minecraft.world.entity.Avatar
@@ -23,126 +24,10 @@ import kotlin.math.min
 import kotlin.math.sin
 
 object LocomotionAnimations {
-    class Style(
-        val label: String,
-        val walkArm: Float = 1f, val walkLeg: Float = 1f, val walkBob: Float = 0f, val walkLean: Float = 0f, val walkSway: Float = 0f,
-        val walkDrop: Float = 0f, val roll: Float = 0f, val swagger: Float = 0f, val headBob: Float = 0f, val headRoll: Float = 0f,
-        val armFlare: Float = 0f, val stomp: Float = 0f, val bobSharp: Float = 1f,
-        val launchDip: Float = 1.5f, val launchStretch: Float = 0.6f, val launchArms: Float = 0.8f, val launchKnee: Float = 0.7f,
-        val sprintArm: Float = 1f, val sprintLeg: Float = 1f, val sprintBob: Float = 0f, val sprintLean: Float = 0f, val sprintSway: Float = 0f,
-        val posture: Float = 0f, val idleBreath: Float = 0f, val idleRate: Float = 0.06f, val idleSway: Float = 0f, val idleArmOpen: Float = 0f,
-        val idleHeadDrop: Float = 0f,
-        val jumpArms: Float = 0f, val jumpLegs: Float = 0f, val fallSpread: Float = 0f, val fallLegs: Float = 0f,
-        val landDip: Float = 0f, val landLean: Float = 0f,
-        val crouchLean: Float = 0f, val crouchArm: Float = 0f, val crouchLeg: Float = 0f,
-        val swimKick: Float = 0f, val swimArm: Float = 0f,
-        val climbArm: Float = 0f, val climbLeg: Float = 0f,
-        val rideSpread: Float = 0f, val rideArm: Float = 0f, val rideLean: Float = 0f,
-        val elytraArm: Float = 0f, val elytraLeg: Float = 0f,
-        val useBrace: Float = 0f, val useChew: Float = 0f,
-        val hurtRecoil: Float = 0f, val hurtFlail: Float = 0f,
-        val deathFlop: Float = 0f,
-    )
+    val styleKeys: List<String> get() = AnimationLibrary.tables().locomotion.styles.keys.toList()
 
-    private val STYLES = linkedMapOf(
-        "HEROIC" to Style(
-            "Heroic",
-            walkArm = 1.3f, walkLeg = 1.2f, walkBob = 0.5f, walkLean = 0f, walkSway = 0.05f,
-            walkDrop = 0f, roll = 0.02f, swagger = 0.07f, headBob = 0.01f, headRoll = 0.02f, armFlare = 0.12f,
-            sprintArm = 1.6f, sprintLeg = 1.4f, sprintBob = 0.9f, sprintLean = 0.24f, sprintSway = 0.08f,
-            posture = -0.06f, idleBreath = 0.35f, idleRate = 0.05f, idleSway = 0.02f, idleArmOpen = 0.16f, idleHeadDrop = -0.04f,
-            jumpArms = 1.0f, jumpLegs = 0.8f, fallSpread = 0.9f, fallLegs = 0.25f,
-            landDip = 1.8f, landLean = 0.25f,
-            crouchLean = 0.9f, crouchArm = 0.5f, crouchLeg = 0.3f,
-            swimKick = 0.6f, swimArm = 0.5f,
-            climbArm = 0.6f, climbLeg = 0.55f,
-            rideSpread = 0.2f, rideArm = 0.8f, rideLean = -0.05f,
-            elytraArm = 0.5f, elytraLeg = 0.15f,
-            useBrace = 0.25f, useChew = 0.1f,
-            hurtRecoil = 0.3f, hurtFlail = 0.6f,
-            deathFlop = 0.9f,
-        ),
-        "STEALTH" to Style(
-            "Stealth",
-            walkArm = 0.45f, walkLeg = 0.8f, walkBob = 0.1f, walkLean = 0.2f, walkSway = 0.015f,
-            walkDrop = 1.4f, roll = 0.01f, swagger = -0.05f, headBob = 0f, headRoll = 0f, armFlare = -0.05f,
-            sprintArm = 0.8f, sprintLeg = 1.0f, sprintBob = 0.3f, sprintLean = 0.42f, sprintSway = 0.03f,
-            posture = 0.12f, idleBreath = 0.12f, idleRate = 0.04f, idleSway = 0.0f, idleArmOpen = -0.05f,
-            idleHeadDrop = 0.08f,
-            jumpArms = 0.4f, jumpLegs = 0.5f, fallSpread = 0.25f, fallLegs = 0.05f,
-            landDip = 2.6f, landLean = 0.35f,
-            crouchLean = 1.5f, crouchArm = 1.0f, crouchLeg = 0.6f,
-            swimKick = 0.35f, swimArm = 0.25f,
-            climbArm = 0.35f, climbLeg = 0.35f,
-            rideSpread = 0.08f, rideArm = 0.5f, rideLean = 0.18f,
-            elytraArm = 0.25f, elytraLeg = 0.05f,
-            useBrace = 0.3f, useChew = 0.05f,
-            hurtRecoil = 0.2f, hurtFlail = 0.3f,
-            deathFlop = 0.5f,
-        ),
-        "LIGHT" to Style(
-            "Lightfoot",
-            walkArm = 1.35f, walkLeg = 1.25f, walkBob = 0.9f, walkLean = 0.05f, walkSway = 0.02f,
-            walkDrop = 0f, roll = 0f, swagger = 0f, headBob = 0.03f, headRoll = 0.02f, armFlare = 0.03f, bobSharp = 2f,
-            launchDip = 1.0f, launchStretch = 1.3f, launchArms = 1.3f, launchKnee = 0.6f,
-            sprintArm = 1.6f, sprintLeg = 1.4f, sprintBob = 1.2f, sprintLean = 0.2f, sprintSway = 0.04f,
-            posture = -0.02f, idleBreath = 0.4f, idleRate = 0.1f, idleSway = 0.05f, idleArmOpen = 0.04f,
-            idleHeadDrop = 0f,
-            jumpArms = 1.2f, jumpLegs = 1.0f, fallSpread = 0.9f, fallLegs = 0.3f,
-            landDip = 0.9f, landLean = 0.08f,
-            crouchLean = 0.6f, crouchArm = 0.35f, crouchLeg = 0.2f,
-            swimKick = 0.8f, swimArm = 0.6f,
-            climbArm = 0.8f, climbLeg = 0.7f,
-            rideSpread = 0.22f, rideArm = 0.9f, rideLean = 0.05f,
-            elytraArm = 0.7f, elytraLeg = 0.25f,
-            useBrace = 0.12f, useChew = 0.2f,
-            hurtRecoil = 0.4f, hurtFlail = 0.8f,
-            deathFlop = 1.1f,
-        ),
-        "HEAVY" to Style(
-            "Heavy",
-            walkArm = 0.45f, walkLeg = 0.8f, walkBob = 0.12f, walkLean = 0.1f, walkSway = 0.03f,
-            walkDrop = 1.1f, roll = 0.05f, swagger = 0.02f, headBob = 0.04f, headRoll = 0.03f, armFlare = 0.02f, stomp = 1.2f,
-            launchDip = 2.4f, launchStretch = 0.25f, launchArms = 0.25f, launchKnee = 0.9f,
-            sprintArm = 0.7f, sprintLeg = 0.95f, sprintBob = 0.2f, sprintLean = 0.3f, sprintSway = 0.05f,
-            posture = 0.11f, idleBreath = 0.4f, idleRate = 0.035f, idleSway = 0.02f, idleArmOpen = 0.03f,
-            idleHeadDrop = 0.09f,
-            jumpArms = 0.2f, jumpLegs = 0.2f, fallSpread = 0.15f, fallLegs = 0.02f,
-            landDip = 3.0f, landLean = 0.4f,
-            crouchLean = 0.9f, crouchArm = 0.5f, crouchLeg = 0.3f,
-            swimKick = 0.35f, swimArm = 0.25f,
-            climbArm = 0.45f, climbLeg = 0.4f,
-            rideSpread = 0.06f, rideArm = 0.5f, rideLean = 0.2f,
-            elytraArm = 0.25f, elytraLeg = 0.05f,
-            useBrace = 0.55f, useChew = 0.08f,
-            hurtRecoil = 0.5f, hurtFlail = 0.2f,
-            deathFlop = 0.5f,
-        ),
-        "WEARY" to Style(
-            "Weary",
-            walkArm = 0.35f, walkLeg = 0.65f, walkBob = 0.3f, walkLean = 0.16f, walkSway = 0.08f,
-            walkDrop = 0.9f, roll = 0.05f, swagger = 0.03f, headBob = 0.06f, headRoll = 0.05f, armFlare = 0.08f,
-            sprintArm = 0.7f, sprintLeg = 0.9f, sprintBob = 0.8f, sprintLean = 0.34f, sprintSway = 0.12f,
-            posture = 0.14f, idleBreath = 0.7f, idleRate = 0.03f, idleSway = 0.05f, idleArmOpen = 0.1f,
-            idleHeadDrop = 0.16f,
-            jumpArms = 0.3f, jumpLegs = 0.3f, fallSpread = 0.4f, fallLegs = 0.1f,
-            landDip = 2.2f, landLean = 0.32f,
-            crouchLean = 1.1f, crouchArm = 0.6f, crouchLeg = 0.4f,
-            swimKick = 0.3f, swimArm = 0.2f,
-            climbArm = 0.3f, climbLeg = 0.3f,
-            rideSpread = 0.1f, rideArm = 0.4f, rideLean = 0.2f,
-            elytraArm = 0.2f, elytraLeg = 0.05f,
-            useBrace = 0.4f, useChew = 0.16f,
-            hurtRecoil = 0.4f, hurtFlail = 0.4f,
-            deathFlop = 0.6f,
-        ),
-    )
+    fun labelOf(key: String): String = AnimationLibrary.tables().locomotion.styles[key]?.label ?: key
 
-    val styleKeys: List<String> get() = STYLES.keys.toList()
-
-    fun styleNamed(key: String?): Style? = key?.let { STYLES[it] }
-
-    fun labelOf(key: String): String = STYLES[key]?.label ?: key
 
     private const val AIR_DELAY = 0.1f
     private const val LAND_MIN_FALL = 0.12f
@@ -150,9 +35,13 @@ object LocomotionAnimations {
     private const val LAND_TAU = 0.2f
     private const val TAU = 0.08f
     private const val STALE_NANOS = 5_000_000_000L
-    private const val LEG_SWING = 1.4f
     private const val GAIT_PHASE = 0.4f
+    private const val SLOPE_REACH = 1.5
+    private const val SLOPE_SPAN_PX = 48f
+    private const val SLOPE_MAX = 0.35f
+    private const val SLOPE_SAMPLE_NANOS = 50_000_000L
     private const val MASTER = 0.7f
+    private const val GATE_MIN = 0.001f
     private const val PACE_REFERENCE = 0.22f
     private const val LAUNCH_MIN_VY = 0.15f
     private const val LAUNCH_SECONDS = 0.34f
@@ -223,7 +112,7 @@ object LocomotionAnimations {
         var sprinting = false
         var hurt = 0f
         var useKind = USE_NONE
-        var styleIndex = 0
+        var styleSeed = 0
         var lastAirVy = 0f
         var airTime = 0f
         var wAir = 0f
@@ -240,6 +129,7 @@ object LocomotionAnimations {
         var climbMove = 0f
         var wSwim = 0f
         var wTread = 0f
+        var wCrawl = 0f
         var wRide = 0f
         var wFly = 0f
         var wUse = 0f
@@ -247,6 +137,12 @@ object LocomotionAnimations {
         var wHurt = 0f
         var wDead = 0f
         var wCrouch = 0f
+        var lastBodyRot = 0f
+        var rotSeen = false
+        var turnRate = 0f
+        var slopePitch = 0f
+        var slopeGoal = 0f
+        var slopeNanos = 0L
         var entity: Avatar? = null
         var terrainNanos = 0L
         var groundRight = 0f
@@ -272,7 +168,7 @@ object LocomotionAnimations {
             ItemUseAnimation.BLOCK -> USE_BLOCK
             else -> USE_NONE
         }
-        body.styleIndex = Math.floorMod(entity.uuid.hashCode() * -1640531535, STYLES.size)
+        body.styleSeed = entity.uuid.hashCode() * -1640531535
         body.entity = entity
         body.seenNanos = System.nanoTime()
     }
@@ -320,6 +216,15 @@ object LocomotionAnimations {
         body.wFall = approach(body.wFall, if (airborne) clamp01(-body.vy / 0.8f) else 0f, a)
 
         body.pace = approach(body.pace, body.hSpeed / PACE_REFERENCE, slow)
+        var drot = state.bodyRot - body.lastBodyRot
+        drot = ((drot % 360f) + 540f) % 360f - 180f
+        if (!body.rotSeen) {
+            body.rotSeen = true
+            drot = 0f
+        }
+        body.lastBodyRot = state.bodyRot
+        body.turnRate += ((drot / max(dt, 1e-4f) / 360f).coerceIn(-1f, 1f) - body.turnRate) * a
+        body.slopePitch = approach(body.slopePitch, sampledSlope(body, state, config), slow)
         val moving = clamp01(state.walkAnimationSpeed / 0.4f)
         val sprintGoal = if (body.sprinting && grounded && !swimming) 1f else 0f
         body.wSprint = approach(body.wSprint, sprintGoal, a)
@@ -329,6 +234,7 @@ object LocomotionAnimations {
         body.climbMove = approach(body.climbMove, clamp01(abs(body.vy) / 0.1f), a)
         body.wSwim = approach(body.wSwim, if (swimming) 1f else 0f, a)
         body.wTread = approach(body.wTread, if (tread) 1f else 0f, a)
+        body.wCrawl = approach(body.wCrawl, if (swimming && body.onGround && !state.isInWater) 1f else 0f, a)
         body.wRide = approach(body.wRide, if (state.isPassenger) 1f else 0f, a)
         body.wFly = approach(body.wFly, if (state.isFallFlying) 1f else 0f, a)
         body.wCrouch = approach(body.wCrouch, if (state.isCrouching) 1f else 0f, a)
@@ -482,6 +388,7 @@ object LocomotionAnimations {
     @JvmStatic
     fun apply(model: HumanoidModel<*>, humanoid: HumanoidRenderState) {
         val state = humanoid as? AvatarRenderState ?: return
+        FirstPersonBody.applyHeadVisibility(model, state)
         if (unseen(state) || (state.distanceToCameraSq > ANIMATE_FAR_SQ && Minecraft.getInstance().player?.id != state.id)) {
             clearBends(model)
             return
@@ -507,10 +414,12 @@ object LocomotionAnimations {
             clearBends(model)
             return
         }
-        val style = (if (!local && config.locomotionRandomizeOthers) STYLES.values.elementAt(body.styleIndex) else STYLES[config.locomotionStyle]) ?: run {
-            clearBends(model)
-            return
-        }
+        val styles = AnimationLibrary.tables().locomotion.styles
+        val style = (if (!local && config.locomotionRandomizeOthers) styles.values.elementAt(Math.floorMod(body.styleSeed, styles.size)) else styles[config.locomotionStyle])
+            ?: styles.values.firstOrNull() ?: run {
+                clearBends(model)
+                return
+            }
         if (System.nanoTime() - body.seenNanos > STALE_NANOS) {
             clearBends(model)
             return
@@ -537,205 +446,128 @@ object LocomotionAnimations {
         val gait = cos(phase)
         val gaitOpp = cos(phase + PI.toFloat())
 
-        if (config.locomotionWalk) {
-            val wSprint = body.wSprint * grounded
-            val wWalk = body.wMove * grounded * (1f - body.wSprint)
-            val armMul = (style.walkArm - 1f) * wWalk + (style.sprintArm - 1f) * wSprint
-            val legMul = (style.walkLeg - 1f) * wWalk + (style.sprintLeg - 1f) * wSprint
-            val gr = grounded * (1f - body.wCrouch)
-            rLeg.xRot += gait * LEG_SWING * (sp * legMul + boost) * k
-            lLeg.xRot += gaitOpp * LEG_SWING * (sp * legMul + boost) * k
-            rLeg.zRot += style.swagger * sp * gr * k
-            lLeg.zRot -= style.swagger * sp * gr * k
-            if (!owned) {
-                val bob = style.walkBob * wWalk + style.sprintBob * wSprint
-                val sway = style.walkSway * wWalk + style.sprintSway * wSprint
-                val leanAmt = style.walkLean * wWalk + style.sprintLean * wSprint
-                rArm.xRot += gaitOpp * (sp * armMul + boost) * k
-                lArm.xRot += gait * (sp * armMul + boost) * k
-                rArm.zRot += style.armFlare * sp * gr * k
-                lArm.zRot -= style.armFlare * sp * gr * k
-                val stride = Math.pow((1f - abs(gait)).toDouble(), style.bobSharp.toDouble()).toFloat()
-                val footfall = abs(gait) * abs(gait) * abs(gait)
-                torso.shift += -stride * sp * bob * k + style.walkDrop * wWalk * k + footfall * sp * style.stomp * (wWalk + 1.5f * wSprint) * k
-                torso.pitch += footfall * sp * style.stomp * 0.03f * (wWalk + wSprint) * k
-                torso.yaw += sin(phase) * sp * sway * k
-                torso.roll += gait * sp * style.roll * gr * k
-                torso.pitch += leanAmt * k * clamp01(sp * 2f)
-                model.head.zRot -= gait * sp * style.headRoll * gr * k
-                model.head.xRot += sin(phase * 2f) * sp * style.headBob * gr * k
-                val idle = gr * (1f - body.wMove)
-                torso.pitch += style.posture * gr * k
-                model.head.xRot += style.idleHeadDrop * idle * k
-                torso.shift += sin(state.ageInTicks * style.idleRate * 6.2832f) * style.idleBreath * idle * k
-                torso.yaw += sin(state.ageInTicks * style.idleRate * 2.3f) * style.idleSway * idle * k
-                torso.roll += sin(state.ageInTicks * style.idleRate * 1.7f) * style.idleSway * 0.6f * idle * k
-                rArm.zRot += style.idleArmOpen * idle * k
-                lArm.zRot -= style.idleArmOpen * idle * k
-            }
-        }
-
-        if (config.locomotionJump) {
-            val air = body.wAir
-            val rise = body.wRise
-            val fall = body.wFall
-            if (armsFree) {
-                rArm.xRot += -style.jumpArms * rise * air * k
-                lArm.xRot += -style.jumpArms * rise * air * k
-                rArm.zRot += style.fallSpread * fall * air * k
-                lArm.zRot -= style.fallSpread * fall * air * k
-            }
-            rLeg.xRot += (-style.jumpLegs * rise + 0.25f * fall) * air * k
-            lLeg.xRot += (0.4f * style.jumpLegs * rise + 0.1f * fall) * air * k
-            rLeg.zRot += style.fallLegs * fall * air * k
-            lLeg.zRot -= style.fallLegs * fall * air * k
-            val launch = clamp01(1f - body.launchAge / LAUNCH_SECONDS)
-            if (launch > 0.001f) {
-                val u = body.launchAge / LAUNCH_SECONDS
-                val compress = clamp01(1f - u / 0.4f)
-                val stretch = sin(clamp01(u / 0.75f) * PI.toFloat())
-                val drive = sin(clamp01(u / 0.5f) * PI.toFloat() * 0.5f) * launch
-                val speedLean = clamp01(pace) * 0.1f
-                torso.shift += compress * compress * style.launchDip * k - stretch * style.launchStretch * k
-                torso.pitch += (compress * 0.16f + speedLean * stretch) * k
-                val leadLeg = if (body.leadRight) rLeg else lLeg
-                val trailLeg = if (body.leadRight) lLeg else rLeg
-                leadLeg.xRot -= drive * 0.9f * k
-                trailLeg.xRot += (stretch * 0.6f + compress * 0.1f) * k
-                if (armsFree) {
-                    val swing = sin(clamp01(u / 0.6f) * PI.toFloat()) * style.launchArms
-                    val drivenArm = if (body.leadRight) lArm else rArm
-                    val otherArm = if (body.leadRight) rArm else lArm
-                    drivenArm.xRot -= swing * 0.9f * k
-                    otherArm.xRot -= swing * 0.6f * k
-                }
-            }
-            val land = body.wLand
-            if (land > 0.001f) {
-                val dip = style.landDip * land * k
-                torso.shift += dip
-                torso.pitch += style.landLean * land * k
-                rLeg.xRot -= 0.5f * land * k
-                lLeg.xRot -= 0.5f * land * k
-                if (armsFree) {
-                    rArm.zRot += 0.35f * land * k
-                    lArm.zRot -= 0.35f * land * k
-                }
-            }
-        }
-
-        if (config.locomotionCrouch && body.wCrouch > 0.001f) {
-            val w = body.wCrouch
-            torso.pitch += style.crouchLean * 0.25f * w * k
-            if (armsFree) {
-                rArm.xRot -= style.crouchArm * 0.4f * w * k
-                lArm.xRot -= style.crouchArm * 0.4f * w * k
-                rArm.zRot -= 0.1f * style.crouchArm * w * k
-                lArm.zRot += 0.1f * style.crouchArm * w * k
-            }
-            rLeg.xRot -= style.crouchLeg * w * k * (0.6f + 0.4f * gait * sp)
-            lLeg.xRot -= style.crouchLeg * w * k * (0.6f - 0.4f * gait * sp)
-            model.head.xRot += 0.1f * w * k
-        }
-
-        if (config.locomotionSwim) {
-            val beat = state.ageInTicks * 0.9f
-            val wSwim = body.wSwim
-            val wTread = body.wTread
-            rLeg.xRot += sin(beat) * style.swimKick * wSwim * k + sin(beat * 0.6f) * 0.45f * wTread * k
-            lLeg.xRot += sin(beat + PI.toFloat()) * style.swimKick * wSwim * k - sin(beat * 0.6f) * 0.45f * wTread * k
-            if (armsFree) {
-                val stroke = sin(state.ageInTicks * 0.45f)
-                rArm.zRot += (stroke * style.swimArm * 0.5f * wSwim + (0.55f + 0.25f * stroke) * wTread) * k
-                lArm.zRot -= (stroke * style.swimArm * 0.5f * wSwim + (0.55f - 0.25f * stroke) * wTread) * k
-            }
-        }
-
-        if (config.locomotionClimb && body.wClimb > 0.001f) {
-            val w = body.wClimb
-            val ph = state.ageInTicks * 0.4f
-            val amp = body.climbMove
-            if (armsFree) {
-                rArm.xRot = approach(rArm.xRot, -1.9f + sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
-                lArm.xRot = approach(lArm.xRot, -1.9f - sin(ph) * style.climbArm * amp, w * k.coerceAtMost(1f))
-                rArm.zRot += 0.15f * w * k
-                lArm.zRot -= 0.15f * w * k
-            }
-            rLeg.xRot += (-0.35f - sin(ph + PI.toFloat()) * style.climbLeg * amp) * w * k
-            lLeg.xRot += (-0.35f - sin(ph) * style.climbLeg * amp) * w * k
-            torso.pitch += 0.08f * w * k
-        }
-
-        if (config.locomotionRide && body.wRide > 0.001f) {
-            val w = body.wRide
-            rLeg.zRot += style.rideSpread * w * k
-            lLeg.zRot -= style.rideSpread * w * k
-            if (armsFree) {
-                rArm.xRot -= style.rideArm * w * k
-                lArm.xRot -= style.rideArm * w * k
-                rArm.zRot += 0.1f * w * k
-                lArm.zRot -= 0.1f * w * k
-            }
-            torso.pitch += style.rideLean * w * k
-        }
-
-        if (config.locomotionElytra && body.wFly > 0.001f) {
-            val w = body.wFly
-            if (armsFree) {
-                rArm.xRot += style.elytraArm * w * k
-                lArm.xRot += style.elytraArm * w * k
-                rArm.zRot += 0.12f * w * k
-                lArm.zRot -= 0.12f * w * k
-            }
-            rLeg.xRot += style.elytraLeg * w * k
-            lLeg.xRot += style.elytraLeg * w * k
-            rLeg.zRot -= 0.08f * w * k
-            lLeg.zRot += 0.08f * w * k
-        }
-
-        if (config.locomotionUseItem) {
-            if (body.wUse > 0.001f) {
-                val chew = sin(state.ageInTicks * 1.6f) * style.useChew * body.wUse * k
-                model.head.xRot += chew
-                model.head.y += chew * 0.5f
-            }
-            if (body.wBlock > 0.001f) {
-                val w = body.wBlock
-                torso.pitch += -style.useBrace * w * k
-                rLeg.xRot -= 0.15f * w * k
-                lLeg.xRot += 0.25f * w * k
-            }
-        }
-
-        if (config.locomotionHurt && body.wHurt > 0.001f) {
-            val w = body.wHurt
-            torso.pitch += -style.hurtRecoil * w * k
-            model.head.xRot -= 0.25f * w * k
-            if (armsFree) {
-                rArm.zRot += style.hurtFlail * w * k
-                lArm.zRot -= style.hurtFlail * w * k
-            }
-        }
-
-        if (config.locomotionDeath && body.wDead > 0.001f) {
-            val w = body.wDead
-            if (armsFree) {
-                rArm.zRot += style.deathFlop * w * k
-                lArm.zRot -= style.deathFlop * w * k
-                rArm.xRot = approach(rArm.xRot, -0.3f, w * 0.5f)
-                lArm.xRot = approach(lArm.xRot, -0.3f, w * 0.5f)
-            }
-            rLeg.zRot += 0.3f * w * k
-            lLeg.zRot -= 0.3f * w * k
-        }
+        applyStates(model, state, body, style, config, k, armsFree, grounded, pace, sp, boost, vanillaSp, phase, gait, gaitOpp)
 
         clampParts(model, armsFree, body.wClimb > 0.3f)
         applyTorso(model, armsFree)
         guardJoints(model, armsFree)
         val wTerrain = grounded * (1f - body.wDead)
         val terrainActive = config.locomotionTerrain && config.locomotionBend && applyTerrain(model, state, body, wTerrain, k)
-        if (config.locomotionBend) setBends(model, body, style, armsFree, owned, if (terrainActive) terrainKnees else null) else clearBends(model)
+        if (config.locomotionBend) setBends(model, body, armsFree, owned, if (terrainActive) terrainKnees else null) else clearBends(model)
     }
+
+    private var env = FloatArray(LocoSignals.COUNT)
+
+    private fun toggleOn(config: WynnOverhaulConfig, name: String?): Boolean = name == null || LocoToggles.enabled(config, name)
+
+    private fun partOf(model: HumanoidModel<*>, index: Int): ModelPart = when (index) {
+        LocoTargets.HEAD -> model.head
+        LocoTargets.RIGHT_ARM -> model.rightArm
+        LocoTargets.LEFT_ARM -> model.leftArm
+        LocoTargets.RIGHT_LEG -> model.rightLeg
+        else -> model.leftLeg
+    }
+
+    private fun readTarget(model: HumanoidModel<*>, code: Int): Float {
+        val part = code shr 2
+        val axis = code and 3
+        if (part == LocoTargets.TORSO) {
+            return when (axis) {
+                0 -> torso.pitch
+                1 -> torso.roll
+                2 -> torso.yaw
+                else -> torso.shift
+            }
+        }
+        val p = partOf(model, part)
+        return when (axis) {
+            0 -> p.xRot
+            1 -> p.yRot
+            2 -> p.zRot
+            else -> p.y
+        }
+    }
+
+    private fun writeTarget(model: HumanoidModel<*>, code: Int, value: Float) {
+        val part = code shr 2
+        val axis = code and 3
+        if (part == LocoTargets.TORSO) {
+            when (axis) {
+                0 -> torso.pitch = value
+                1 -> torso.roll = value
+                2 -> torso.yaw = value
+                else -> torso.shift = value
+            }
+            return
+        }
+        val p = partOf(model, part)
+        when (axis) {
+            0 -> p.xRot = value
+            1 -> p.yRot = value
+            2 -> p.zRot = value
+            else -> p.y = value
+        }
+    }
+
+    private fun applyStates(
+        model: HumanoidModel<*>, state: AvatarRenderState, body: Body, style: StyleDef, config: WynnOverhaulConfig,
+        k: Float, armsFree: Boolean, grounded: Float, pace: Float, sp: Float, boost: Float, vanillaSp: Float,
+        phase: Float, gait: Float, gaitOpp: Float,
+    ) {
+        val loco = AnimationLibrary.tables().locomotion
+        if (env.size < loco.envSize) env = FloatArray(loco.envSize)
+        val e = env
+        e[LocoSignals.K] = k
+        e[LocoSignals.W_AIR] = body.wAir
+        e[LocoSignals.W_RISE] = body.wRise
+        e[LocoSignals.W_FALL] = body.wFall
+        e[LocoSignals.W_LAND] = body.wLand
+        e[LocoSignals.W_MOVE] = body.wMove
+        e[LocoSignals.W_SPRINT] = body.wSprint
+        e[LocoSignals.W_CLIMB] = body.wClimb
+        e[LocoSignals.CLIMB_MOVE] = body.climbMove
+        e[LocoSignals.W_SWIM] = body.wSwim
+        e[LocoSignals.W_TREAD] = body.wTread
+        e[LocoSignals.W_CRAWL] = body.wCrawl
+        e[LocoSignals.W_RIDE] = body.wRide
+        e[LocoSignals.W_FLY] = body.wFly
+        e[LocoSignals.W_USE] = body.wUse
+        e[LocoSignals.W_BLOCK] = body.wBlock
+        e[LocoSignals.W_HURT] = body.wHurt
+        e[LocoSignals.W_DEAD] = body.wDead
+        e[LocoSignals.W_CROUCH] = body.wCrouch
+        e[LocoSignals.PACE] = pace
+        e[LocoSignals.SP] = sp
+        e[LocoSignals.BOOST] = boost
+        e[LocoSignals.VANILLA_SP] = vanillaSp
+        e[LocoSignals.PHASE] = phase
+        e[LocoSignals.GAIT] = gait
+        e[LocoSignals.GAIT_OPP] = gaitOpp
+        e[LocoSignals.AGE] = state.ageInTicks
+        e[LocoSignals.GROUNDED] = grounded
+        e[LocoSignals.TURN_RATE] = body.turnRate
+        e[LocoSignals.SLOPE_PITCH] = body.slopePitch
+        e[LocoSignals.LAUNCH_AGE] = body.launchAge
+        e[LocoSignals.LEAD_RIGHT] = if (body.leadRight) 1f else 0f
+        e[LocoSignals.LAUNCH] = clamp01(1f - body.launchAge / LAUNCH_SECONDS)
+        System.arraycopy(style.values, 0, e, LocoSignals.COUNT, style.values.size)
+        for (s in loco.states) {
+            if (!toggleOn(config, s.toggle)) continue
+            if (s.gate >= 0 && e[s.gate] <= GATE_MIN) continue
+            for (i in s.locals.indices) e[s.localSlots[i]] = s.locals[i].eval(e)
+            for (fx in s.effects) {
+                if (fx.freeArmsOnly && !armsFree) continue
+                val v = fx.value.eval(e)
+                if (fx.approach) {
+                    val current = readTarget(model, fx.target)
+                    writeTarget(model, fx.target, current + (v - current) * fx.rate!!.eval(e))
+                } else {
+                    writeTarget(model, fx.target, readTarget(model, fx.target) + v)
+                }
+            }
+        }
+    }
+
 
     private val terrainKnees = FloatArray(2)
     private val footRight = FloatArray(2)
@@ -754,6 +586,27 @@ object LocomotionAnimations {
         val bend = acos((r * r / (2f * LEG_HALF * LEG_HALF) - 1f).coerceIn(-1f, 1f))
         out[0] = atan2(dz, dy.coerceAtLeast(0.5f)) - bend * 0.5f
         out[1] = bend
+    }
+
+    private fun sampledSlope(body: Body, state: AvatarRenderState, config: WynnOverhaulConfig): Float {
+        val now = System.nanoTime()
+        if (now - body.slopeNanos >= SLOPE_SAMPLE_NANOS) {
+            body.slopeNanos = now
+            body.slopeGoal = slopeTarget(body, state, config)
+        }
+        return body.slopeGoal
+    }
+
+    private fun slopeTarget(body: Body, state: AvatarRenderState, config: WynnOverhaulConfig): Float {
+        if (!config.locomotionTerrain || !config.locomotionWalk || body.wMove < 0.05f) return 0f
+        val entity = body.entity
+        if (entity !is LocalPlayer) return 0f
+        val rad = state.bodyRot * (PI.toFloat() / 180f)
+        val fx = -sin(rad).toDouble()
+        val fz = cos(rad).toDouble()
+        val front = groundDelta(entity, state.x + fx * SLOPE_REACH, state.z + fz * SLOPE_REACH, state.y)
+        val back = groundDelta(entity, state.x - fx * SLOPE_REACH, state.z - fz * SLOPE_REACH, state.y)
+        return atan2((front - back).toDouble(), SLOPE_SPAN_PX.toDouble()).toFloat().coerceIn(-SLOPE_MAX, SLOPE_MAX)
     }
 
     private fun groundDelta(entity: Avatar, x: Double, z: Double, baseY: Double): Float {
@@ -877,7 +730,7 @@ object LocomotionAnimations {
         return -(ELBOW_REST + ELBOW_FORWARD * forward).coerceIn(0f, ELBOW_LIMIT)
     }
 
-    private fun setBends(model: HumanoidModel<*>, body: Body, style: Style, armsFree: Boolean, owned: Boolean, kneeOverride: FloatArray?) {
+    private fun setBends(model: HumanoidModel<*>, body: Body, armsFree: Boolean, owned: Boolean, kneeOverride: FloatArray?) {
         val stamp = System.nanoTime()
         val rKnee = kneeOverride?.get(0) ?: knee(model.rightLeg, body)
         val lKnee = kneeOverride?.get(1) ?: knee(model.leftLeg, body)

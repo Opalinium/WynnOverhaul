@@ -6,6 +6,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.player.LocalPlayer;
 import opal.dev.wynnoverhaul.client.WeaponAnimations;
+import opal.dev.wynnoverhaul.client.FirstPersonBody;
 import opal.dev.wynnoverhaul.client.WeaponTrail;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,6 +19,13 @@ public abstract class WeaponAnimationFirstPersonMixin {
     @Inject(method = "submitHandsWithItems", at = @At("HEAD"))
     private void wynnoverhaul$captureHandRoot(float partialTicks, PoseStack poseStack, SubmitNodeCollector collector, LocalPlayer player, int light, CallbackInfo ci) {
         WeaponTrail.captureRoot(poseStack);
+    }
+
+    @Inject(method = "submitHandsWithItems", at = @At("HEAD"), cancellable = true)
+    private void wynnoverhaul$hideHandsForBody(float partialTicks, PoseStack poseStack, SubmitNodeCollector collector, LocalPlayer player, int light, CallbackInfo ci) {
+        if (FirstPersonBody.INSTANCE.handsHidden()) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "swingArm", at = @At("HEAD"), cancellable = true)
