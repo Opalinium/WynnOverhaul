@@ -40,11 +40,11 @@ class EntityTrackerClient : ClientModInitializer {
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "entity_tracker"),
-            EntityTrackerHudElement(),
+            HudVisibility.hideable(EntityTrackerHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "potion_effects"),
-            PotionEffectHudElement(),
+            HudVisibility.hideable(PotionEffectHudElement()),
         )
     }
 

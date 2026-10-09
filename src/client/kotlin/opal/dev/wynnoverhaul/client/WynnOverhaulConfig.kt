@@ -90,6 +90,7 @@ data class WynnOverhaulConfig(
     var voxyVistaEnabled: Boolean = true,
     var voxyVistaMessages: Boolean = true,
     var hideVanillaPotionHud: Boolean = false,
+    var hideHudInCutscenes: Boolean = true,
     var customPotionHudEnabled: Boolean = false,
     var abilityCooldownHudEnabled: Boolean = true,
     var totemHudEnabled: Boolean = true,

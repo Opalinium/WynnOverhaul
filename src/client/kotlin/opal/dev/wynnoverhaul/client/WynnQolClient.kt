@@ -60,84 +60,84 @@ class WynnQolClient : ClientModInitializer {
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_feeder"),
-            MountFeederHudElement(),
+            HudVisibility.hideable(MountFeederHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "lootrun"),
-            LootrunHudElement(),
+            HudVisibility.hideable(LootrunHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "ability_cooldowns"),
-            AbilityCooldownHudElement(),
+            HudVisibility.hideable(AbilityCooldownHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "party_buffs"),
-            PartyBuffHudElement(),
+            HudVisibility.hideable(PartyBuffHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "ultimates"),
-            UltimateHudElement(),
+            HudVisibility.hideable(UltimateHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "toast"),
-            WynnOverhaulToastHudElement(),
+            HudVisibility.hideable(WynnOverhaulToastHudElement()),
         )
 
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "hp"),
-            HpHudElement(),
+            HudVisibility.hideable(HpHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mana"),
-            ManaHudElement(),
+            HudVisibility.hideable(ManaHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "sprint"),
-            SprintHudElement(),
+            HudVisibility.hideable(SprintHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "xp_bar"),
-            XpHudElement(),
+            HudVisibility.hideable(XpHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "resource_bar"),
-            ResourceBarHudElement(),
+            HudVisibility.hideable(ResourceBarHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "guild"),
-            WynnGuildHudElement(),
+            HudVisibility.hideable(WynnGuildHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "quest_log"),
-            WynnQuestLogHudElement(),
+            HudVisibility.hideable(WynnQuestLogHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "compass"),
-            WynnCompassHudElement(),
+            HudVisibility.hideable(WynnCompassHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "hotbar"),
-            HotbarHudElement(),
+            HudVisibility.hideable(HotbarHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "spell_combo"),
-            WynnSpellComboHudElement(),
+            HudVisibility.hideable(WynnSpellComboHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "spell_bar"),
-            SpellBarHudElement(),
+            HudVisibility.hideable(SpellBarHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "powder_special"),
-            PowderSpecialHudElement(),
+            HudVisibility.hideable(PowderSpecialHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_pickup"),
-            WynnMountPickupHudElement(),
+            HudVisibility.hideable(WynnMountPickupHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_energy"),
-            WynnMountEnergyHudElement(),
+            HudVisibility.hideable(WynnMountEnergyHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "dialogue"),
@@ -145,15 +145,15 @@ class WynnQolClient : ClientModInitializer {
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "totems"),
-            TotemHudElement(),
+            HudVisibility.hideable(TotemHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "dps"),
-            DpsHudElement(),
+            HudVisibility.hideable(DpsHudElement()),
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "class_buffs"),
-            ClassBuffHudElement(),
+            HudVisibility.hideable(ClassBuffHudElement()),
         )
     }
 
@@ -216,6 +216,7 @@ class WynnQolClient : ClientModInitializer {
         PartyFriendModel.tick(client)
         PartyBuffTracker.tick()
         WynnBuffTracker.tick(client)
+        WynnCutsceneTracker.tick(client)
         WynnTotemTracker.tick(client)
         WynnDamageTracker.tick(client)
         WynnClassBuffTracker.tick(client)

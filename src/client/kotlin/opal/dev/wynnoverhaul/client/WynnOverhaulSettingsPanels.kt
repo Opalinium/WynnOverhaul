@@ -1126,6 +1126,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 HudLayoutPresets.undo(config)
             }
 
+            header("Cutscenes")
+            checkbox("Hide HUD in cutscenes", "Hides the bars, hotbar, spell bar, crosshair and other HUD elements while a cutscene plays. Dialogue stays visible.", config.hideHudInCutscenes) {
+                config.hideHudInCutscenes = it
+            }
+
             header("Potion Effects")
             checkbox("Hide vanilla effect icons", "Hides the top-right vanilla potion effect icon HUD.", config.hideVanillaPotionHud) {
                 config.hideVanillaPotionHud = it

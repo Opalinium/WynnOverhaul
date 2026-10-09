@@ -10,6 +10,7 @@ import net.minecraft.world.scores.Objective;
 import opal.dev.wynnoverhaul.client.WynnOverhaulConfig;
 import opal.dev.wynnoverhaul.client.WynnOverhaulGate;
 import opal.dev.wynnoverhaul.client.WynnActionBar;
+import opal.dev.wynnoverhaul.client.WynnCutsceneTracker;
 import opal.dev.wynnoverhaul.client.WynnGuildBarTracker;
 import opal.dev.wynnoverhaul.client.WynnRegionBarTracker;
 import opal.dev.wynnoverhaul.client.WynnUltimateTracker;
@@ -72,6 +73,24 @@ public abstract class HudSuppressionMixin {
         }
         Player player = Minecraft.getInstance().player;
         if (player != null && !player.isSpectator()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(
+        method = {"extractHotbarAndDecorations", "extractCrosshair", "extractEffects", "extractBossOverlay"},
+        at = @At("HEAD"),
+        cancellable = true
+    )
+    private void wynnoverhaul$hideInCutscene(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        if (WynnCutsceneTracker.INSTANCE.getHidesHud()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "displayScoreboardSidebar", at = @At("HEAD"), cancellable = true, order = 900)
+    private void wynnoverhaul$hideSidebarInCutscene(GuiGraphicsExtractor graphics, Objective objective, CallbackInfo ci) {
+        if (WynnCutsceneTracker.INSTANCE.getHidesHud()) {
             ci.cancel();
         }
     }

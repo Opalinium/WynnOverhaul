@@ -2,6 +2,7 @@ package opal.dev.wynnoverhaul.mixin.client;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
+import opal.dev.wynnoverhaul.client.WynnCutsceneTracker;
 import opal.dev.wynnoverhaul.client.WynnGuildBarTracker;
 import opal.dev.wynnoverhaul.client.WynnRegionBarTracker;
 import opal.dev.wynnoverhaul.client.WynnResourceBarTracker;
@@ -17,5 +18,6 @@ public class BossBarMixin {
         packet.dispatch(WynnResourceBarTracker.INSTANCE);
         packet.dispatch(WynnGuildBarTracker.INSTANCE);
         packet.dispatch(WynnRegionBarTracker.INSTANCE);
+        packet.dispatch(WynnCutsceneTracker.INSTANCE);
     }
 }
