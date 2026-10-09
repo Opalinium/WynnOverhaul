@@ -26,14 +26,14 @@ def find_pack():
     raise SystemExit("pack not found: pass its path or set WYNN_PACK")
 
 
-def entries(pack):
+def entries(pack, prefix=PREFIX, keep=KEEP):
     z = zipfile.ZipFile(pack)
     fh = open(pack, "rb")
     for i in z.infolist():
-        if not i.filename.startswith(PREFIX) or not i.filename.endswith(".json"):
+        if not i.filename.startswith(prefix) or not i.filename.endswith(".json"):
             continue
-        rel = i.filename[len(PREFIX):]
-        if not rel.startswith(KEEP):
+        rel = i.filename[len(prefix):]
+        if keep and not rel.startswith(keep):
             continue
         fh.seek(i.header_offset)
         h = fh.read(30)

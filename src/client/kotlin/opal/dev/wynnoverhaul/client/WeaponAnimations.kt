@@ -1087,7 +1087,11 @@ object WeaponAnimations {
     internal fun autoKind(stack: ItemStack): GearSlotKind? =
         WynnGearKind.of(stack)?.takeIf { it.name in POSES } ?: classKind(stack)
 
-    fun autoStyleKey(stack: ItemStack): String? = autoKind(stack)?.name
+    fun autoStyleKey(stack: ItemStack): String? {
+        val kind = autoKind(stack) ?: return null
+        val skin = WynnSkinStyles.styleFor(stack)
+        return if (skin != null && skin.substringBefore(':') == kind.name && (skin in POSES || skin in COMBOS)) skin else kind.name
+    }
 
     fun isRanged(stack: ItemStack): Boolean = autoStyleKey(stack)?.startsWith("BOW") == true
 

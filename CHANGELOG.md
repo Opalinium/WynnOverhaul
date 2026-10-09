@@ -32,6 +32,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Swimming uses a freestyle arm stroke with a kick that quickens and strengthens with speed, and crawling under low ceilings gets its own low crawl with reaching arms instead of reusing the swim.
 - While you gather, the XP bar and Discord presence show your profession and its level instead of your combat level.
 - Dropped items get a subtle gold beam and ground glow, with a toggle and an intensity slider in the Alerts tab.
+- Weapons get their moveset from the skin they wear: the model id Wynncraft puts on the item picks the style that suits its shape, such as the Axe for the Galvanic Decollator, the Great axe for battleaxes and greatswords, the Hammer for hammers and maces, Twinblades, Naginata, Halberd, Stiletto, Dancer, Staff, Conductor, Ritualist and Firearm skins. Anything else keeps the style for its weapon type, and a style you assign in the weapon animation menu still wins.
 
 ### Changed
 - Combat settings moved from the HUD and QoL tabs into their own Combat tab.
