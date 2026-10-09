@@ -273,4 +273,4 @@ trails:
   "WAND:STAFF": [-6, 32]
   "WAND:STAFF_SWEEP": [-6, 32]
   "WAND:STAFF_RAISE": [-6, 32]
-  "WAND": [-3, 16]
+  "WAND": [10, 28]

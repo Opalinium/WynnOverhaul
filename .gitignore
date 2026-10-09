@@ -19,3 +19,6 @@ bin/
 
 __pycache__/
 *.pyc
+
+# Local Wynncraft model reference
+tools/reference/

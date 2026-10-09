@@ -261,12 +261,26 @@ BLADES = {
     "SPEAR:GLAIVE_DRAW": ("sickle", 14.0, 13.0),
     "SPEAR:GLAIVE_RISE": ("sickle", 14.0, 13.0),
     "SPEAR:GLAIVE_CLEAVE": ("sickle", 14.0, 13.0),
-    "DAGGER": ("blade", 11.0, 2.5),
-    "DAGGER:STAB": ("blade", 11.0, 2.5),
-    "DAGGER:WHIRL": ("blade", 11.0, 2.5),
+    "DAGGER": ("blade", 20.0, 2.5),
+    "DAGGER:STAB": ("blade", 20.0, 2.5),
+    "DAGGER:WHIRL": ("blade", 20.0, 2.5),
     "WAND": ("orb", 3.0, 3.0),
     "WAND:STAFF": ("orb", 4.0, 4.0),
     "RELIK": ("flat", 8.0, 5.0),
+    "SPEAR:TWIN": ("flat", 7.0, 3.0),
+    "SPEAR:TWIN_REND": ("flat", 7.0, 3.0),
+    "SPEAR:TWIN_WHIRL": ("flat", 7.0, 3.0),
+    "SPEAR:TWIN_X": ("flat", 7.0, 3.0),
+    "SPEAR:AXE": ("flat", 15.0, 7.0),
+    "SPEAR:AXE_HEW": ("flat", 15.0, 7.0),
+    "SPEAR:AXE_MAUL": ("flat", 15.0, 7.0),
+    "SPEAR:GREATAXE": ("flat", 17.0, 8.0),
+    "SPEAR:GREATAXE_UP": ("flat", 17.0, 8.0),
+    "SPEAR:GREATAXE_HEW": ("flat", 17.0, 8.0),
+    "SPEAR:GREATAXE_X": ("flat", 17.0, 8.0),
+    "SPEAR:HAMMER": ("flat", 9.0, 7.0),
+    "SPEAR:HAMMER_SWEEP": ("flat", 9.0, 7.0),
+    "SPEAR:HAMMER_QUAKE": ("flat", 9.0, 7.0),
 }
 
 
@@ -372,7 +386,7 @@ def load_stances(src):
     return {k: (v[0], v[1], v[4]) for k, v in load_states(src).items()}
 
 
-WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "SPEAR:GLAIVE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (2, 12), "WAND": (2, 14), "RELIK": (2, 16), "BOW": (14, 14), "BOW:FIREARM": (10, 16)}
+WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "SPEAR:GLAIVE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (1, 28), "WAND": (9, 28), "RELIK": (2, 25), "BOW": (10, 24), "BOW:FIREARM": (10, 16), "SPEAR:TWIN": (16, 30), "SPEAR:AXE": (7, 26), "SPEAR:GREATAXE": (8, 33), "SPEAR:HAMMER": (13, 28)}
 
 
 def render_stances(src, out_dir, only=None):

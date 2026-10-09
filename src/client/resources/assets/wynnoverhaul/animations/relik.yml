@@ -173,4 +173,4 @@ movesets:
       - {pose: "RELIK:LIFT", mirror: true}
       - {pose: "RELIK:TOLL", finisher: true}
 trails:
-  "RELIK": [-3, 18]
+  "RELIK": [2, 25]

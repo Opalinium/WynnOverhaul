@@ -262,4 +262,4 @@ movesets:
       - {pose: "DAGGER:WHIRL", mirror: true}
       - {pose: "DAGGER:TEMPEST", finisher: true}
 trails:
-  "DAGGER": [-2, 12]
+  "DAGGER": [0, 28]
