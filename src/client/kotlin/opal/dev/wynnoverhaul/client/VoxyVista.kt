@@ -38,9 +38,7 @@ object VoxyVista {
             return
         }
 
-        val x = player.x
-        val z = player.z
-        val withinMap = x >= -2560 && x <= 2047 && z >= -6144 && z <= -1
+        val withinMap = WynnMapBounds.contains(player.x, player.z)
 
         if (!withinMap && !hiddenByUs && VoxyConfig.CONFIG.enableRendering) {
             hiddenByUs = true

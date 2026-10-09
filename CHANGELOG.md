@@ -33,6 +33,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - While you gather, the XP bar and Discord presence show your profession and its level instead of your combat level.
 - Dropped items get a subtle gold beam and ground glow, with a toggle and an intensity slider in the Alerts tab.
 - Weapons get their moveset from the skin they wear: the model id Wynncraft puts on the item picks the style that suits its shape, such as the Axe for the Galvanic Decollator, the Great axe for battleaxes and greatswords, the Hammer for hammers and maces, Twinblades, Naginata, Halberd, Stiletto, Dancer, Staff, Conductor, Ritualist and Firearm skins. Anything else keeps the style for its weapon type, and a style you assign in the weapon animation menu still wins.
+- A `cinder:lod_bounds` entrypoint hands Cinder the Wynncraft map bounds (minX, minZ, maxX, maxZ) while you are on Wynncraft, so it can skip distant terrain outside the map. It follows the same toggle as hiding Voxy terrain, now labeled Hide LODs outside Wynncraft.
 - The HUD hides while a cutscene plays, including the bars, hotbar, spell bar, crosshair and boss bars, while dialogue stays on screen. A toggle in the HUD tab turns it off.
 
 ### Changed

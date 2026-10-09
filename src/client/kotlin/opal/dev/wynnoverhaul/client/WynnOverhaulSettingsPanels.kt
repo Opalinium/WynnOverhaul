@@ -1312,7 +1312,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             rows += waypointCheckbox to OwTheme.ROW_H
 
             rows += OwSectionHeader(left, 0, w, "Rendering") to 18
-            val voxyCheckbox = OwCheckbox(left, 0, w, Component.literal("Voxy Vista (hide LODs outside Wynncraft)"), config.voxyVistaEnabled) {
+            val voxyCheckbox = OwCheckbox(left, 0, w, Component.literal("Hide LODs outside Wynncraft (Voxy, Cinder)"), config.voxyVistaEnabled) {
                 config.voxyVistaEnabled = it
             }
             voxyCheckbox.setTooltip(

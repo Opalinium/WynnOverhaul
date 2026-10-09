@@ -23,6 +23,9 @@
       "opal.dev.wynnoverhaul.client.DiscordRichPresence",
       "opal.dev.wynnoverhaul.client.ContentBookInterceptor"
     ],
+    "cinder:lod_bounds": [
+      "opal.dev.wynnoverhaul.client.CinderLodBounds"
+    ],
     "main": [
       "opal.dev.wynnoverhaul.WynnOverhaul"
     ],
