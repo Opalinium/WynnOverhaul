@@ -1534,7 +1534,9 @@ class WynnOverhaulInventoryScreen(
         if (invTab == InvTab.JOURNAL) rebuildWidgets()
     }
 
-    private fun refreshJournal() {
+    private var lastProgressRebuildNanos = 0L
+
+    private fun refreshJournal(resume: Boolean = false) {
         val client = Minecraft.getInstance()
         val player = client.player ?: return
         val menu = journalMenu ?: return
@@ -1544,7 +1546,17 @@ class WynnOverhaulInventoryScreen(
         ContentBookQuery.start(
             menu = menu,
             seed = journal.activities,
-            onProgress = { acts -> if (isJournalLive(menu)) { journal.update(acts); refreshJournalView() } },
+            resume = resume,
+            onProgress = { acts ->
+                if (isJournalLive(menu)) {
+                    journal.update(acts)
+                    val now = System.nanoTime()
+                    if (now - lastProgressRebuildNanos > PROGRESS_REBUILD_NANOS) {
+                        lastProgressRebuildNanos = now
+                        refreshJournalView()
+                    }
+                }
+            },
             onComplete = { acts ->
                 ContentBookCache.commit(acts)
                 journalBusy = false
@@ -1614,13 +1626,13 @@ class WynnOverhaulInventoryScreen(
                 journalBusy = false
                 journal.applyTrackToggleLocal(activity)
                 refreshJournalView()
-                if (resumeScan && isJournalLive(menu)) refreshJournal()
+                if (resumeScan && isJournalLive(menu)) refreshJournal(resume = true)
             },
             onFailed = {
                 journalBusy = false
                 if (isJournalLive(menu)) {
                     showJournalMessage("Couldn't find ${activity.name} in the book")
-                    if (resumeScan) refreshJournal()
+                    if (resumeScan) refreshJournal(resume = true)
                 }
             },
         )
@@ -2975,6 +2987,7 @@ class WynnOverhaulInventoryScreen(
         const val SHIFT_DRAG_STEP = 4
         const val POUCH_LINES = 12
         const val WARN_NANOS = 2_500_000_000L
+        private const val PROGRESS_REBUILD_NANOS = 400_000_000L
         const val POUCH_SKELETON_ROWS = 4
         const val POUCH_PENDING_NANOS = 3_000_000_000L
 

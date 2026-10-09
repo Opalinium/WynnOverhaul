@@ -8,8 +8,11 @@ import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
+import net.minecraft.world.item.ItemStack
 import opal.dev.wynnoverhaul.WynnOverhaul
 import java.util.Optional
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 object ContentBookQuery {
     private const val CHANGE_VIEW_SLOT = 66
@@ -20,7 +23,9 @@ object ContentBookQuery {
     private const val MAX_FILTERS = 14
     private const val MAX_PAGES_PER_FILTER = 30
     private const val STABLE_TICKS_REQUIRED = 3
+    private const val FILTER_RETRIES = 40
     private const val CHANGE_WAIT_TICKS = 40
+    private const val QUIET_MILLIS = 80L
     private const val TIMEOUT_TICKS = 120
     private const val ACTIVE_FILTER_COLOR = 0xFFFFFF
 
@@ -29,6 +34,8 @@ object ContentBookQuery {
     private enum class Phase { NAVIGATE, REWIND, SCAN }
 
     private class Filters(val names: List<String>, val active: String?)
+
+    private class Location(val filter: String, val page: Int, val slot: Int)
 
     private var active = false
     private var mode = Mode.ENUMERATE
@@ -64,11 +71,47 @@ object ContentBookQuery {
     private val similar = LinkedHashSet<String>()
     private var lastFilters: Filters? = null
 
+    private val locations = HashMap<Pair<ActivityType, String>, Location>()
+    private val completedFilters = LinkedHashSet<String>()
+    private var bookMenu: AbstractContainerMenu? = null
+    private var bookFilter: String? = null
+    private var bookPage = -1
+    private var targetLocation: Location? = null
+    private var usedLocation = false
+    private var startNanos = 0L
+    private var clickNanos = 0L
+    private var clicks = 0
+    private var packetGeneration = 0
+    private var filterRetries = 0
+    private var changeSeenHash = 0
+    private var changeStable = 0
+
+    private val settler by lazy {
+        Executors.newSingleThreadScheduledExecutor { task -> Thread(task, "WynnOverhaul book settle").also { it.isDaemon = true } }
+    }
+
     val isActive: Boolean get() = active
     val isEnumerating: Boolean get() = active && mode == Mode.ENUMERATE
 
-    fun start(menu: AbstractContainerMenu, seed: List<ActivityInfo> = emptyList(), onProgress: (List<ActivityInfo>) -> Unit, onComplete: (List<ActivityInfo>) -> Unit, onFailed: () -> Unit) {
+    fun exportLocations(): Map<String, List<String>> =
+        locations.entries.associate { (key, location) -> "${key.first.name}|${key.second}" to listOf(location.filter, location.page.toString(), location.slot.toString()) }
+
+    fun importLocations(data: Map<String, List<String>>?) {
+        locations.clear()
+        data?.forEach { (key, value) ->
+            val type = runCatching { ActivityType.valueOf(key.substringBefore('|')) }.getOrNull() ?: return@forEach
+            val page = value.getOrNull(1)?.toIntOrNull() ?: return@forEach
+            val slot = value.getOrNull(2)?.toIntOrNull() ?: return@forEach
+            locations[type to key.substringAfter('|')] = Location(value[0], page, slot)
+        }
+    }
+
+    private fun locationOf(type: ActivityType, name: String): Location? =
+        locations[type to name] ?: if (type.isQuest) locations.entries.firstOrNull { it.key.second == name && it.key.first.isQuest }?.value else null
+
+    fun start(menu: AbstractContainerMenu, seed: List<ActivityInfo> = emptyList(), resume: Boolean = false, onProgress: (List<ActivityInfo>) -> Unit, onComplete: (List<ActivityInfo>) -> Unit, onFailed: () -> Unit) {
         reset(menu, Mode.ENUMERATE, onFailed)
+        if (!resume) completedFilters.clear()
         for (info in seed) results[info.type to info.name] = info
         this.onProgress = onProgress
         this.onComplete = onComplete
@@ -79,9 +122,22 @@ object ContentBookQuery {
         this.targetType = type
         this.targetName = name
         this.onFound = onFound
+        targetLocation = locationOf(type, name)
+        usedLocation = targetLocation != null
     }
 
     private fun reset(menu: AbstractContainerMenu, mode: Mode, onFailed: () -> Unit) {
+        if (menu !== bookMenu) {
+            bookMenu = menu
+            bookFilter = null
+            bookPage = -1
+            completedFilters.clear()
+        }
+        targetLocation = null
+        usedLocation = false
+        startNanos = System.nanoTime()
+        clicks = 0
+        filterRetries = 0
         this.menu = menu
         this.mode = mode
         this.onComplete = null
@@ -118,6 +174,32 @@ object ContentBookQuery {
         onFound = null
     }
 
+    fun onContainerPacket(containerId: Int) {
+        if (!active || !awaitingChange) return
+        if (menu?.containerId != containerId) return
+        val generation = ++packetGeneration
+        settler.schedule({ Minecraft.getInstance().execute { settled(generation) } }, QUIET_MILLIS, TimeUnit.MILLISECONDS)
+    }
+
+    private fun settled(generation: Int) {
+        if (generation != packetGeneration || !active || !awaitingChange) return
+        val client = Minecraft.getInstance()
+        val m = menu ?: return
+        val player = client.player ?: return
+        if (player.containerMenu !== m) return
+        val hash = snapshotHash(m)
+        if (hash == baselineHash) return
+        if (mode == Mode.FIND_AND_CLICK) {
+            WynnOverhaul.LOGGER.info("content book click {} settled by packets in {} ms", clicks, (System.nanoTime() - clickNanos) / 1_000_000)
+        }
+        awaitingChange = false
+        lastSnapshotHash = hash
+        stableCount = STABLE_TICKS_REQUIRED
+        if (!awaitingClick) return
+        awaitingClick = false
+        step(client, m, player)
+    }
+
     fun tick(client: Minecraft) {
         if (!active) return
         val m = menu ?: return fail("no menu")
@@ -136,10 +218,19 @@ object ContentBookQuery {
         val hash = snapshotHash(m)
         if (awaitingChange) {
             if (hash == baselineHash && ticksSinceAction < CHANGE_WAIT_TICKS) return
+            if (hash != changeSeenHash) {
+                changeSeenHash = hash
+                changeStable = 0
+                return
+            }
+            changeStable++
+            if (changeStable < STABLE_TICKS_REQUIRED && ticksSinceAction < CHANGE_WAIT_TICKS) return
+            if (mode == Mode.FIND_AND_CLICK) {
+                WynnOverhaul.LOGGER.info("content book click {} settled by ticks in {} ms ({} ticks)", clicks, (System.nanoTime() - clickNanos) / 1_000_000, ticksSinceAction)
+            }
             awaitingChange = false
             lastSnapshotHash = hash
-            stableCount = 0
-            return
+            stableCount = STABLE_TICKS_REQUIRED
         }
         if (hash == lastSnapshotHash) {
             stableCount++
@@ -157,15 +248,27 @@ object ContentBookQuery {
     private fun step(client: Minecraft, m: AbstractContainerMenu, player: Player) {
         val filters = readFilters(m)
         lastFilters = filters
+        if (filters == null && !queueReady && filterRetries < FILTER_RETRIES) {
+            filterRetries++
+            awaitingClick = true
+            return
+        }
+        if (filters == null && !queueReady) {
+            WynnOverhaul.LOGGER.warn("content book: no filter item found after {} retries, control slots: {}", filterRetries, describeControls(m))
+        }
         if (!queueReady) {
             queueReady = true
             queue = when {
                 filters == null || filters.active == null -> null
-                mode == Mode.ENUMERATE -> rotate(filters.names, filters.active)
+                mode == Mode.ENUMERATE -> rotate(filters.names, filters.active).filter { name -> completedFilters.none { it.equals(name, ignoreCase = true) } }
                 else -> targetType?.filterName?.let { wanted -> filters.names.firstOrNull { it.equals(wanted, ignoreCase = true) } }?.let { listOf(it) }
             }
             if (mode == Mode.FIND_AND_CLICK && queue == null && filters != null && filters.active != null) {
                 fail("filter ${targetType?.filterName} not in book filters ${filters.names}")
+                return
+            }
+            if (mode == Mode.ENUMERATE && queue?.isEmpty() == true) {
+                finish()
                 return
             }
         }
@@ -178,6 +281,8 @@ object ContentBookQuery {
                     return
                 }
                 navClicks++
+                bookPage = -1
+                bookFilter = null
                 click(client, m, player, CHANGE_VIEW_SLOT)
                 return
             }
@@ -186,28 +291,63 @@ object ContentBookQuery {
         }
 
         if (phase == Phase.REWIND) {
-            val up = scrollUpSlot(m)
-            if (up != null && rewindClicks < MAX_PAGES_PER_FILTER) {
-                rewindClicks++
-                click(client, m, player, up)
+            val known = targetLocation != null && bookMenu === m && bookPage >= 0 && bookFilter.equals(filters?.active, ignoreCase = true)
+            if (known) {
+                pageCount = bookPage
+                phase = Phase.SCAN
+            } else {
+                val up = scrollUpSlot(m)
+                if (up != null && rewindClicks < MAX_PAGES_PER_FILTER) {
+                    rewindClicks++
+                    bookPage = -1
+                    click(client, m, player, up)
+                    return
+                }
+                rewindClicks = 0
+                pageCount = 0
+                bookPage = 0
+                bookFilter = filters?.active
+                phase = Phase.SCAN
+            }
+        }
+
+        val location = targetLocation
+        if (mode == Mode.FIND_AND_CLICK && location != null) {
+            if (pageCount < location.page && canGoNextPage(m)) {
+                pageCount++
+                bookPage = pageCount
+                click(client, m, player, NEXT_PAGE_SLOT)
                 return
             }
+            if (pageCount > location.page) {
+                val up = scrollUpSlot(m)
+                if (up != null) {
+                    pageCount--
+                    bookPage = pageCount
+                    click(client, m, player, up)
+                    return
+                }
+            }
+            if (pageCount == location.page && matchesTarget(m.slots.getOrNull(location.slot)?.item)) {
+                clickTarget(client, m, player, location.slot)
+                return
+            }
+            locations.remove(targetType!! to targetName!!)
+            targetLocation = null
+            usedLocation = false
+            phase = Phase.REWIND
             rewindClicks = 0
-            pageCount = 0
-            phase = Phase.SCAN
+            bookPage = -1
+            step(client, m, player)
+            return
         }
 
         pagesSeen++
         if (mode == Mode.FIND_AND_CLICK) {
+            recordLocations(m)
             val targetSlot = findTargetSlot(m)
             if (targetSlot != null) {
-                client.gameMode?.handleContainerInput(m.containerId, targetSlot, 0, ContainerInput.PICKUP, player)
-                active = false
-                menu = null
-                val cb = onFound
-                onFound = null
-                onFailed = null
-                cb?.invoke(m)
+                clickTarget(client, m, player, targetSlot)
                 return
             }
         } else {
@@ -217,12 +357,14 @@ object ContentBookQuery {
 
         if (canGoNextPage(m) && pageCount < MAX_PAGES_PER_FILTER) {
             pageCount++
+            bookPage = pageCount
             click(client, m, player, NEXT_PAGE_SLOT)
             return
         }
 
         val remaining = queue?.size ?: 0
         if (mode == Mode.ENUMERATE && filterIndex + 1 < remaining) {
+            queue?.getOrNull(filterIndex)?.let { completedFilters.add(it) }
             filterIndex++
             phase = Phase.NAVIGATE
             step(client, m, player)
@@ -235,6 +377,31 @@ object ContentBookQuery {
         }
     }
 
+    private fun recordLocations(m: AbstractContainerMenu) {
+        val filter = currentFilter() ?: return
+        for (i in 0 until minOf(CONTAINER_SIZE, m.slots.size)) {
+            val info = ActivityItemParser.parse(m.slots[i].item) ?: continue
+            locations[info.type to info.name] = Location(filter, pageCount, i)
+        }
+    }
+
+    private fun matchesTarget(stack: ItemStack?): Boolean {
+        val type = targetType ?: return false
+        val info = ActivityItemParser.parse(stack ?: return false) ?: return false
+        return info.name == targetName && (info.type == type || (type.isQuest && info.type.isQuest))
+    }
+
+    private fun clickTarget(client: Minecraft, m: AbstractContainerMenu, player: Player, slot: Int) {
+        client.gameMode?.handleContainerInput(m.containerId, slot, 0, ContainerInput.PICKUP, player)
+        WynnOverhaul.LOGGER.info("content book tracked {} after {} clicks in {} ms (known location: {})", targetName, clicks, (System.nanoTime() - startNanos) / 1_000_000, usedLocation)
+        active = false
+        menu = null
+        val cb = onFound
+        onFound = null
+        onFailed = null
+        cb?.invoke(m)
+    }
+
     private fun currentFilter(): String? = queue?.getOrNull(filterIndex) ?: lastFilters?.active
 
     private fun rotate(names: List<String>, first: String?): List<String> {
@@ -242,6 +409,12 @@ object ContentBookQuery {
         if (at <= 0) return names
         return names.drop(at) + names.take(at)
     }
+
+    private fun describeControls(m: AbstractContainerMenu): String =
+        (CONTAINER_SIZE until minOf(m.slots.size, CONTAINER_SIZE + 24)).joinToString("; ") { i ->
+            val stack = m.slots[i].item
+            if (stack.isEmpty) "$i=empty" else "$i='${stack.hoverName.string}' lore=${stack.get(DataComponents.LORE)?.lines()?.take(4)?.joinToString("|") { it.string }}"
+        }
 
     private fun readFilters(m: AbstractContainerMenu): Filters? {
         val stack = m.slots.getOrNull(CHANGE_VIEW_SLOT)?.item ?: return null
@@ -262,11 +435,12 @@ object ContentBookQuery {
                 },
                 Style.EMPTY,
             )
-            if (!text.startsWith("- ")) continue
-            val name = text.removePrefix("- ").trim()
+            val cleaned = TextClean.clean(text)
+            if (!cleaned.startsWith("- ")) continue
+            val name = cleaned.removePrefix("- ").trim()
             if (name.isEmpty()) continue
             names.add(name)
-            if (firstColor == ACTIVE_FILTER_COLOR) activeName = name
+            if (firstColor == ACTIVE_FILTER_COLOR || text.startsWith("§f")) activeName = name
         }
         return if (names.isEmpty()) null else Filters(names, activeName)
     }
@@ -284,7 +458,11 @@ object ContentBookQuery {
     }
 
     private fun click(client: Minecraft, m: AbstractContainerMenu, player: Player, slot: Int) {
+        clickNanos = System.nanoTime()
+        clicks++
         baselineHash = snapshotHash(m)
+        changeSeenHash = baselineHash
+        changeStable = 0
         awaitingChange = true
         client.gameMode?.handleContainerInput(m.containerId, slot, 0, ContainerInput.PICKUP, player)
         ticksSinceAction = 0
@@ -313,6 +491,7 @@ object ContentBookQuery {
             val key = info.type to info.name
             results[key] = info
             seenThisRun.add(key)
+            currentFilter()?.let { locations[key] = Location(it, pageCount, i) }
         }
     }
 
@@ -345,6 +524,9 @@ object ContentBookQuery {
 
     private fun finish() {
         active = false
+        completedFilters.clear()
+        bookFilter = currentFilter()
+        bookPage = pageCount
         val seenTypes = seenThisRun.mapTo(HashSet()) { it.first }
         results.keys.retainAll { it in seenThisRun || it.first !in seenTypes }
         val list = results.values.toList()

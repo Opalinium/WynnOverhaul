@@ -37,6 +37,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The HUD hides while a cutscene plays, including the bars, hotbar, spell bar, crosshair and boss bars, while dialogue stays on screen. A toggle in the HUD tab turns it off.
 
 ### Changed
+- Tracking an activity from the journal goes straight to the page it was seen on instead of walking the book page by page, moves on as soon as the server's page update has arrived instead of polling the screen for four ticks, and no longer restarts the whole book scan afterwards, only the filters it had not finished. The journal also rebuilds at most twice a second while the book is being read.
 - Combat settings moved from the HUD and QoL tabs into their own Combat tab.
 - Custom menu settings moved from the QoL and Advanced tabs into a new Menus tab, and the bank, loot chest, Item Upgrader, identifier, selling and repair, merchant and mount menus each have their own toggle.
 - Weapon afterimages default to the lowest opacity and swing sounds to 0.45 volume.

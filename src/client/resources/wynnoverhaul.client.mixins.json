@@ -19,6 +19,7 @@
     "EditBoxTextCenterMixin",
     "TabListFooterMixin",
     "BossBarMixin",
+    "ContainerPacketMixin",
     "BossBarSuppressionMixin",
     "BossHealthOverlayAccessor",
     "BossHealthUpdateGuardMixin",

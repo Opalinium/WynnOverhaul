@@ -18,6 +18,7 @@ object ContentBookCache {
     private val MAP_TYPE = object : TypeToken<MutableMap<String, PersistedEntry>>() {}.type
 
     private const val REFRESH_INTERVAL_MILLIS = 20 * 60 * 1000L
+    private const val CACHE_VERSION = 3
 
     var snapshot: List<ActivityInfo>? = null
         private set
@@ -32,7 +33,8 @@ object ContentBookCache {
         contextKey = key
         val entry = readAll()[key]
         snapshot = entry?.activities?.mapNotNull { it.toActivityInfo() }
-        lastFullScanAt = entry?.scannedAtMillis ?: 0L
+        lastFullScanAt = if (entry?.version == CACHE_VERSION) entry.scannedAtMillis else 0L
+        ContentBookQuery.importLocations(entry?.locations)
         clearTracking()
     }
 
@@ -113,7 +115,7 @@ object ContentBookCache {
         val activities = snapshot ?: return
         try {
             val all = readAll()
-            all[key] = PersistedEntry(lastFullScanAt, activities.map { PersistedActivity.from(it) })
+            all[key] = PersistedEntry(lastFullScanAt, activities.map { PersistedActivity.from(it) }, CACHE_VERSION, ContentBookQuery.exportLocations())
             PATH.parent?.let { Files.createDirectories(it) }
             PATH.writeText(GSON.toJson(all))
         } catch (t: Throwable) {
@@ -134,7 +136,12 @@ object ContentBookCache {
         return "$server/${player.uuid}"
     }
 
-    private data class PersistedEntry(val scannedAtMillis: Long, val activities: List<PersistedActivity>)
+    private data class PersistedEntry(
+        val scannedAtMillis: Long,
+        val activities: List<PersistedActivity>,
+        val version: Int = 0,
+        val locations: Map<String, List<String>>? = null,
+    )
 
     private data class PersistedActivity(
         val type: String,
