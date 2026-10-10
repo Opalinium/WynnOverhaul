@@ -279,6 +279,10 @@ BLADES = {
     "SPEAR:GREATAXE_HEW": ("flat", 17.0, 8.0),
     "SPEAR:GREATAXE_X": ("flat", 17.0, 8.0),
     "SPEAR:HAMMER": ("flat", 9.0, 7.0),
+    "SPEAR:GREATSWORD": ("flat", 34.0, 3.0),
+    "SPEAR:GREATSWORD_DRAW": ("flat", 34.0, 3.0),
+    "SPEAR:GREATSWORD_THRUST": ("flat", 34.0, 3.0),
+    "SPEAR:GREATSWORD_CLEAVE": ("flat", 34.0, 3.0),
     "SPEAR:HAMMER_SWEEP": ("flat", 9.0, 7.0),
     "SPEAR:HAMMER_QUAKE": ("flat", 9.0, 7.0),
 }
@@ -386,7 +390,7 @@ def load_stances(src):
     return {k: (v[0], v[1], v[4]) for k, v in load_states(src).items()}
 
 
-WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "SPEAR:GLAIVE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (1, 28), "WAND": (9, 28), "RELIK": (2, 25), "BOW": (10, 24), "BOW:FIREARM": (10, 16), "SPEAR:TWIN": (16, 30), "SPEAR:AXE": (7, 26), "SPEAR:GREATAXE": (8, 33), "SPEAR:HAMMER": (13, 28)}
+WEAPON_LEN = {"SPEAR": (14, 34), "SPEAR:SCYTHE": (14, 34), "SPEAR:GLAIVE": (14, 34), "WAND:STAFF": (14, 34), "DAGGER": (1, 28), "WAND": (9, 28), "RELIK": (2, 25), "BOW": (10, 24), "BOW:FIREARM": (10, 16), "SPEAR:TWIN": (16, 30), "SPEAR:AXE": (7, 26), "SPEAR:GREATAXE": (8, 33), "SPEAR:GREATSWORD": (11, 39), "SPEAR:GREATSWORD_DRAW": (11, 39), "SPEAR:GREATSWORD_THRUST": (11, 39), "SPEAR:GREATSWORD_CLEAVE": (11, 39), "SPEAR:HAMMER": (13, 28)}
 
 
 def render_stances(src, out_dir, only=None):

@@ -4,6 +4,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+### Added
+- A Greatsword moveset with its own stance and strokes.
+
 ## 1.5.0 - 2026-10-09
 
 ### Added

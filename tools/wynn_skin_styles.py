@@ -12,7 +12,9 @@ SPEAR = {
     "SPEAR:AXE": ["galvanic_decollator"],
     "SPEAR:GREATAXE": [
         "aurora_battleaxe", "miasmic_axe", "mosaic_axe", "evergreen_axe",
-        "paladin_greatsword", "silver_zweihander", "shark_greatsword", "crimson_greatsword", "blueshift_greatsword", "tisaun_greatsword",
+    ],
+    "SPEAR:GREATSWORD": [
+        "cruor_slate", "paladin_greatsword", "silver_zweihander", "shark_greatsword", "crimson_greatsword", "blueshift_greatsword", "tisaun_greatsword",
     ],
     "SPEAR:HAMMER": [
         "geomancer_hammer", "halfmoon_hammer", "highlands_gavel", "mora_hammer", "phoenix_hammer", "scrap_hammer",

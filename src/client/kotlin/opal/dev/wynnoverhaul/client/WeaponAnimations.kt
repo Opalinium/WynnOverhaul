@@ -1281,7 +1281,7 @@ object WeaponAnimations {
             off.xRot = offX
             off.yRot = offY
             off.zRot = offZ
-            applyGrip(main, off, s, yaw, out[HEAD_A], out[HEAD_Y], gripWeight * relax, (gripOffset + slide).coerceAtLeast(GRIP_MIN_OFFSET))
+            applyGrip(main, off, s, yaw, out[HEAD_A], out[HEAD_Y], gripWeight * relax, (gripOffset + slide).coerceAtLeast(minOf(GRIP_MIN_OFFSET, gripOffset)))
             !armInsideBody(off, offShoulder, yaw)
         }
         var slideGoal = 0f
