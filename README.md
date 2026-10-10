@@ -21,16 +21,20 @@
 - **Hold-to-attack** that follows your weapon's attack speed (from the item lore or the attack speed attribute) with slightly randomized timing. Bows hold right-click for you.
 - **Spell combo guard** pauses auto-attack and swing animations while you cast (R-L-R, or L-R-L with a bow), so it never interrupts a spell.
 - **Souls camera**, a free orbit camera around your character that you can toggle and recenter.
+- **Hit feedback** with weighty swing holds and recoil, layered impact sounds, slash arcs, sparks, and floating damage numbers that scale with the hit and are colored by element.
 
 ### Animations
-- Swing sets for spears, daggers, wands, reliks and bows, with combos, spell casts, sound effects and weapon trails.
-- Idle, walk and sprint stances in first and third person.
-- A locomotion layer that bends limbs as characters move, for you and other players.
-- Per-item style overrides and an in-game preview.
+- Full movesets for every weapon type, each with its own stance, idle, walk and sprint suite and a chain of strokes: Twinblades, Axe, Great axe, Hammer, Naginata and more, plus spell casts, sound effects and weapon trails.
+- The moveset is picked from the skin model on the weapon, so a battleaxe swings like an axe and a mace like a hammer. Per-item overrides and an in-game preview are still there.
+- Whole-body attacks: the lead leg plants, the hips twist into the strike, and attacks have walking and sprinting variants.
+- A locomotion layer that bends limbs as characters move, with walk, swim, crawl, climb, ride, glide, eat, block, hurt and death animations, for you and other players.
+- Gathering animations for pickaxes, axes, scythes and fishing rods that follow the node.
+- A first-person body option, and animations defined in YAML files you can edit or extend.
 
 ### HUD
 - Health, mana, resource, XP, sprint, mount energy, guild and region bars.
-- Compass, ability cooldowns, potion effects, a spell bar with combo indicator, quest log and dialogue.
+- Compass, ability cooldowns, potion effects, a spell bar with combo indicator, class buffs for shields, summons and puppets, quest log and dialogue.
+- The HUD hides during cutscenes, over the debug screen and while the player list is open.
 - Six hotbar styles: Classic, Glass, Tiles, Arc, Radial and Cross.
 - Chat restyle with channel buttons and a direct message panel.
 - Quest, level-up, discovery and location toasts.
@@ -45,7 +49,8 @@
 ### Quests and the Content Book
 - A searchable, sortable replacement for the Content Book, built from the live container.
 - Tracking and untracking clicks the real slot, so it always matches the game.
-- Quest beacon pointer that follows Wynncraft's marker entity, with wiki coordinates as a fallback.
+- Tracking goes straight to the page an activity was seen on, using the container update packets to move through the book quickly.
+- Quest beacon pointer that follows Wynncraft's marker entity, with wiki coordinates as a fallback, and dungeon waypoints that point at the dungeon entrances.
 - A quest reference screen.
 
 ### Lootruns
@@ -56,6 +61,9 @@
 
 ### Inventory and items
 - Custom inventory screen with item sorting.
+- Custom screens for the bank, loot chests, the Item Upgrader, powders, ascension, the identifier, selling, repair and merchants, each with its own toggle.
+- Identified stats show their roll as a percentage from red to aqua.
+- Loot beams over dropped items.
 - Tooltip that compares an item to what you have equipped.
 - Price checks through wynnventory.
 - Rare item alerts, shift-drag to move items, and a hotbar overscroll lock.
@@ -74,6 +82,8 @@
 | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin) | 1.13.13+kotlin.2.4.10 or newer | required |
 | [Mod Menu](https://modrinth.com/mod/modmenu) | 20.0.1 | optional, adds a config screen entry |
 | [Voxy](https://modrinth.com/mod/voxy) | 0.2.19-beta | optional, hides LOD terrain outside the Wynncraft map |
+| [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) | any | optional, receives the tracked quest and discovery waypoints |
+| Cinder | any | optional, receives the Wynncraft map bounds to skip LODs outside the map |
 
 ## Installation
 
@@ -116,13 +126,13 @@ The jar is written to `build/libs/`. The project uses Fabric Loom, Kotlin and Sh
 
 ## Network access
 
-WynnOverhaul connects to these services and nothing else:
+WynnOverhaul connects to these services and nothing else. The Wynncraft wiki reference data is bundled with the mod, so the wiki itself is never contacted.
 
 | Service | Used for |
 | --- | --- |
 | `api.wynncraft.com` | guild territory |
 | `wynnventory.com` | market prices |
-| `wynncraft.wiki.gg` | quest data |
+| `api.mojang.com` | checking that a direct message sender is a real player |
 
 ## Support
 
