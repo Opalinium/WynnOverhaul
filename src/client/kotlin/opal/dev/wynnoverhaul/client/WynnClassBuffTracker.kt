@@ -307,8 +307,8 @@ object WynnClassBuffTracker {
     private const val JUDRAJIM_GROUP = "Judrajim"
     private const val ITEM_SCAN_RADIUS = 12.0
     private const val LABEL_SCAN_RADIUS = 48.0
-    private const val RECENT_MILLIS = 300L
-    private const val CAST_WINDOW_MILLIS = 250L
+    private const val RECENT_MILLIS = 900L
+    private const val CAST_WINDOW_MILLIS = 800L
     private const val REGISTER_DELAY_MILLIS = 200L
     private const val JUDRAJIM_LINGER_MILLIS = 1000L
 }

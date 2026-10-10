@@ -46,6 +46,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ### Fixed
 - Tracked dungeons point at their known entrance coordinates instead of being triangulated from the beacon, so the waypoint no longer drifts when you move or climb. A dungeon beacon seen while tracking something else snaps to the entrance it points at.
+- Shield summons are matched when the cast message arrives up to 0.8 seconds before the shield appears.
+- Mantle, Broken Mantle and Guardian Angels are matched again after the Wynncraft resource pack renumbered their models.
+- The owdump report lists nearby item displays with their model ids, plus the class buff tracker state.
 
 ## 1.4.0 - 2026-10-01
 

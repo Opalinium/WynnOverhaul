@@ -22,6 +22,7 @@ import net.minecraft.network.chat.Style
 import net.minecraft.world.entity.Display
 import net.minecraft.world.phys.AABB
 import opal.dev.wynnoverhaul.mixin.client.BossHealthOverlayAccessor
+import opal.dev.wynnoverhaul.mixin.client.ItemDisplayAccessor
 import net.minecraft.world.inventory.AbstractContainerMenu
 import opal.dev.wynnoverhaul.WynnOverhaul
 import java.nio.file.Files
@@ -239,7 +240,20 @@ object WynnStateDump {
                 val distance = "%.1f".format(entity.distanceTo(player))
                 appendLine("${BuiltInRegistries.ENTITY_TYPE.getKey(entity.type)} id=${entity.id} dist=$distance ${describe(label)}")
             }
+            appendLine("== Item displays within 12 blocks")
+            val itemBox = player.boundingBox.inflate(12.0)
+            for (entity in level.getEntities(player, itemBox) { it is Display.ItemDisplay || it.passengers.any { p -> p is Display.ItemDisplay } }) {
+                val stacks = (listOf(entity) + entity.passengers).filterIsInstance<Display.ItemDisplay>().map {
+                    val stack = (it as ItemDisplayAccessor).`wynnoverhaul$getItemStack`()
+                    "${BuiltInRegistries.ITEM.getKey(stack.item)} cmd=${stack.get(DataComponents.CUSTOM_MODEL_DATA)?.floats()}"
+                }
+                val distance = "%.1f".format(entity.distanceTo(player))
+                appendLine("${BuiltInRegistries.ENTITY_TYPE.getKey(entity.type)} id=${entity.id} dist=$distance passengers=${entity.passengers.size} age=${entity.tickCount} items=$stacks")
+            }
         }
+        appendLine("== Class buffs")
+        appendLine("classKey=${WynnClassTracker.classKey} lastCast=${WynnSpellTracker.lastCast?.let { "${it.name} ${System.currentTimeMillis() - it.atMillis}ms ago" }}")
+        for (buff in WynnClassBuffTracker.buffs) appendLine(buff.toString())
     }
 
     private fun describe(component: Component): String = buildString {
