@@ -2,6 +2,8 @@ package opal.dev.wynnoverhaul.client
 
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.FormattedText
+import net.minecraft.network.chat.Style
 import net.minecraft.world.scores.DisplaySlot
 import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
@@ -9,7 +11,25 @@ import net.minecraft.world.scores.PlayerTeam
 object WynnScoreboardTracker {
     data class Tracked(val type: String, val name: String, val nextTask: String)
 
+    data class PartyMember(
+        val name: String,
+        val level: Int?,
+        val health: Int?,
+        val healthColor: Int?,
+        val dead: Boolean,
+        val online: Boolean = true,
+        val fraction: Float? = null,
+    )
+
+    data class Party(val level: Int?, val members: List<PartyMember>, val rawLines: List<String>)
+
     var current: Tracked? = null
+        private set
+
+    var party: Party? = null
+        private set
+
+    var rawLines: List<Component> = emptyList()
         private set
 
     var sidebarText: String = ""
@@ -26,6 +46,8 @@ object WynnScoreboardTracker {
         val objective = scoreboard?.getDisplayObjective(DisplaySlot.SIDEBAR)
         if (scoreboard == null || objective == null) {
             current = null
+            party = null
+            rawLines = emptyList()
             sidebarText = ""
             sidebarTitle = ""
             sidebarLines = emptyList()
@@ -38,7 +60,10 @@ object WynnScoreboardTracker {
             .take(15)
             .map { entry -> PlayerTeam.formatNameForTeam(scoreboard.getPlayersTeam(entry.owner()), entry.ownerName()) as Component }
 
-        val texts = lines.map { clean(it.string) }
+        rawLines = lines
+        val allTexts = lines.map { clean(it.string) }
+        val partyEnd = extractParty(lines, allTexts)
+        val texts = if (party == null) allTexts else allTexts.mapIndexed { index, text -> if (index in partyEnd) "" else text }
         sidebarText = joinWrapped(texts)
 
         val rawTitle = clean(objective.displayName.string)
@@ -72,6 +97,53 @@ object WynnScoreboardTracker {
         current = Tracked(type, name, joinWrapped(taskParts))
     }
 
+    private fun extractParty(lines: List<Component>, texts: List<String>): IntRange {
+        val headerIndex = texts.indexOfFirst { PARTY_HEADER.matches(it) }
+        if (headerIndex < 0) {
+            party = null
+            return IntRange.EMPTY
+        }
+        val level = PARTY_HEADER.find(texts[headerIndex])!!.groupValues[1].toIntOrNull()
+        var end = headerIndex + 1
+        val members = ArrayList<PartyMember>()
+        while (end < texts.size && texts[end].startsWith("-")) {
+            members.add(parseMember(lines[end], texts[end]))
+            end++
+        }
+        party = Party(level, members, texts.subList(headerIndex, end).toList())
+        return headerIndex until end
+    }
+
+    private fun parseMember(line: Component, text: String): PartyMember {
+        val match = MEMBER.matchEntire(text)
+        val name = match?.groupValues?.get(2)?.trim() ?: text.removePrefix("-").trim()
+        val level = match?.groupValues?.get(3)?.toIntOrNull()
+        val health = match?.let { DIGITS.find(it.groupValues[1])?.value?.toIntOrNull() }
+        var color: Int? = null
+        var struck = false
+        var inBar = false
+        var barDone = false
+        var filled = 0
+        var empty = 0
+        line.visit(FormattedText.StyledContentConsumer<Unit> { style, piece ->
+            if (color == null && piece.any { it.isDigit() }) color = style.color?.value?.let { 0xFF000000.toInt() or it }
+            if (style.isStrikethrough && piece.isNotBlank()) struck = true
+            for (ch in piece) {
+                if (barDone) break
+                if (!inBar) {
+                    if (ch == '[') inBar = true
+                } else if (ch == ']') {
+                    barDone = true
+                } else if (ch == '|') {
+                    if (style.color?.value == BAR_EMPTY_RGB) empty++ else filled++
+                }
+            }
+            java.util.Optional.empty()
+        }, Style.EMPTY)
+        val fraction = if (match != null && filled + empty > 0) filled.toFloat() / (filled + empty) else null
+        return PartyMember(name, level, health, color, struck || health == 0, match != null, if (struck || health == 0) 0f else fraction)
+    }
+
     private fun clean(text: String): String {
         val result = TextClean.clean(text)
         return if (result.all { it == SIDEBAR_SPACER || it.isWhitespace() }) "" else result
@@ -89,9 +161,13 @@ object WynnScoreboardTracker {
 
     private fun startsWhite(component: Component): Boolean = component.string.startsWith(WHITE_LEGACY_CODE)
 
+    private const val BAR_EMPTY_RGB = 0x555555
     private const val WHITE_LEGACY_CODE = "§f"
     private const val SIDEBAR_SPACER = 'À'
     private val HEADER_PATTERN = Regex("^Tracked (.+):$")
+    private val PARTY_HEADER = Regex("""^Party:?(?:\s*\[Lv\.?\s*(\d+)])?$""")
+    private val MEMBER = Regex("""^-\s*\[([^\]]*)]\s*(.+?)\s*\[(\d+)]$""")
+    private val DIGITS = Regex("""\d+""")
     private val SPACER_PATTERN = Regex("""[^a-zA-Z\[\d-].*""")
     private val SERVER_BRAND_PATTERN = Regex("""(?i)^([a-z0-9-]+\.)*wynncraft\.(com|net)$""")
 }

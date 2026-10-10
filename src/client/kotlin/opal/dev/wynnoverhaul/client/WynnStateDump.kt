@@ -219,6 +219,9 @@ object WynnStateDump {
         for (event in overlay.`wynnoverhaul$getEvents`().values) {
             appendLine("${describe(event.name)} progress=${event.progress}")
         }
+        appendLine("== Sidebar")
+        appendLine(describe(Component.literal(WynnScoreboardTracker.sidebarTitle)))
+        for (line in WynnScoreboardTracker.rawLines) appendLine(describe(line))
         appendLine("== Potion effects")
         if (player != null) {
             for (effect in player.activeEffects) {

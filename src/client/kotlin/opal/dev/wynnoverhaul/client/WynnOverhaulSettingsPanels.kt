@@ -1147,6 +1147,27 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Replaces the vanilla scoreboard sidebar (tracked quest, daily/weekly objectives) with a draggable panel. Also hides the vanilla sidebar it replaces.",
                 config.questLogHudEnabled,
             ) { config.questLogHudEnabled = it }
+            checkbox(
+                "Show party panel",
+                "Lists your party members in their own panel instead of inside the quest log, with their health, level and whether they are dead or offline.",
+                config.partyHudEnabled,
+            ) { config.partyHudEnabled = it }
+            dropdown(
+                "Party name colours",
+                "Colour by player gives each member their own steady colour so you can tell them apart at a glance. Colour by health tints each name green, amber or red as their health drops. Off keeps other names plain. Your own name is always gold.",
+                listOf("PLAYER" to "By player", "HEALTH" to "By health", "OFF" to "Off"),
+                config.partyNameColors,
+            ) { config.partyNameColors = it }
+            checkbox(
+                "Party health bars",
+                "Draws a smooth health bar under each member that shifts from green to amber to red and pulses when they are low. Dead members show DEAD and offline members show offline.",
+                config.partyHealthBars,
+            ) { config.partyHealthBars = it }
+            checkbox(
+                "Party distances",
+                "Shows how many blocks away each member is when they are close enough to be loaded.",
+                config.partyShowDistance,
+            ) { config.partyShowDistance = it }
 
             header("Bars")
             dropdown(
