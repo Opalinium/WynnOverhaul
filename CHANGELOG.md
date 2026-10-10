@@ -44,6 +44,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Depositing an item into the bank first tops up an existing stack of the same item, on any page, before using an empty slot.
 - Item rarity is read from the item's tier data when it has any, and a colored symbol before the name no longer decides the tier.
 
+### Fixed
+- Tracked dungeons point at their known entrance coordinates instead of being triangulated from the beacon, so the waypoint no longer drifts when you move or climb. A dungeon beacon seen while tracking something else snaps to the entrance it points at.
+
 ## 1.4.0 - 2026-10-01
 
 ### Added

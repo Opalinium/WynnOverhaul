@@ -168,7 +168,11 @@ object QuestBeaconTracker {
                 ?: beacons.firstOrNull { withinMarkerProximity(it.first, position) }?.second
                 ?: continue
             if (kind.isQuest || kind in fresh) continue
-            fresh[kind] = BeaconTriangulator.estimate(kind, player, position, distance)
+            fresh[kind] = if (kind == ActivityType.DUNGEON) {
+                DungeonEntrances.snap(player, position, distance) ?: BeaconTriangulator.estimate(kind, player, position, distance)
+            } else {
+                BeaconTriangulator.estimate(kind, player, position, distance)
+            }
         }
         val targets = HashMap<ActivityType, Vec3>(BeaconTriangulator.recent())
         targets.putAll(fresh)
@@ -207,7 +211,9 @@ object QuestBeaconTracker {
             ?: ActivityType.entries.filter { it.displayName.equals(tracked.type, ignoreCase = true) }
                 .ifEmpty { discoveryTypesFor(tracked.type) }
         for (type in candidateTypes) {
-            val coord = QuestWikiFetcher.find(type, tracked.name)?.coord ?: continue
+            val coord = (if (type == ActivityType.DUNGEON) DungeonEntrances.at(tracked.name) else null)
+                ?: QuestWikiFetcher.find(type, tracked.name)?.coord
+                ?: continue
             return waypointMatch(coord.x, coord.y, coord.z, tracked.type, WIKI_WAYPOINT_COLOR, WaypointIcons.activity(type))
         }
         return null

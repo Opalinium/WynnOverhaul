@@ -52,6 +52,7 @@ object WynnOverhaulGate {
             PartyBuffTracker.clear()
             HudLayoutManager.clearSizes()
             ContentBookCache.clearTracking()
+            DungeonEntrances.reset()
             ObjectiveClaims.clear()
             DiscoveryTracker.clear()
             XaeroHook.clear()
