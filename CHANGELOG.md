@@ -4,6 +4,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.5.0 - 2026-10-09
+
 ### Added
 - Your hits land with weight: the weapon swing holds and recoils on contact, layered impact sounds change with your weapon and deepen on heavy hits, sparks burst from the target in the hit's element, and spell hits end in a ground shockwave. Heavier hits compared with your recent hits respond more strongly, and strength is adjustable with a toggle for each effect.
 - Floating damage numbers grow with how hard the hit is and are colored by element. Four styles (Pop, Float, Slam, Fountain), a size slider and compact formatting such as 2.4k are available in the Combat tab.
