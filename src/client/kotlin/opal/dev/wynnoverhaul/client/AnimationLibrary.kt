@@ -28,6 +28,7 @@ import java.nio.file.Path
 internal object AnimationLibrary {
     private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "spell", "tool", "locomotion")
     private const val RESOURCE_ROOT = "/assets/wynnoverhaul/animations/"
+    private const val README_NAME = "README.txt"
     private const val CHECK_TICKS = 20
     private const val MAX_WARNINGS_SHOWN = 5
 
@@ -53,6 +54,7 @@ internal object AnimationLibrary {
     }
 
     fun register() {
+        writeReadme()
         ClientTickEvents.END_CLIENT_TICK.register { client -> watch(client) }
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             dispatcher.register(
@@ -71,6 +73,16 @@ internal object AnimationLibrary {
                         },
                     ),
             )
+        }
+    }
+
+    private fun writeReadme() {
+        runCatching {
+            val target = directory.resolve(README_NAME)
+            if (Files.exists(target)) return
+            val stream = AnimationLibrary::class.java.getResourceAsStream("$RESOURCE_ROOT$README_NAME") ?: return
+            Files.createDirectories(directory)
+            stream.use { Files.copy(it, target) }
         }
     }
 
