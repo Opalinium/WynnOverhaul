@@ -7,6 +7,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 ### Added
 - A Greatsword moveset with its own stance and strokes.
 - The party panel shows health bars, colored names, dead and offline states and distances, with your own name in gold.
+- Fishing rods cast a bobber at the node when a fishing gather starts and reel it in when it finishes.
 
 ## 1.5.0 - 2026-10-09
 

@@ -693,6 +693,10 @@ object WeaponAnimations {
                 suppress = false
                 return
             }
+            if (styleKey.startsWith("TOOL:ROD") && !previewing) {
+                suppress = true
+                return
+            }
             val gathering = styleKey.startsWith("TOOL:")
             val now = System.nanoTime()
             val gap = if (lastBeginNanos == 0L) Float.MAX_VALUE else (now - lastBeginNanos) / 1_000_000_000f
@@ -769,6 +773,9 @@ object WeaponAnimations {
         private fun watchGather(client: Minecraft, player: LocalPlayer) {
             val key = if (enabled() && !previewing) toolKey(player.mainHandItem) else null
             GatherSession.tick(client, player, key)
+            val started = GatherSession.takeStarted()
+            if (started && key == "TOOL:ROD") POSES["TOOL:ROD"]?.let { beginSpell(player, it) }
+            if (GatherSession.fishing()) readyUntil = System.nanoTime() + READY_NANOS
             if (GatherSession.takeCompleted() && key == "TOOL:ROD") POSES["TOOL:ROD_REEL"]?.let { beginSpell(player, it) }
         }
 

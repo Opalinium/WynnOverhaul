@@ -35,6 +35,7 @@ object WynnOverhaulGate {
             WynnResourceBarTracker.clear()
             WynnGuildBarTracker.clear()
             WynnRegionBarTracker.clear()
+            SimulatedCast.clear()
             WynnCutsceneTracker.clear()
             WynnSpellTracker.clear()
             WynnClassTracker.clear()
