@@ -234,9 +234,10 @@ class WynnOverhaulWorkbenchScreen(menu: AbstractContainerMenu, private val spec:
         private val REMOVE_POWDERS = Spec("", "Remove Powders", listOf(13), null, upgrader = true)
         private val ASCEND = Spec("", "Ascend Equipment", listOf(11), 24, upgrader = true)
         private val IDENTIFY = Spec("\uE018", "Item Identifier", listOf(11, 12, 13, 14, 15, 20, 21, 22, 23, 24), null, 5)
+        private val IDENTIFY_AUGMENTED = Spec("", "Identify with Augments", listOf(11, 13, 14, 15), null)
         private val SELL = Spec("\uE016", "Sell Items", listOf(11, 12, 13, 14, 15, 20, 21, 22, 23, 24), null, 5)
         private val REPAIR = Spec("", "Repair Items", listOf(11, 12, 13, 14, 15), null)
-        private val SPECS = listOf(UPGRADE_POWDERS, REMOVE_POWDERS, ASCEND, IDENTIFY, SELL, REPAIR)
+        private val SPECS = listOf(UPGRADE_POWDERS, REMOVE_POWDERS, ASCEND, IDENTIFY, IDENTIFY_AUGMENTED, SELL, REPAIR)
 
         fun specFor(title: String): Spec? = SPECS.firstOrNull { title.contains(it.marker) }
     }

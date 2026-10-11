@@ -9,6 +9,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The party panel shows health bars, colored names, dead and offline states and distances, with your own name in gold.
 - Fishing rods cast a bobber at the node when a fishing gather starts and reel it in when it finishes.
 
+### Fixed
+- The augmented Item Identifier opens in the workbench layout.
+
 ## 1.5.0 - 2026-10-09
 
 ### Added
