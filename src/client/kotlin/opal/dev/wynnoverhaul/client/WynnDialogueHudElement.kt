@@ -12,6 +12,9 @@ class WynnDialogueHudElement : HudElement {
     private var loggedError = false
     private var wasVisible = false
     private var shownSince = 0L
+    private var lastBody = ""
+    private var lastSpeaker: String? = null
+    private var lastChoiceStage = false
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker) {
         try {
@@ -58,6 +61,14 @@ class WynnDialogueHudElement : HudElement {
             wasVisible = true
             shownSince = now
             HudLayoutManager.forgetSize(ID)
+        }
+        if (!isHudDesignerOpen()) {
+            val choiceStage = rawChoices.isNotEmpty()
+            val continues = body.startsWith(lastBody) || lastBody.startsWith(body)
+            if (choiceStage != lastChoiceStage || speaker != lastSpeaker || !continues) HudLayoutManager.forgetSize(ID)
+            lastChoiceStage = choiceStage
+            lastSpeaker = speaker
+            lastBody = body
         }
         val fade = HudStyle.smoothstep(((now - shownSince) / FADE_MS).coerceIn(0f, 1f))
         val lift = ((1f - fade) * LIFT).toInt()

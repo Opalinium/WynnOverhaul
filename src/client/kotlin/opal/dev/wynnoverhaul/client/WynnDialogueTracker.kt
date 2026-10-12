@@ -60,6 +60,8 @@ object WynnDialogueTracker {
         windowStart = 0
         selIndex = null
         pendingUntil = 0L
+        outstandingNudges = 0
+        rowBeforeNudge = null
         stableSpeaker = null
         stableBody = ""
     }
@@ -90,20 +92,20 @@ object WynnDialogueTracker {
         val now = System.currentTimeMillis()
         val cleaned = cleanText(raw)
         val choiceModeHint = raw.contains("to choose option", ignoreCase = true)
-        requiresShift = raw.contains("to continue", ignoreCase = true) ||
+        val shiftNeeded = raw.contains("to continue", ignoreCase = true) ||
             raw.contains("to confirm", ignoreCase = true)
 
         val visited = visitParts(message)
         val live = visited.choices
-        hasChoices = live.isNotEmpty() || choiceModeHint
+        val choicesNow = live.isNotEmpty() || choiceModeHint
 
         val stripped = stripControls(cleaned)
         val (fallbackName, rest) = extractSpeaker(stripped)
         val visitedSpeaker = cleanText(visited.speakerRaw).trim()
-        speaker = visitedSpeaker.ifBlank { fallbackName }
+        val newSpeaker = visitedSpeaker.ifBlank { fallbackName }
 
         val visitedBody = stripControls(cleanText(visited.bodyRaw))
-        body = if (visitedBody.isNotBlank()) {
+        val newBody = if (visitedBody.isNotBlank()) {
             visitedBody
         } else if (choiceModeHint) {
             val question = rest.indexOf('?')
@@ -111,10 +113,22 @@ object WynnDialogueTracker {
         } else {
             rest
         }
+        if (newBody.isBlank() && !choicesNow) return
+
+        requiresShift = shiftNeeded
+        hasChoices = choicesNow
+        speaker = newSpeaker
+        body = newBody
 
         val samePrompt = speaker == stableSpeaker &&
-            (stableBody.isEmpty() || body.startsWith(stableBody) || stableBody.startsWith(body))
+            (stableBody.isEmpty() || (body.isNotEmpty() && (body.startsWith(stableBody) || stableBody.startsWith(body))))
         if (!samePrompt) {
+            options.clear()
+            windowStart = 0
+            selIndex = null
+            pendingUntil = 0L
+        }
+        if (!hasChoices) {
             options.clear()
             windowStart = 0
             selIndex = null
@@ -147,7 +161,8 @@ object WynnDialogueTracker {
         val current = selIndex ?: 0
         selIndex = Math.floorMod(current + direction, options.size)
         pendingUntil = System.currentTimeMillis() + PENDING_NUDGE_MS
-        if (polarity == 0) {
+        outstandingNudges++
+        if (outstandingNudges == 1) {
             rowBeforeNudge = lastSelectedRow
             nudgeDirection = direction
         }
@@ -176,7 +191,7 @@ object WynnDialogueTracker {
         for ((i, c) in window.withIndex()) {
             val at = offset + i
             while (options.size <= at) options.add("")
-            options[at] = stitch(options[at], c.text)
+            options[at] = remembered(stitch(options[at], c.text))
         }
         windowStart = offset
         val strong = selectedRank?.coerceIn(0, window.size - 1)
@@ -196,6 +211,17 @@ object WynnDialogueTracker {
             current >= offset + window.size -> offset + window.size - 1
             else -> current
         }
+    }
+
+    private fun remembered(text: String): String {
+        if (text.length < REMEMBER_PREFIX) return text
+        val key = "${speaker.orEmpty()}|${text.take(REMEMBER_PREFIX)}"
+        val known = knownOptions[key]
+        if (known == null || text.length > known.length) {
+            knownOptions[key] = text
+            return text
+        }
+        return if (known.startsWith(text)) known else text
     }
 
     private fun alignWindow(window: List<NumberedChoice>): Int {
@@ -265,9 +291,9 @@ object WynnDialogueTracker {
     }
 
     private fun rowsOf(string: String, into: MutableSet<Int>) {
-        for (ch in string) {
+        for ((index, ch) in string.withIndex()) {
             val code = ch.code
-            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || code == CHOICE_MARKER_GLYPH) continue
+            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || string.getOrNull(index + 1) == ' ') continue
             val row = (code shr 4) and 0xF
             if (row in 1..8) into.add(row)
         }
@@ -281,17 +307,20 @@ object WynnDialogueTracker {
 
     private fun learnPolarity(row: Int?) {
         val before = rowBeforeNudge ?: return
-        if (polarity != 0 || row == null || row == before) return
+        if (row == null || row == before) return
+        val single = outstandingNudges == 1
         rowBeforeNudge = null
+        outstandingNudges = 0
+        if (!single) return
         val delta = row - before
         if (abs(delta) != 1) return
         polarity = if (delta * nudgeDirection > 0) 1 else -1
     }
 
     private fun selectedRowOf(string: String): Int? {
-        for (ch in string) {
+        for ((index, ch) in string.withIndex()) {
             val code = ch.code
-            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || code == CHOICE_MARKER_GLYPH) continue
+            if (code !in CHOICE_GLYPH_MIN..CHOICE_GLYPH_MAX || string.getOrNull(index + 1) == ' ') continue
             val row = (code shr 4) and 0xF
             if (code and 0xF != 0 && row in 1..8) return row
         }
@@ -352,6 +381,7 @@ object WynnDialogueTracker {
     private const val LCS_MIN_LENGTH = 12
     private const val PENDING_NUDGE_MS = 300L
     private const val SAME_MIN_LENGTH = 3
+    private const val REMEMBER_PREFIX = 12
 
     private fun cleanText(raw: String): String {
         val sb = StringBuilder(raw.length)
@@ -369,11 +399,10 @@ object WynnDialogueTracker {
     }
 
     private fun stripControls(cleaned: String): String {
-        return CONTROL_PHRASES.replace(cleaned, " ")
+        val collapsed = CONTROL_PHRASES.replace(cleaned, " ")
             .replace(WHITESPACE_RUN, " ")
             .trim()
-            .trimStart { !it.isLetter() }
-            .trim()
+        return collapsed.trimStart { !it.isLetter() }.trim().ifEmpty { if (collapsed.any { it.isLetterOrDigit() }) "" else collapsed }
     }
 
     private fun extractSpeaker(stripped: String): Pair<String?, String> {
@@ -392,12 +421,14 @@ object WynnDialogueTracker {
     private var lastSelectedRow: Int? = null
 
     private val options = ArrayList<String>()
+    private val knownOptions = HashMap<String, String>()
     private var windowStart = 0
     private var pendingUntil = 0L
     private var lastTruth: Int? = null
     private var polarity = 0
     private var rowBeforeNudge: Int? = null
     private var nudgeDirection = 0
+    private var outstandingNudges = 0
     private var selIndex: Int? = null
 
     @Volatile
@@ -412,7 +443,6 @@ object WynnDialogueTracker {
     private const val CHOICE_STYLE_SUFFIX = "/style/default/choice"
     private const val CHOICE_GLYPH_MIN = 0xE000
     private const val CHOICE_GLYPH_MAX = 0xE0FF
-    private const val CHOICE_MARKER_GLYPH = 0xE090
     private const val BODY_MARKER = "/body_"
     private const val NAMEPLATE_PATH = "/text/nameplate"
     private const val DIALOGUE_FONT_PREFIX = "hud/dialogue/"
