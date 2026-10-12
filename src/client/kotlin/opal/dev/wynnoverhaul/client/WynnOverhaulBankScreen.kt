@@ -177,12 +177,20 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
 
     private fun jumpOptions(): List<Triple<Int, Int, Int>> {
         val out = ArrayList<Triple<Int, Int, Int>>()
+        val storage = storageName()
         for (slot in intArrayOf(PREV_SLOT, NEXT_SLOT)) {
             for ((index, page) in jumpTargets(slot).withIndex()) {
-                if (index in 0..8) out.add(Triple(slot, index, page))
+                if (index in 0..8 && pageExists(storage, page)) out.add(Triple(slot, index, page))
             }
         }
         return out
+    }
+
+    private fun pageExists(storage: String, page: Int): Boolean {
+        if (page < 1) return false
+        val lastUnlocked = BankSession.lockedPageAfter(storage)
+        if (lastUnlocked != null && page > lastUnlocked) return false
+        return page == currentPage() || page in BankSession.pagesOf(storage).keys
     }
 
     private fun navCost(from: Int, target: Int): Int {

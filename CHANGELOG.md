@@ -11,6 +11,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.
+- Bank deposits only jump to bank pages that exist and are unlocked.
 
 ## 1.5.0 - 2026-10-09
 
