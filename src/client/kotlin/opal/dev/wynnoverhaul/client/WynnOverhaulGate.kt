@@ -18,7 +18,12 @@ object WynnOverhaulGate {
     }
 
     fun refresh(client: Minecraft) {
-        val onWynn = client.currentServer?.ip?.contains("wynncraft", ignoreCase = true) == true
+        val ip = client.currentServer?.ip
+        if (ip != cachedIp) {
+            cachedIp = ip
+            cachedOnWynn = ip?.contains("wynncraft", ignoreCase = true) == true
+        }
+        val onWynn = cachedOnWynn
         val fresh = System.currentTimeMillis() - lastActionBarMillis < HEARTBEAT_TIMEOUT_MS
         val inGameNow = onWynn && fresh && !inCharacterSelect(client)
         if (inGame && !inGameNow) {
@@ -63,9 +68,21 @@ object WynnOverhaulGate {
     }
 
     private fun inCharacterSelect(client: Minecraft): Boolean {
-        val title = client.gui.screen()?.title?.string ?: return false
-        return CHARACTER_SELECT.containsMatchIn(TextClean.clean(title))
+        val screen = client.gui.screen()
+        if (screen == null) {
+            checkedScreen = null
+            return false
+        }
+        if (screen === checkedScreen) return checkedSelect
+        checkedScreen = screen
+        checkedSelect = CHARACTER_SELECT.containsMatchIn(TextClean.clean(screen.title.string))
+        return checkedSelect
     }
+
+    private var cachedIp: String? = null
+    private var cachedOnWynn = false
+    private var checkedScreen: Any? = null
+    private var checkedSelect = false
 
     @Volatile
     private var lastActionBarMillis: Long = 0L

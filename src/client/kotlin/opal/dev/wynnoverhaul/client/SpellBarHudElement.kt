@@ -38,33 +38,20 @@ class SpellBarHudElement : HudElement {
 
         val font = Minecraft.getInstance().font
         val base = WynnClassTracker.baseNames()
-        val showPlaceholder = preview && base == null
-        val names = (0 until SLOT_COUNT).map { slot ->
-            base?.getOrNull(slot) ?: DEMO_NAMES.getOrNull(slot).takeIf { showPlaceholder }
-        }
-        val keys = (0 until SLOT_COUNT).map { QuickCast.keyLabel(it) }
-        val costs = (0 until SLOT_COUNT).map { slot ->
-            names[slot]?.let { WynnSpellTracker.spellCosts(it) }?.ifEmpty { null }
-                ?: if (showPlaceholder) DEMO_COSTS.getOrNull(slot) ?: emptyList() else emptyList()
-        }
+        val style = WynnOverhaulConfig.current.spellBarStyle.takeIf { it in STYLES } ?: ROWS
+        val derived = derivedFor(font, base, preview, style, now)
+        val names = derived.names
+        val keys = derived.keys
+        val nameParts = derived.nameParts
+        val costParts = derived.costParts
+        val badgeW = derived.badgeW
         val lastName = WynnSpellTracker.lastCast?.takeIf { WynnSpellTracker.castVisible(now) }?.name
-
-        val nameParts = (0 until SLOT_COUNT).map { slot -> Component.literal("${slot + 1}  ${names[slot] ?: UNKNOWN_NAME}") }
-        val costParts = (0 until SLOT_COUNT).map { slot ->
-            val cost = costs[slot].firstOrNull { it.mana } ?: costs[slot].firstOrNull()
-            cost?.let { it to Component.literal("-${it.amount}") }
-        }
         val lit = BooleanArray(SLOT_COUNT) { slot ->
-            val match = prefix.isNotEmpty() && QuickCast.slotCombo(slot).take(prefix.size) == prefix
+            val match = prefix.isNotEmpty() && comboStartsWith(QuickCast.slotCombo(slot), prefix)
             match || (lastName != null && names[slot] == lastName)
         }
         val fired = BooleanArray(SLOT_COUNT) { slot -> lastName != null && names[slot] == lastName }
-        val badgeW = (0 until SLOT_COUNT).maxOf { slot -> keyBadgeWidth(font, keys[slot], slot) }
-        val costW = costParts.maxOf { it?.second?.let { c -> font.width(c) } ?: 0 }
-
-        val style = WynnOverhaulConfig.current.spellBarStyle.takeIf { it in STYLES } ?: ROWS
-        val (contentW, contentH) = sizeFor(style, font, names, nameParts, badgeW, costW)
-        val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, contentH)
+        val (boxW, boxH) = HudLayoutManager.stableSize(ID, derived.contentW, derived.contentH)
 
         val scale = HudLayoutManager.scale(ID)
         val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
@@ -86,6 +73,51 @@ class SpellBarHudElement : HudElement {
         }
 
         if (scaled) graphics.pose().popMatrix()
+    }
+
+    private class Derived(
+        val base: List<String>?,
+        val preview: Boolean,
+        val style: String,
+        val builtAt: Long,
+        val names: List<String?>,
+        val keys: List<String?>,
+        val nameParts: List<Component>,
+        val costParts: List<Pair<WynnSpellSegments.SpellCost, Component>?>,
+        val badgeW: Int,
+        val contentW: Int,
+        val contentH: Int,
+    )
+
+    private var derived: Derived? = null
+
+    private fun derivedFor(font: net.minecraft.client.gui.Font, base: List<String>?, preview: Boolean, style: String, now: Long): Derived {
+        val cached = derived
+        if (cached != null && cached.base === base && cached.preview == preview && cached.style == style && now - cached.builtAt < DERIVED_MAX_AGE_MS) return cached
+        val showPlaceholder = preview && base == null
+        val names = (0 until SLOT_COUNT).map { slot ->
+            base?.getOrNull(slot) ?: DEMO_NAMES.getOrNull(slot).takeIf { showPlaceholder }
+        }
+        val keys = (0 until SLOT_COUNT).map { QuickCast.keyLabel(it) }
+        val costs = (0 until SLOT_COUNT).map { slot ->
+            names[slot]?.let { WynnSpellTracker.spellCosts(it) }?.ifEmpty { null }
+                ?: if (showPlaceholder) DEMO_COSTS.getOrNull(slot) ?: emptyList() else emptyList()
+        }
+        val nameParts = (0 until SLOT_COUNT).map { slot -> Component.literal("${slot + 1}  ${names[slot] ?: UNKNOWN_NAME}") }
+        val costParts = (0 until SLOT_COUNT).map { slot ->
+            val cost = costs[slot].firstOrNull { it.mana } ?: costs[slot].firstOrNull()
+            cost?.let { it to Component.literal("-${it.amount}") }
+        }
+        val badgeW = (0 until SLOT_COUNT).maxOf { slot -> keyBadgeWidth(font, keys[slot], slot) }
+        val costW = costParts.maxOf { it?.second?.let { c -> font.width(c) } ?: 0 }
+        val (contentW, contentH) = sizeFor(style, font, names, nameParts, badgeW, costW)
+        return Derived(base, preview, style, now, names, keys, nameParts, costParts, badgeW, contentW, contentH).also { derived = it }
+    }
+
+    private fun comboStartsWith(combo: List<Boolean>, prefix: List<Boolean>): Boolean {
+        if (combo.size < prefix.size) return false
+        for (i in prefix.indices) if (combo[i] != prefix[i]) return false
+        return true
     }
 
     private fun drawRows(
@@ -373,6 +405,7 @@ class SpellBarHudElement : HudElement {
     companion object {
         const val ID = "spell_bar"
         const val SLOT_COUNT = 4
+        const val DERIVED_MAX_AGE_MS = 250L
         const val ROW_H = 16
         const val PAD = 4
         const val GAP = 6

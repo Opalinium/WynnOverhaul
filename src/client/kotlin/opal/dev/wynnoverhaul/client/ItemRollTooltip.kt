@@ -37,7 +37,20 @@ object ItemRollTooltip {
         }
     }
 
+    private val rollCache = java.util.IdentityHashMap<Component, Float>()
+
     private fun rollOf(line: Component): Float? {
+        val cached = rollCache[line]
+        if (cached != null) return if (cached.isNaN()) null else cached
+        val roll = computeRoll(line)
+        if (rollCache.size >= ROLL_CACHE_LIMIT) rollCache.clear()
+        rollCache[line] = roll ?: Float.NaN
+        return roll
+    }
+
+    private const val ROLL_CACHE_LIMIT = 1024
+
+    private fun computeRoll(line: Component): Float? {
         var seenValue = false
         var meter = -1
         line.visit(

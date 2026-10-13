@@ -150,12 +150,12 @@ object LocomotionAnimations {
         var pelvis = 0f
     }
 
-    private val bodies = HashMap<Int, Body>()
+    private val bodies = it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap<Body>()
 
     @JvmStatic
     fun capture(entity: Avatar, state: AvatarRenderState) {
         if (!enabled()) return
-        val body = bodies.getOrPut(state.id) { Body() }
+        val body = bodies.get(state.id) ?: Body().also { bodies.put(state.id, it) }
         val delta = entity.deltaMovement
         body.vy = delta.y.toFloat()
         body.hSpeed = Math.sqrt(delta.x * delta.x + delta.z * delta.z).toFloat()
@@ -264,22 +264,29 @@ object LocomotionAnimations {
         val values = FloatArray(21)
         val pivots = FloatArray(12)
 
+        private fun rotations(part: ModelPart, at: Int) {
+            values[at] = part.xRot
+            values[at + 1] = part.yRot
+            values[at + 2] = part.zRot
+        }
+
+        private fun pivot(part: ModelPart, at: Int) {
+            pivots[at] = part.x
+            pivots[at + 1] = part.y
+            pivots[at + 2] = part.z
+        }
+
         fun capture(model: HumanoidModel<*>) {
-            var i = 0
-            for (part in arrayOf(model.head, model.rightArm, model.leftArm, model.rightLeg, model.leftLeg)) {
-                values[i++] = part.xRot
-                values[i++] = part.yRot
-                values[i++] = part.zRot
-            }
-            values[i++] = model.body.xRot
-            values[i++] = model.body.yRot
-            values[i] = model.body.zRot
-            var j = 0
-            for (part in arrayOf(model.body, model.head, model.rightArm, model.leftArm)) {
-                pivots[j++] = part.x
-                pivots[j++] = part.y
-                pivots[j++] = part.z
-            }
+            rotations(model.head, 0)
+            rotations(model.rightArm, 3)
+            rotations(model.leftArm, 6)
+            rotations(model.rightLeg, 9)
+            rotations(model.leftLeg, 12)
+            rotations(model.body, 15)
+            pivot(model.body, 0)
+            pivot(model.head, 3)
+            pivot(model.rightArm, 6)
+            pivot(model.leftArm, 9)
         }
     }
 
@@ -409,7 +416,7 @@ object LocomotionAnimations {
             return
         }
         val local = Minecraft.getInstance().player?.id == state.id
-        val body = bodies[state.id]
+        val body = bodies.get(state.id)
         if ((!local && !config.locomotionOtherPlayers) || body == null) {
             clearBends(model)
             return

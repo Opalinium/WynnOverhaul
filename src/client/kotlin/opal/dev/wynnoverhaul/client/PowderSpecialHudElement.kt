@@ -6,6 +6,8 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import opal.dev.wynnoverhaul.WynnOverhaul
+import java.util.TreeMap
+import java.util.TreeSet
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -140,11 +142,27 @@ class PowderSpecialHudElement : HudElement {
             val py = (cy + s * dy).roundToInt()
             if (edge.isEmpty() || edge.last() != (px to py)) edge.add(px to py)
         }
-        for ((px, py) in edge) graphics.fill(px, py, px + 2, py + 2, RING_TRACK)
+        dots(graphics, edge, RING_TRACK)
         val n = (edge.size * charge.coerceIn(0f, 1f)).toInt()
-        for (i in 0 until n) {
-            val (px, py) = edge[i]
-            graphics.fill(px, py, px + 2, py + 2, color)
+        dots(graphics, edge.subList(0, n), color)
+    }
+
+    private fun dots(graphics: GuiGraphicsExtractor, points: List<Pair<Int, Int>>, color: Int) {
+        val rows = TreeMap<Int, TreeSet<Int>>()
+        for ((px, py) in points) rows.getOrPut(py) { TreeSet() }.add(px)
+        for ((py, xs) in rows) {
+            var start = Int.MIN_VALUE
+            var end = Int.MIN_VALUE
+            for (px in xs) {
+                if (start != Int.MIN_VALUE && px <= end) {
+                    end = px + 2
+                    continue
+                }
+                if (start != Int.MIN_VALUE) graphics.fill(start, py, end, py + 2, color)
+                start = px
+                end = px + 2
+            }
+            if (start != Int.MIN_VALUE) graphics.fill(start, py, end, py + 2, color)
         }
     }
 
@@ -161,13 +179,13 @@ class PowderSpecialHudElement : HudElement {
         var a = startDeg
         val end = startDeg + sweepDeg
         val step = 360f / (r * 8).coerceAtLeast(16)
+        val points = ArrayList<Pair<Int, Int>>()
         while (a < end) {
             val rad = Math.toRadians(a.toDouble())
-            val px = (cx + cos(rad) * r).toInt()
-            val py = (cy + sin(rad) * r).toInt()
-            graphics.fill(px, py, px + 2, py + 2, color)
+            points.add((cx + cos(rad) * r).toInt() to (cy + sin(rad) * r).toInt())
             a += step
         }
+        dots(graphics, points, color)
     }
 
     companion object {

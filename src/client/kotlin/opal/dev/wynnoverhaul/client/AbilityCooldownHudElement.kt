@@ -65,7 +65,7 @@ class AbilityCooldownHudElement : HudElement {
 
     private fun timerText(cooldown: WynnStatusEffectTracker.Cooldown): String {
         val seconds = cooldown.displaySeconds()
-        return if (seconds >= 60) "%d:%02d".format(seconds / 60, seconds % 60) else "${seconds}s"
+        return if (seconds >= 60) HudStyle.clock(seconds) else "${seconds}s"
     }
 
     private companion object {

@@ -31,6 +31,12 @@ object QuestWikiFetcher {
 
     fun allPages(): Collection<WikiPage> = byKey.values
 
+    fun preload() {
+        byKey.size
+        byDisambiguatedKey.size
+        byName.size
+    }
+
     private val findCache = java.util.concurrent.ConcurrentHashMap<String, java.util.Optional<WikiPage>>()
     private val byName: Map<String, WikiPage> by lazy {
         val out = HashMap<String, WikiPage>(byKey.size)

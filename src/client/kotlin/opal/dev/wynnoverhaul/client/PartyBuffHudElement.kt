@@ -43,8 +43,9 @@ class PartyBuffHudElement : HudElement {
         }
 
         val font = Minecraft.getInstance().font
+        val rights = heals.map { "+${HudStyle.grouped(it.total)} (×${it.hits})" }
         val contentW = maxOf(
-            heals.maxOfOrNull { font.width(it.giver) + font.width("+%,d (×%d)".format(it.total, it.hits)) + 14 } ?: 0,
+            heals.withIndex().maxOfOrNull { (i, feed) -> font.width(feed.giver) + font.width(rights[i]) + 14 } ?: 0,
             notices.maxOfOrNull { font.width(it.text) + 14 } ?: 0,
         )
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW + BAR_PAD * 2, ROW_HEIGHT * (heals.size + notices.size))
@@ -62,9 +63,9 @@ class PartyBuffHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         var y = oy
-        for (feed in heals) {
+        for ((index, feed) in heals.withIndex()) {
             HudStyle.bar(graphics, ox, y, boxW, ROW_HEIGHT - 2, feed.recencyFraction(now), HEAL_FILL, notches = false)
-            val right = "+%,d (×%d)".format(feed.total, feed.hits)
+            val right = rights[index]
             graphics.text(font, feed.giver, ox + BAR_PAD + 1, y + TEXT_Y_OFFSET, OwTheme.TEXT, true)
             graphics.text(font, right, ox + boxW - font.width(right) - BAR_PAD - 1, y + TEXT_Y_OFFSET, OwTheme.TEXT_DIM, true)
             y += ROW_HEIGHT

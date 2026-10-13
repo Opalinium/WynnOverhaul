@@ -103,14 +103,10 @@ object WynnClassBuffTracker {
     }
 
     private fun scanItemDisplays(client: Minecraft, now: Long) {
-        val player = client.player ?: return
+        if (client.player == null) return
         val level = client.level ?: return
-        val box = AABB(
-            player.x - ITEM_SCAN_RADIUS, player.y - ITEM_SCAN_RADIUS, player.z - ITEM_SCAN_RADIUS,
-            player.x + ITEM_SCAN_RADIUS, player.y + ITEM_SCAN_RADIUS, player.z + ITEM_SCAN_RADIUS,
-        )
         val present = HashSet<Int>()
-        for (entity in level.getEntities(player, box) { it is Display.ItemDisplay }) {
+        for (entity in DisplayScan.itemsWithin(ITEM_SCAN_RADIUS)) {
             present.add(entity.id)
             if (seen.add(entity.id)) recent[entity.id] = now
         }
@@ -235,16 +231,11 @@ object WynnClassBuffTracker {
     }
 
     private fun scanLabels(client: Minecraft, playerName: String): List<Buff> {
-        val player = client.player ?: return emptyList()
-        val level = client.level ?: return emptyList()
-        val box = AABB(
-            player.x - LABEL_SCAN_RADIUS, player.y - LABEL_SCAN_RADIUS, player.z - LABEL_SCAN_RADIUS,
-            player.x + LABEL_SCAN_RADIUS, player.y + LABEL_SCAN_RADIUS, player.z + LABEL_SCAN_RADIUS,
-        )
+        if (client.player == null || client.level == null) return emptyList()
         class Group(var count: Int = 0, var seconds: Int = 0, var note: String = "")
         val groups = LinkedHashMap<String, Group>()
-        for (entity in level.getEntities(player, box) { it is Display.TextDisplay }) {
-            val raw = (entity as Display.TextDisplay).text.string
+        for (label in DisplayScan.labelsWithin(LABEL_SCAN_RADIUS)) {
+            val raw = label.string
             val beast = BEAST.matchEntire(raw)
             if (beast != null) {
                 if (beast.groupValues[1] != playerName) continue

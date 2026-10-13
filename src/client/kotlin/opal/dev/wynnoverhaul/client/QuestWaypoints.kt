@@ -47,6 +47,11 @@ object QuestWaypoints {
     private val indexes = HashMap<String, QuestIndex>()
     private val keysByNormalized: Map<String, String> by lazy { byQuest.keys.associateBy { normalizeName(it) } }
 
+    fun preload() {
+        byQuest.size
+        keysByNormalized.size
+    }
+
     fun resolveQuest(name: String): String? {
         if (name.isBlank()) return null
         if (byQuest.containsKey(name)) return name

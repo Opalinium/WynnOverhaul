@@ -192,9 +192,33 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("hotbar", "Hotbar", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 4, fallbackW = 211, fallbackH = 24, barStretch = true))
     }
 
+    private var preloadStarted = false
+
+    private fun startPreload() {
+        if (!WynnOverhaulConfig.current.questWaypointOverrideEnabled) return
+        Thread({
+            runCatching {
+                QuestWikiFetcher.preload()
+                QuestWaypoints.preload()
+                WynncraftQuests.all.size
+            }.onFailure { WynnOverhaul.LOGGER.warn("Background data preload failed", it) }
+        }, "wynnoverhaul-preload").also {
+            it.isDaemon = true
+            it.start()
+        }
+    }
+
     private fun onTick(client: Minecraft) {
         WynnOverhaulGate.refresh(client)
-        if (!WynnOverhaulGate.inGame) return
+        if (!WynnOverhaulGate.inGame) {
+            DisplayScan.clear()
+            return
+        }
+        if (!preloadStarted) {
+            preloadStarted = true
+            startPreload()
+        }
+        DisplayScan.refresh(client)
         RareItemAlert.tick(client)
         LootBeams.tick(client)
         WynnScoreboardTracker.tick(client)

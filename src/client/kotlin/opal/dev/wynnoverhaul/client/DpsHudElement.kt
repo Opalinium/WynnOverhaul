@@ -78,10 +78,10 @@ class DpsHudElement : HudElement {
     }
 
     private fun compact(value: Double): String = when {
-        value >= 1_000_000_000 -> "%.2fB".format(value / 1_000_000_000)
-        value >= 1_000_000 -> "%.2fM".format(value / 1_000_000)
-        value >= 10_000 -> "%.1fk".format(value / 1_000)
-        else -> "%,d".format(value.toLong())
+        value >= 1_000_000_000 -> HudStyle.fixed(value / 1_000_000_000, 2) + "B"
+        value >= 1_000_000 -> HudStyle.fixed(value / 1_000_000, 2) + "M"
+        value >= 10_000 -> HudStyle.fixed(value / 1_000, 1) + "k"
+        else -> HudStyle.grouped(value.toLong())
     }
 
     private companion object {

@@ -37,7 +37,7 @@ object WynnDamageTracker {
 
     private val hits = ArrayDeque<Hit>()
     private val lastLabel = HashMap<Int, Component>()
-    private val labelKinds = HashMap<Component, Boolean>()
+    private val labelKinds = java.util.IdentityHashMap<Component, Boolean>()
     private val lastValues = HashMap<Int, Map<Element, Long>>()
     private val fightElements = newElementMap()
     private var fightStart = 0L
@@ -51,16 +51,12 @@ object WynnDamageTracker {
             if (stats != null || lastLabel.isNotEmpty()) clear()
             return
         }
-        val player = client.player ?: return
-        val level = client.level ?: return
+        if (client.player == null || client.level == null) return
         val now = System.currentTimeMillis()
-        val box = AABB(
-            player.x - SCAN_RADIUS, player.y - SCAN_RADIUS, player.z - SCAN_RADIUS,
-            player.x + SCAN_RADIUS, player.y + SCAN_RADIUS, player.z + SCAN_RADIUS,
-        )
         val seen = HashSet<Int>()
-        for (entity in level.getEntities(player, box) { it is Display.TextDisplay }) {
-            val text = (entity as Display.TextDisplay).text
+        for (label in DisplayScan.labelsWithin(SCAN_RADIUS)) {
+            val entity = label.entity
+            val text = label.text
             seen.add(entity.id)
             if (lastLabel[entity.id] == text) continue
             lastLabel[entity.id] = text
@@ -88,7 +84,11 @@ object WynnDamageTracker {
         if (entity !is Display.TextDisplay) return false
         if (!WynnOverhaulConfig.current.hitFeedbackNumbers || !WynnOverhaulGate.inGame) return false
         if (labelKinds.size > LABEL_CACHE_LIMIT) labelKinds.clear()
-        return labelKinds.getOrPut(entity.text) { parse(entity.text) != null }
+        val text = entity.text
+        labelKinds[text]?.let { return it }
+        val hides = parse(text) != null
+        labelKinds[text] = hides
+        return hides
     }
 
     fun clear() {

@@ -20,8 +20,29 @@ enum class WynnRarity(val colorRgb: Int, val displayName: String) {
 object WynnItemRarity {
     private val byColor = WynnRarity.entries.associateBy { it.colorRgb }
 
+    private class RarityEntry(val data: Any?, val style: Any?, val custom: Any?, val itemName: Any?, val result: WynnRarity?)
+
+    private val rarityCache = IdentityHashMap<ItemStack, RarityEntry>()
+
     fun of(stack: ItemStack): WynnRarity? {
         if (stack.isEmpty) return null
+        val data = stack.get(DataComponents.CUSTOM_MODEL_DATA)
+        val style = stack.get(DataComponents.TOOLTIP_STYLE)
+        val custom = stack.get(DataComponents.CUSTOM_NAME)
+        val itemName = stack.get(DataComponents.ITEM_NAME)
+        synchronized(rarityCache) {
+            val hit = rarityCache[stack]
+            if (hit != null && hit.data === data && hit.style === style && hit.custom === custom && hit.itemName === itemName) return hit.result
+        }
+        val result = compute(stack)
+        synchronized(rarityCache) {
+            if (rarityCache.size >= LORE_CACHE_LIMIT) rarityCache.clear()
+            rarityCache[stack] = RarityEntry(data, style, custom, itemName, result)
+        }
+        return result
+    }
+
+    private fun compute(stack: ItemStack): WynnRarity? {
         tierFromModelData(stack)?.let { return it }
         tierFromTooltipStyle(stack)?.let { return it }
         return firstStyledColor(stack.hoverName)?.let { byColor[it] }
@@ -62,6 +83,7 @@ object WynnItemRarity {
 
     fun clearCaches() {
         synchronized(loreCache) { loreCache.clear() }
+        synchronized(rarityCache) { rarityCache.clear() }
     }
 
     private const val LORE_CACHE_LIMIT = 512

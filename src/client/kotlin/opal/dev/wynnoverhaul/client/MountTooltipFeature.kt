@@ -2,19 +2,30 @@ package opal.dev.wynnoverhaul.client
 
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback
 import net.minecraft.ChatFormatting
+import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
+import net.minecraft.world.item.ItemStack
 
 object MountTooltipFeature {
+    private var memoStack: ItemStack? = null
+    private var memoLore: Any? = null
+    private var memoLines: List<Component> = emptyList()
+
     fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
             val config = WynnOverhaulConfig.current
             if (config.mountTooltipEnabled && WynnOverhaulGate.inGame) {
-                val reading = MountTooltipParser.parse(stack)
-                if (reading != null) {
-                    MountRegistry.note(reading)
-                    val result = MountFeedingSummary.compute(reading)
-                    if (result != null) lines.addAll(format(result))
+                val lore = stack.get(DataComponents.LORE)
+                if (memoStack !== stack || memoLore !== lore) {
+                    memoStack = stack
+                    memoLore = lore
+                    val reading = MountTooltipParser.parse(stack)
+                    memoLines = if (reading == null) emptyList() else {
+                        MountRegistry.note(reading)
+                        MountFeedingSummary.compute(reading)?.let { format(it) } ?: emptyList()
+                    }
                 }
+                lines.addAll(memoLines)
             }
         }
     }

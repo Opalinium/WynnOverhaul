@@ -9,6 +9,9 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The party panel shows health bars, colored names, dead and offline states and distances, with your own name in gold.
 - Fishing rods cast a bobber at the node when a fishing gather starts and reel it in when it finishes.
 
+### Changed
+- Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
+
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.
 - Bank deposits only jump to bank pages that exist and are unlocked.

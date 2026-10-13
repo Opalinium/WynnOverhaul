@@ -1,7 +1,13 @@
 package opal.dev.wynnoverhaul.client
 
+import com.mojang.blaze3d.platform.NativeImage
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.client.renderer.texture.DynamicTexture
+import net.minecraft.resources.Identifier
+import opal.dev.wynnoverhaul.WynnOverhaul
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import java.util.IdentityHashMap
@@ -41,6 +47,9 @@ object HotbarStyles {
     )
 
     private const val CELL = 20
+    private const val OPAQUE = -1
+    private const val MAX_TEXTURE_RADIUS = 64
+    private const val MAX_CIRCLE_TEXTURES = 48
     private const val TILE_GAP = 3
     private const val OFF_GAP = 6
     private const val RADIAL_SLOT = 18
@@ -171,8 +180,72 @@ object HotbarStyles {
         return out.toIntArray()
     }
 
+    private val circleTextures = HashMap<Int, Identifier>()
+    private val circleRejected = HashSet<Int>()
+    private var circleFailureLogged = false
+
+    private fun circleTexture(ring: Boolean, r: Int): Identifier? {
+        if (r > MAX_TEXTURE_RADIUS) return null
+        val key = r * 2 + (if (ring) 1 else 0)
+        circleTextures[key]?.let { return it }
+        if (key in circleRejected || circleTextures.size >= MAX_CIRCLE_TEXTURES) return null
+        return try {
+            bakeCircle(ring, r).also { circleTextures[key] = it }
+        } catch (t: Throwable) {
+            circleRejected.add(key)
+            if (!circleFailureLogged) {
+                circleFailureLogged = true
+                WynnOverhaul.LOGGER.error("Circle texture bake failed, drawing circles row by row", t)
+            }
+            null
+        }
+    }
+
+    private fun bakeCircle(ring: Boolean, r: Int): Identifier {
+        val size = r * 2 + 1
+        val image = NativeImage(NativeImage.Format.RGBA, size, size, true)
+        if (ring) {
+            val runs = ringRuns.getOrPut(r) { buildRingRuns(r) }
+            var i = 0
+            while (i < runs.size) {
+                val hi = runs[i + 2]
+                val lo = runs[i + 3]
+                for (y in runs[i] until runs[i + 1]) {
+                    if (lo == 0) {
+                        for (x in -hi..hi) image.setPixel(x + r, y + r, OPAQUE)
+                    } else {
+                        for (x in -hi..-lo) image.setPixel(x + r, y + r, OPAQUE)
+                        for (x in lo..hi) image.setPixel(x + r, y + r, OPAQUE)
+                    }
+                }
+                i += 4
+            }
+        } else {
+            val runs = discRuns.getOrPut(r) { buildDiscRuns(r) }
+            var i = 0
+            while (i < runs.size) {
+                val hw = runs[i + 2]
+                for (y in runs[i] until runs[i + 1]) {
+                    for (x in -hw..hw) image.setPixel(x + r, y + r, OPAQUE)
+                }
+                i += 3
+            }
+        }
+        val id = Identifier.fromNamespaceAndPath("wynnoverhaul", "dynamic/" + (if (ring) "ring_" else "disc_") + r)
+        Minecraft.getInstance().textureManager.register(id, DynamicTexture({ id.toString() }, image))
+        return id
+    }
+
+    private fun blitCircle(g: GuiGraphicsExtractor, ring: Boolean, cx: Int, cy: Int, r: Int, color: Int): Boolean {
+        val id = circleTexture(ring, r) ?: return false
+        val size = r * 2 + 1
+        g.blit(RenderPipelines.GUI_TEXTURED, id, cx - r, cy - r, 0f, 0f, size, size, size, size, color)
+        return true
+    }
+
     internal fun disc(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
         if (r < 0 || (color ushr 24) == 0) return
+        if (blitCircle(g, false, cx, cy, r, color)) return
         val runs = discRuns.getOrPut(r) { buildDiscRuns(r) }
         var i = 0
         while (i < runs.size) {
@@ -184,6 +257,7 @@ object HotbarStyles {
 
     internal fun ring(g: GuiGraphicsExtractor, cx: Int, cy: Int, r: Int, color: Int) {
         if (r < 0 || (color ushr 24) == 0) return
+        if (blitCircle(g, true, cx, cy, r, color)) return
         val runs = ringRuns.getOrPut(r) { buildRingRuns(r) }
         var i = 0
         while (i < runs.size) {

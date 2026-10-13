@@ -7,8 +7,8 @@ import net.minecraft.core.Direction;
 import opal.dev.wynnoverhaul.client.LimbBend;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,8 +19,10 @@ import java.util.Set;
 public abstract class CubeBendMixin {
     @Shadow
     @Final
-    @Mutable
     public ModelPart.Polygon[] polygons;
+
+    @Unique
+    private ModelPart.Polygon[] wynnoverhaul$strips;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void wynnoverhaul$subdivide(
@@ -29,13 +31,13 @@ public abstract class CubeBendMixin {
         Set<Direction> visibleFaces, CallbackInfo ci
     ) {
         if (h == 12.0F && d == 4.0F && (w == 4.0F || w == 3.0F)) {
-            this.polygons = LimbBend.subdivide(this.polygons);
+            this.wynnoverhaul$strips = LimbBend.subdivide(this.polygons);
         }
     }
 
     @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
     private void wynnoverhaul$bentCompile(PoseStack.Pose pose, VertexConsumer buffer, int light, int overlay, int color, CallbackInfo ci) {
-        if (LimbBend.compile((ModelPart.Cube) (Object) this, pose, buffer, light, overlay, color)) {
+        if (LimbBend.compile(this.wynnoverhaul$strips != null ? this.wynnoverhaul$strips : this.polygons, (ModelPart.Cube) (Object) this, pose, buffer, light, overlay, color)) {
             ci.cancel();
         }
     }

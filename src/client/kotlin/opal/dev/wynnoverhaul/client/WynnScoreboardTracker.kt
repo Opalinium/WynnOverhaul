@@ -41,10 +41,15 @@ object WynnScoreboardTracker {
     var sidebarLines: List<String> = emptyList()
         private set
 
+    private var lastLines: List<Component>? = null
+    private var lastTitle: Component? = null
+
     fun tick(mc: Minecraft) {
         val scoreboard = mc.level?.scoreboard
         val objective = scoreboard?.getDisplayObjective(DisplaySlot.SIDEBAR)
         if (scoreboard == null || objective == null) {
+            lastLines = null
+            lastTitle = null
             current = null
             party = null
             rawLines = emptyList()
@@ -60,6 +65,10 @@ object WynnScoreboardTracker {
             .take(15)
             .map { entry -> PlayerTeam.formatNameForTeam(scoreboard.getPlayersTeam(entry.owner()), entry.ownerName()) as Component }
 
+        val title = objective.displayName
+        if (lines == lastLines && title == lastTitle) return
+        lastLines = lines
+        lastTitle = title
         rawLines = lines
         val allTexts = lines.map { clean(it.string) }
         val partyEnd = extractParty(lines, allTexts)

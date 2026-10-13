@@ -18,16 +18,16 @@ object WynnTotemTracker {
     private val byId = HashMap<Int, Totem>()
 
     fun tick(client: Minecraft) {
+        if (!WynnOverhaulConfig.current.totemHudEnabled) {
+            if (totems.isNotEmpty() || byId.isNotEmpty()) clear()
+            return
+        }
         val player = client.player ?: return
-        val level = client.level ?: return
         val self = player.gameProfile.name
-        val box = AABB(
-            player.x - SCAN_RADIUS, player.y - SCAN_RADIUS, player.z - SCAN_RADIUS,
-            player.x + SCAN_RADIUS, player.y + SCAN_RADIUS, player.z + SCAN_RADIUS,
-        )
         val seen = HashSet<Int>()
-        for (entity in level.getEntities(player, box) { it is Display.TextDisplay }) {
-            val parsed = parse((entity as Display.TextDisplay).text.string) ?: continue
+        for (label in DisplayScan.labelsWithin(SCAN_RADIUS)) {
+            val entity = label.entity
+            val parsed = parse(label.string) ?: continue
             if (parsed.kind == Kind.CLASS && parsed.owner != self) continue
             seen.add(entity.id)
             val known = byId[entity.id]

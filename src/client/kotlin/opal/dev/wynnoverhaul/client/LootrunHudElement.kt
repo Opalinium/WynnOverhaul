@@ -29,7 +29,7 @@ class LootrunHudElement : HudElement {
 
         val lines = ArrayList<Pair<String, Int>>()
         lines.add(stateLine() to STATE_COLOR)
-        val timer = if (isHudDesignerOpen()) "15:30" else LootrunModel.timeLeftSeconds?.let { "%d:%02d".format(it / 60, it % 60) }.orEmpty()
+        val timer = if (isHudDesignerOpen()) "15:30" else LootrunModel.timeLeftSeconds?.let { HudStyle.clock(it) }.orEmpty()
         if (LootrunModel.challengesTotal > 0 || isHudDesignerOpen()) {
             lines.add("Challenges: ${if (isHudDesignerOpen()) "3/5" else "${LootrunModel.challengesDone}/${LootrunModel.challengesTotal}"}" to TEXT_COLOR)
         }

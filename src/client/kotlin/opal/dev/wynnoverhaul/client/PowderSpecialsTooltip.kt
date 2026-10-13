@@ -9,6 +9,9 @@ object PowderSpecialsTooltip {
 
     private class Element(val color: ChatFormatting, val weapon: Special, val armour: Special)
 
+    private var memoName: Component? = null
+    private var memoElement: Element? = null
+
     private val elements = mapOf(
         "Earth" to Element(
             ChatFormatting.GREEN,
@@ -42,8 +45,12 @@ object PowderSpecialsTooltip {
     fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
             if (!WynnOverhaulConfig.current.powderSpecialsTooltipEnabled || !WynnOverhaulGate.inGame || stack.isEmpty) return@register
-            val name = TextClean.clean(stack.hoverName.string)
-            val element = powderName.find(name)?.groupValues?.get(1)?.let { elements[it] } ?: return@register
+            val hover = stack.hoverName
+            if (hover !== memoName) {
+                memoName = hover
+                memoElement = powderName.find(TextClean.clean(hover.string))?.groupValues?.get(1)?.let { elements[it] }
+            }
+            val element = memoElement ?: return@register
             lines.add(Component.literal(""))
             lines.add(Component.literal("Special effects (2+ powders, Tier 4+):").withStyle(ChatFormatting.GOLD))
             lines.add(line("Weapon", element.weapon, element.color))

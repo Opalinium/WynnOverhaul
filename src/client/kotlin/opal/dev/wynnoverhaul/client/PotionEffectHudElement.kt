@@ -97,9 +97,7 @@ class PotionEffectHudElement : HudElement {
     private fun romanNumeral(amplifier: Int): String = ROMAN.getOrElse(amplifier) { (amplifier + 1).toString() }
 
     private fun formatDuration(totalSeconds: Int): String {
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
+        return HudStyle.clock(totalSeconds)
     }
 
     private companion object {

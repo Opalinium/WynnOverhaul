@@ -47,6 +47,23 @@ object HudStyle {
         return lines
     }
 
+    private val groupedFormat = java.text.NumberFormat.getIntegerInstance()
+    private val fixedFormats = Array(3) { digits ->
+        java.text.NumberFormat.getNumberInstance().also {
+            it.minimumFractionDigits = digits
+            it.maximumFractionDigits = digits
+        }
+    }
+
+    fun grouped(value: Long): String = groupedFormat.format(value)
+
+    fun fixed(value: Double, digits: Int): String = fixedFormats[digits].format(value)
+
+    fun clock(totalSeconds: Int): String {
+        val seconds = totalSeconds % 60
+        return "${totalSeconds / 60}:${if (seconds < 10) "0" else ""}$seconds"
+    }
+
     fun mix(a: Int, b: Int, t: Float): Int {
         val f = t.coerceIn(0f, 1f)
         val ar = (a shr 16) and 0xFF

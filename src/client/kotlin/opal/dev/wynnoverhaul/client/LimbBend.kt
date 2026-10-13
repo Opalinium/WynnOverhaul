@@ -106,7 +106,7 @@ object LimbBend {
         )
 
     @JvmStatic
-    fun compile(cube: ModelPart.Cube, pose: PoseStack.Pose, buffer: VertexConsumer, light: Int, overlay: Int, color: Int): Boolean {
+    fun compile(polygons: Array<ModelPart.Polygon>, cube: ModelPart.Cube, pose: PoseStack.Pose, buffer: VertexConsumer, light: Int, overlay: Int, color: Int): Boolean {
         val bend = angle
         if (bend == 0f) return false
         val jointY = (cube.minY + cube.maxY) * 0.5f
@@ -114,7 +114,7 @@ object LimbBend {
         val matrix = pose.pose()
         val lowY = jointY - ZONE * 0.5f
         val highY = jointY + ZONE * 0.5f
-        for (polygon in cube.polygons) {
+        for (polygon in polygons) {
             val n = polygon.normal()
             var cachedState = -1
             for (vertex in polygon.vertices()) {
