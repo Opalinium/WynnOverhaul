@@ -567,6 +567,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
         val invTile = f.inventory.firstOrNull { it.rect.contains(mx, my) }
         val invSlot = hotbarTile?.slot ?: invTile?.slot
         if (invSlot != null) {
+            if (lockClick(invSlot, button, event.hasAltDown())) return true
             clickInventory(invSlot, button)
             return true
         }

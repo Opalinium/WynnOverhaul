@@ -158,6 +158,7 @@ class WynnOverhaulUpgraderScreen(menu: AbstractContainerMenu) :
         val invSlot = layout?.hotbar?.firstOrNull { it.slot >= 0 && it.rect.contains(mx, my) }?.slot
             ?: layout?.inventory?.firstOrNull { it.rect.contains(mx, my) }?.slot
         if (invSlot != null) {
+            if (lockClick(invSlot, button, event.hasAltDown())) return true
             val stack = stackAt(invSlot)
             when (button) {
                 0, 1 -> if (!stack.isEmpty || !menu.carried.isEmpty) send(invSlot, button, ContainerInput.PICKUP)

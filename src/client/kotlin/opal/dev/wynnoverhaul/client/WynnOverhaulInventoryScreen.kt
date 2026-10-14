@@ -1172,7 +1172,7 @@ class WynnOverhaulInventoryScreen(
                 i++
             }
         }
-        for (tile in pouchTiles) drawTile(graphics, tile, tile.menuSlot == pouchHoverSlot) { pouchStack(it.menuSlot) }
+        for (tile in pouchTiles) drawTile(graphics, tile, tile.menuSlot == pouchHoverSlot, false) { pouchStack(it.menuSlot) }
         pouchHoverSlot = pouchTiles.firstOrNull { mouseX in it.x until it.x + TILE && mouseY in it.y until it.y + TILE }?.menuSlot ?: -1
         pouchFade.overlay(graphics, pouchPX, pouchPY, pouchPW, pouchPH, GLASS_BG)
     }
@@ -1670,28 +1670,20 @@ class WynnOverhaulInventoryScreen(
         return dockedStackCache[slot] ?: ItemStack.EMPTY
     }
 
-    private fun drawTile(graphics: GuiGraphicsExtractor, tile: PlacedTile, hovered: Boolean, stackOf: (PlacedTile) -> ItemStack = { if (it.docked) dockedStack(it.menuSlot) else slotStack(it.menuSlot) }) {
+    private fun drawTile(
+        graphics: GuiGraphicsExtractor,
+        tile: PlacedTile,
+        hovered: Boolean,
+        locked: Boolean = SlotLocks.isLocked(menu, tile.menuSlot),
+        stackOf: (PlacedTile) -> ItemStack = { if (it.docked) dockedStack(it.menuSlot) else slotStack(it.menuSlot) },
+    ) {
         if (tile.menuSlot < 0) return
-        val stack = stackOf(tile)
-
-        val rarityRgb = if (stack.isEmpty) null else WynnItemRarity.of(stack)?.colorRgb
-        graphics.fill(tile.x, tile.y, tile.x + TILE, tile.y + TILE, rarityRgb?.let { TILE_TINT_ALPHA or it } ?: TILE_BG_EMPTY)
-        if (!stack.isEmpty) {
-            graphics.item(stack, tile.x + 2, tile.y + 2)
-            graphics.itemDecorations(font, stack, tile.x + 2, tile.y + 2)
-        }
-        val border = if (stack.isEmpty) OwTheme.TILE_BORDER else (rarityRgb?.let { 0xFF000000.toInt() or it } ?: OwTheme.TILE_BORDER)
-        graphics.outline(tile.x, tile.y, TILE, TILE, border)
-        if (hovered) graphics.outline(tile.x - 1, tile.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
+        ItemTiles.tile(graphics, font, tile.x, tile.y, stackOf(tile), hovered, locked)
     }
 
     private fun drawLooseItem(graphics: GuiGraphicsExtractor, tile: PlacedTile, hovered: Boolean) {
         if (tile.menuSlot < 0) return
-        val stack = slotStack(tile.menuSlot)
-        if (stack.isEmpty) return
-        graphics.item(stack, tile.x + 2, tile.y + 2)
-        graphics.itemDecorations(font, stack, tile.x + 2, tile.y + 2)
-        if (hovered) graphics.outline(tile.x - 1, tile.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
+        ItemTiles.loose(graphics, font, tile.x, tile.y, slotStack(tile.menuSlot), hovered, SlotLocks.isLocked(menu, tile.menuSlot))
     }
 
     private fun drawHoverAndTooltip(graphics: GuiGraphicsExtractor, layout: Layout) {        if (hoveredSlot < 0) return
@@ -2573,6 +2565,7 @@ class WynnOverhaulInventoryScreen(
         layout: Layout,
         player: net.minecraft.world.entity.player.Player
     ): Boolean {
+        if (button == 0 && event.hasAltDown() && SlotLocks.toggle(menu, slot)) return true
         if (tryOpenPouch(slot, button, event.hasShiftDown())) return true
         if ((button == 0 || button == 1) && rejectsReservedPlacement(slot, button, ContainerInput.PICKUP, menu.carried)) {
             blockReason(RESERVED_SLOT_MESSAGE)

@@ -118,9 +118,9 @@ abstract class WynnOverhaulSideScreen(
 
     protected fun drawInventory(graphics: GuiGraphicsExtractor, layout: InventoryLayout, gridX: Int, hoverHotbar: Tile?, hoverInv: Tile?) {
         graphics.text(font, "Hotbar", gridX, layout.hotbarY - CAPTION_H + 2, OwTheme.TEXT_DIM)
-        for (tile in layout.hotbar) if (tile.slot >= 0) drawTile(graphics, tile.rect, stackAt(tile.slot), tile === hoverHotbar)
+        for (tile in layout.hotbar) if (tile.slot >= 0) drawTile(graphics, tile.rect, stackAt(tile.slot), tile === hoverHotbar, tile.slot)
         graphics.text(font, "Inventory", gridX, layout.hotbarY + TILE_STEP + SECTION_GAP + 2, OwTheme.TEXT_DIM)
-        for (tile in layout.inventory) drawLoose(graphics, tile.rect, stackAt(tile.slot), tile === hoverInv)
+        for (tile in layout.inventory) drawLoose(graphics, tile.rect, stackAt(tile.slot), tile === hoverInv, tile.slot)
     }
 
     protected fun drawInventoryFooter(graphics: GuiGraphicsExtractor, invX: Int, invW: Int, y: Int) {
@@ -182,24 +182,16 @@ abstract class WynnOverhaulSideScreen(
         graphics.fill(x + w - 1, y, x + w, y + h, OwTheme.HAIRLINE)
     }
 
-    protected fun drawTile(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean) {
-        val rarityRgb = if (stack.isEmpty) null else WynnItemRarity.of(stack)?.colorRgb
-        graphics.fill(r.x, r.y, r.x + TILE, r.y + TILE, rarityRgb?.let { TILE_TINT_ALPHA or it } ?: TILE_BG_EMPTY)
-        if (!stack.isEmpty) {
-            graphics.item(stack, r.x + 2, r.y + 2)
-            graphics.itemDecorations(font, stack, r.x + 2, r.y + 2)
-        }
-        val border = if (stack.isEmpty) OwTheme.TILE_BORDER else (rarityRgb?.let { 0xFF000000.toInt() or it } ?: OwTheme.TILE_BORDER)
-        graphics.outline(r.x, r.y, TILE, TILE, border)
-        if (hovered) graphics.outline(r.x - 1, r.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
+    protected fun drawTile(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean, slot: Int = -1) {
+        ItemTiles.tile(graphics, font, r.x, r.y, stack, hovered, slot >= 0 && SlotLocks.isLocked(menu, slot))
     }
 
-    protected fun drawLoose(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean) {
-        if (stack.isEmpty) return
-        graphics.item(stack, r.x + 2, r.y + 2)
-        graphics.itemDecorations(font, stack, r.x + 2, r.y + 2)
-        if (hovered) graphics.outline(r.x - 1, r.y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
+    protected fun drawLoose(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean, slot: Int = -1) {
+        ItemTiles.loose(graphics, font, r.x, r.y, stack, hovered, slot >= 0 && SlotLocks.isLocked(menu, slot))
     }
+
+    protected fun lockClick(slot: Int, button: Int, alt: Boolean): Boolean =
+        button == 0 && alt && SlotLocks.toggle(menu, slot)
 
     protected fun drawControl(graphics: GuiGraphicsExtractor, c: Control, hovered: Boolean) {
         val r = c.rect

@@ -145,6 +145,7 @@ class WynnOverhaulLootScreen(menu: AbstractContainerMenu, private val rawTitle: 
         val invSlot = layout?.hotbar?.firstOrNull { it.slot >= 0 && it.rect.contains(mx, my) }?.slot
             ?: layout?.inventory?.firstOrNull { it.rect.contains(mx, my) }?.slot
         if (invSlot != null) {
+            if (lockClick(invSlot, button, event.hasAltDown())) return true
             clickInventory(invSlot, button)
             return true
         }

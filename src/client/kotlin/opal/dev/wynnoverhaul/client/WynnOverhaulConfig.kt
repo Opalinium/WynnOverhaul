@@ -106,6 +106,9 @@ data class WynnOverhaulConfig(
     var hitFeedbackNumbers: Boolean = true,
     var lowHealthStyle: String = "VIGNETTE",
     var pinsEnabled: Boolean = true,
+    var slotLocksEnabled: Boolean = true,
+    var lockedSlots: List<Int> = emptyList(),
+    var slotRarityMarkers: Boolean = false,
     var pinListEnabled: Boolean = true,
     var pinAutoClear: Boolean = true,
     var chatMentionsEnabled: Boolean = true,
@@ -268,6 +271,7 @@ data class WynnOverhaulConfig(
         chatHistoryLimit = chatHistoryLimit.coerceIn(100, 2000)
         chatMentionKeywords = chatMentionKeywords.take(200)
         lowHealthIntensity = lowHealthIntensity.coerceIn(10, 100)
+        lockedSlots = lockedSlots.filter { it in 0..35 }.distinct().sorted()
         damageNumberScale = damageNumberScale.coerceIn(50, 200)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)
         trackerRange = trackerRange.coerceIn(8.0, 128.0)

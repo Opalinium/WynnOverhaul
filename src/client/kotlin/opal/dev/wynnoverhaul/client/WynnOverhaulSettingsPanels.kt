@@ -865,6 +865,12 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Shift-drag quick move", "Hold Shift and drag across slots to quick-move each one, in every container screen (like Mouse Tweaks).", config.shiftDragQuickMove) {
                 config.shiftDragQuickMove = it
             }
+            checkbox("Slot locks", "Alt+click an inventory slot in any of the custom screens to lock it. A locked slot shows a padlock and refuses shift-clicks, sell-all and drops, so it is skipped when you deposit or sell.", config.slotLocksEnabled) {
+                config.slotLocksEnabled = it
+            }
+            checkbox("Rarity letters", "Marks Unique, Rare, Legendary, Fabled and Mythic items with a letter in the corner of their slot, so rarity does not depend on colour alone.", config.slotRarityMarkers) {
+                config.slotRarityMarkers = it
+            }
 
             header("Storage")
             checkbox("Custom bank", "Opens the character and account bank as one scrollable list of every page with search, sorting and quick deposit.", config.customBankEnabled) {

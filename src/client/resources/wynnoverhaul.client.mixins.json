@@ -7,6 +7,7 @@
     "ClientLevelParticleMixin",
     "ScrollWheelHandlerMixin",
     "ChatHistoryMixin",
+    "SlotLockMixin",
     "TextDisplayAccessor",
     "ItemDisplayAccessor",
     "QuestBeaconRenderMixin",
