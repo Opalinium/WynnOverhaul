@@ -4,6 +4,7 @@ import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.KeyEvent
 import kotlin.math.roundToInt
 
 fun Screen.isTextInputFocused(): Boolean = (focused as? EditBox)?.isFocused == true
@@ -39,3 +40,13 @@ fun owNumberField(
     field.setResponder { raw -> raw.toDoubleOrNull()?.let { onChange(it.coerceIn(min, max)) } }
     return listOf(labelWidget to 0, field to OwTheme.ROW_H)
 }
+
+fun Screen.focusSearchOnKey(event: KeyEvent, field: EditBox?): Boolean {
+    if (field == null || isTextInputFocused()) return false
+    if (event.key() != KEY_F || !event.hasControlDown()) return false
+    setFocused(field)
+    field.setFocused(true)
+    return true
+}
+
+private const val KEY_F = 70

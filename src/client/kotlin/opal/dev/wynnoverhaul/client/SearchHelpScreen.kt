@@ -28,6 +28,7 @@ class SearchHelpScreen(private val kind: Kind, parent: Screen) : OwScreen(Compon
                 "lore:thorns" to "Only look in the item description and stats.",
                 "-tier:normal" to "A minus in front excludes matches. Works on any filter or word.",
                 "\"fire sword\"" to "Quotes keep a phrase together.",
+                "Ctrl+F" to "Jumps to the search box. The x at its right end clears it, and your last search is kept when you reopen the screen.",
             ),
             listOf("tier:fabled type:weapon", "lvl:100-105 -type:armor", "thorns -tier:normal"),
         ),

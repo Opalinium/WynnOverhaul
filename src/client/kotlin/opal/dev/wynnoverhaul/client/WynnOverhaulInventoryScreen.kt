@@ -58,7 +58,7 @@ class WynnOverhaulInventoryScreen(
     private var searchHelpButton: OwButton? = null
     private var journalHelpButton: OwButton? = null
     private var inventorySortButton: AbstractWidget? = null
-    private var searchText: String = ""
+    private var searchText: String = SearchMemory.inventory
     private val tabButtons = ArrayList<OwButton>()
 
     private data class CommandShortcut(val id: String, val label: String, val command: String)
@@ -242,6 +242,7 @@ class WynnOverhaulInventoryScreen(
             val fieldY = pt + SEARCH_Y_REL
             val sortW = font.width("Sort: Default") + 34
             searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2 - sortW - 8 - SEARCH_H, SEARCH_H).also {
+                it.clearable = true
                 it.value = searchText
                 addRenderableWidget(it)
             }
@@ -272,6 +273,7 @@ class WynnOverhaulInventoryScreen(
             journalHelpButton = SearchHelpScreen.button(gx + gw - sortW - refreshW - 8 - SEARCH_H - 4, rowY(-JOURNAL_TOP_SHIFT), SEARCH_H, SearchHelpScreen.Kind.JOURNAL, this)
                 .also { addRenderableWidget(it) }
             journalSearchField = OwTextField(font, gx, rowY(-JOURNAL_TOP_SHIFT), gw - sortW - refreshW - 12 - SEARCH_H, SEARCH_H).also {
+                it.clearable = true
                 it.setValue(journal.query)
                 it.setResponder { v ->
                     journal.query = v
@@ -452,6 +454,7 @@ class WynnOverhaulInventoryScreen(
     override fun tick() {
         super.tick()
         searchText = searchField?.value ?: searchText
+        SearchMemory.inventory = searchText
         if (invTab == InvTab.SETTINGS) panels.tick()
 
         if (invTab == InvTab.CHARACTER && characterMenu != null) {
@@ -2810,6 +2813,7 @@ class WynnOverhaulInventoryScreen(
             OwDropdownOverlay.close()
             return true
         }
+        if (focusSearchOnKey(event, if (invTab == InvTab.JOURNAL) journalSearchField else searchField)) return true
         if (isTextInputFocused()) {
             if (event.key() == KEY_ESCAPE) {
                 releaseTextInputFocus()

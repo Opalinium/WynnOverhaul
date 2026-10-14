@@ -19,6 +19,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - A Ping hotkey marks the spot you are looking at and sends it to your party in the same format Wynntils uses. Locations other players send in chat, including wynnmod pings, become waypoints.
 - Chat highlights mentions of your name with an optional chime, and has a reply hotkey, unread counts for party and guild, a longer history and a SYS channel for system messages.
 - Alt+click locks an inventory slot so shift-clicks, sell-all and drops skip it. Optional rarity letters mark Unique, Rare, Legendary, Fabled and Mythic items.
+- Search bars have a clear button and Ctrl+F, and the last inventory and merchant search is kept.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

@@ -123,6 +123,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
         }.also { addRenderableWidget(it) }
         val sortW = font.width("Sort: Default") + 34
         searchField = OwTextField(font, x0, 0, inner - sortW - 8 - SEARCH_H, SEARCH_H).also {
+            it.clearable = true
             it.value = BankSession.search
             it.setResponder { v ->
                 BankSession.search = v
@@ -666,6 +667,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
             OwDropdownOverlay.close()
             return true
         }
+        if (focusSearchOnKey(event, searchField)) return true
         return super.keyPressed(event)
     }
 

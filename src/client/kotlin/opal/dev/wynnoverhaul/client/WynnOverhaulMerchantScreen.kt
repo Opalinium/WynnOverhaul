@@ -48,7 +48,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
     private var searchField: OwTextField? = null
     private var orderDropdown: OwDropdown? = null
     private var searchHelpButton: OwButton? = null
-    private var query = ""
+    private var query = SearchMemory.merchant
     private var order = Order.SHOP
     private var scroll = 0
     private var rows: List<Row> = emptyList()
@@ -70,9 +70,11 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val inner = sidePanelW() - MARGIN * 2
         val orderW = font.width("Sort: Price: high to low") + 34
         searchField = OwTextField(font, x0, 0, inner - orderW - 8 - SEARCH_H, SEARCH_H).also {
+            it.clearable = true
             it.value = query
             it.setResponder { v ->
                 query = v
+                SearchMemory.merchant = v
                 scroll = 0
             }
             addRenderableWidget(it)
@@ -323,6 +325,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
             OwDropdownOverlay.close()
             return true
         }
+        if (focusSearchOnKey(event, searchField)) return true
         return super.keyPressed(event)
     }
 
