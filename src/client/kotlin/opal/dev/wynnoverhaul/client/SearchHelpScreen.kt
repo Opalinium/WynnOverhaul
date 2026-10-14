@@ -7,6 +7,16 @@ import net.minecraft.network.chat.Component
 
 class SearchHelpScreen(private val kind: Kind, parent: Screen) : OwScreen(Component.literal(kind.title), parent) {
     enum class Kind(val title: String, val intro: String, val rows: List<Pair<String, String>>, val examples: List<String>) {
+        SETTINGS(
+            "Settings search",
+            "Type any words to find settings across every page. A setting shows if each word appears in its name, its description or the section it sits in. Results are the real controls, so you can change them right there.",
+            listOf(
+                "chat" to "Everything that mentions chat.",
+                "fade hud" to "Words can be in any order, and all of them have to match.",
+                "toast" to "Notification and toast options.",
+            ),
+            listOf("cooldown", "damage numbers", "camera"),
+        ),
         ITEMS(
             "Item search",
             "Type words to match item names and descriptions. Every word has to match. Add filters with key:value, and put a minus in front of anything to exclude it.",

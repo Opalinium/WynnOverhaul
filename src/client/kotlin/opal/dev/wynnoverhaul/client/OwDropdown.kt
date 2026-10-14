@@ -16,7 +16,9 @@ class OwDropdown(
     private val options: List<OwDropdownOverlay.Option>,
     private val selected: () -> String,
     private val onSelect: (String) -> Unit,
-) : AbstractWidget(x, y, width, height, Component.literal(prefix)) {
+) : AbstractWidget(x, y, width, height, Component.literal(prefix)), ModifiedMark {
+    override var modified = false
+
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val hovered = isHovered
         val fade = getAlpha()
@@ -30,6 +32,7 @@ class OwDropdown(
         val cx = x + width - CARET_W / 2 - 4
         val cy = y + height / 2
         for (row in 0 until 3) graphics.fill(cx - 3 + row, cy - 1 + row, cx + 4 - row, cy + row, HudStyle.alpha(if (hovered) OwTheme.ACCENT else OwTheme.TEXT_DIM, fade))
+        if (modified) drawModifiedMark(graphics, x - CARET_W - 4, y, width, height)
     }
 
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {

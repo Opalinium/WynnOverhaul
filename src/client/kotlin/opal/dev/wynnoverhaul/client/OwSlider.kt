@@ -16,7 +16,9 @@ class OwSlider(
     initial: Double,
     private val label: String,
     private val onChange: (Double) -> Unit,
-) : AbstractSliderButton(x, y, width, height, Component.literal(""), ((initial - min) / (max - min)).coerceIn(0.0, 1.0)) {
+) : AbstractSliderButton(x, y, width, height, Component.literal(""), ((initial - min) / (max - min)).coerceIn(0.0, 1.0)), ModifiedMark {
+    override var modified = false
+
     init {
         updateMessage()
     }
@@ -43,5 +45,6 @@ class OwSlider(
         val font = Minecraft.getInstance().font
         val text = truncateToWidth(font, message.string, width - 6)
         graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2, OwTheme.TEXT)
+        if (modified) drawModifiedMark(graphics, x, y, width, height)
     }
 }

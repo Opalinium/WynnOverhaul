@@ -15,7 +15,9 @@ class OwCheckbox(
     private var checked: Boolean,
     height: Int = OwTheme.ROW_H - 2,
     private val onChange: (Boolean) -> Unit,
-) : AbstractWidget(x, y, width, height, label) {
+) : AbstractWidget(x, y, width, height, label), ModifiedMark {
+    override var modified = false
+
     companion object {
         private const val BOX = 14
     }
@@ -33,6 +35,7 @@ class OwCheckbox(
         val textX = x + BOX + 8
         val text = truncateToWidth(font, message.string, x + width - textX)
         graphics.text(font, text, textX, y + (height - 8) / 2, OwTheme.TEXT)
+        if (modified) drawModifiedMark(graphics, x, y, width, height)
     }
 
     override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {

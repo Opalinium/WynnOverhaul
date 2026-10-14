@@ -21,7 +21,9 @@ class OwButton(
     private val enabled: () -> Boolean = { true },
     private val swatch: Int? = null,
     private val onPress: () -> Unit,
-) : AbstractWidget(x, y, width, height, label) {
+) : AbstractWidget(x, y, width, height, label), ModifiedMark {
+    override var modified = false
+
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val active = enabled()
         val hovered = isHovered && active
@@ -76,6 +78,7 @@ class OwButton(
         } else {
             graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2, color)
         }
+        if (modified) drawModifiedMark(graphics, x, y, width, height)
     }
 
     private companion object {

@@ -44,7 +44,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         DISCOVERED("Discovered"),
     }
 
-    private val config = WynnOverhaulConfig.current
+    private var config = WynnOverhaulConfig.current
     private var activeGroup: Group = Group.QOL
     private var activeTrackerTab: TrackerTab = TrackerTab.GENERAL
     private var trackerRulesPage = 0
@@ -69,6 +69,29 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         val contentLeft = left + sidebarW + SIDEBAR_GAP
         val contentW = w - sidebarW - SIDEBAR_GAP
         var cy = top
+
+        val fieldH = OwTheme.ROW_H - 2
+        val fieldW = contentW - fieldH - 6
+        val searchField = OwTextField(host.panelFont, contentLeft, cy, fieldW, fieldH)
+        searchField.value = settingsQuery
+        searchField.setResponder { v ->
+            settingsQuery = v
+            searchRefocus = searchField.cursorPosition
+            host.rebuildPanels()
+        }
+        host.addPanelWidget(searchField)
+        host.addPanelWidget(SearchHelpScreen.button(contentLeft + fieldW + 2, cy, fieldH, SearchHelpScreen.Kind.SETTINGS, host.screen))
+        if (searchRefocus >= 0) {
+            host.screen.setFocused(searchField)
+            searchField.setCursorPosition(searchRefocus.coerceIn(0, searchField.value.length))
+            searchField.setHighlightPos(searchField.cursorPosition)
+            searchRefocus = -1
+        }
+        cy += fieldH + 6
+        if (settingsQuery.isNotBlank()) {
+            buildSearchResults(contentLeft, contentW, cy)
+            return cy
+        }
 
         if (activeGroup == Group.TRACKER) {
             cy = drawTabRow(TrackerTab.entries, contentLeft, contentW, cy, { it.label }, { it == activeTrackerTab }, sub = true) {
@@ -175,8 +198,25 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
         return ty + height + 2
     }
 
+    private class Entry(
+        val section: String,
+        val label: String,
+        val tooltip: String,
+        val key: String,
+        val value: Any?,
+        val text: String,
+        val widget: AbstractWidget,
+        val height: Int,
+        val apply: ((Any?) -> Unit)?,
+    )
+
+    private class Collected(val group: String, val entries: List<Entry>)
+
     private inner class PanelScope(val left: Int, val w: Int) {
         val rows = mutableListOf<Pair<AbstractWidget, Int>>()
+        val entries = mutableListOf<Entry>()
+        private var section = ""
+        private val seen = HashMap<String, Int>()
 
         private fun <T : AbstractWidget> add(widget: T, tooltip: String, height: Int = OwTheme.ROW_H): T {
             if (tooltip.isNotEmpty()) widget.setTooltip(Tooltip.create(Component.literal(tooltip)))
@@ -184,16 +224,27 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             return widget
         }
 
+        private fun record(label: String, tooltip: String, value: Any?, text: String, widget: AbstractWidget, apply: ((Any?) -> Unit)?) {
+            val base = "$section|$label"
+            val n = (seen[base] ?: 0) + 1
+            seen[base] = n
+            entries += Entry(section, label, tooltip, "$base#$n", value, text, widget, OwTheme.ROW_H, apply)
+        }
+
         fun checkbox(label: String, tooltip: String, selected: Boolean, onChange: (Boolean) -> Unit) {
-            add(OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange), tooltip)
+            val widget = add(OwCheckbox(left, 0, w, Component.literal(label), selected, onChange = onChange), tooltip)
+            record(label, tooltip, selected, if (selected) "On" else "Off", widget) { onChange(it as Boolean) }
         }
 
         fun header(label: String) {
+            section = label
             rows += OwSectionHeader(left, 0, w, label) to 18
         }
 
         fun slider(label: String, min: Double, max: Double, decimals: Int, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
-            add(OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange), tooltip)
+            val widget = add(OwSlider(left, 0, w, OwTheme.ROW_H - 2, min, max, decimals, initial, label, onChange), tooltip)
+            val text = if (decimals <= 0) initial.toLong().toString() else "%.${decimals}f".format(initial)
+            record(label, tooltip, initial, text, widget) { onChange(it as Double) }
         }
 
         fun slider(label: String, min: Double, max: Double, initial: Double, tooltip: String, onChange: (Double) -> Unit) {
@@ -214,7 +265,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
 
         fun dropdown(label: String, tooltip: String, options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
             var current = selected
-            add(
+            val widget = add(
                 OwDropdown(left, 0, w, OwTheme.ROW_H - 2, label, options.map { OwDropdownOverlay.Option(it.first, it.second) }, { current }) { id ->
                     current = id
                     onSelect(id)
@@ -222,13 +273,99 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 },
                 tooltip,
             )
+            record(label, tooltip, selected, options.firstOrNull { it.first == selected }?.second ?: selected, widget) { onSelect(it as String) }
         }
     }
 
+    private var collecting: MutableList<Collected>? = null
+    private var collectGroup = ""
+
+    private fun same(a: Any?, b: Any?): Boolean = if (a is Double && b is Double) kotlin.math.abs(a - b) < 1e-6 else a == b
+
+    private fun decorate(scope: PanelScope, probe: PanelScope): List<() -> Unit> {
+        val defaults = probe.entries.associateBy { it.key }
+        val resets = ArrayList<() -> Unit>()
+        for (entry in scope.entries) {
+            val default = defaults[entry.key] ?: continue
+            val apply = entry.apply ?: continue
+            if (same(entry.value, default.value)) continue
+            (entry.widget as? ModifiedMark)?.modified = true
+            val note = "Changed from the default (${default.text})."
+            entry.widget.setTooltip(Tooltip.create(Component.literal(if (entry.tooltip.isEmpty()) note else entry.tooltip + "\n\n" + note)))
+            resets += { apply(default.value) }
+        }
+        return resets
+    }
+
     private fun panel(left: Int, w: Int, top: Int, build: PanelScope.() -> Unit) {
+        val probe = PanelScope(left, w)
+        val live = config
+        config = WynnOverhaulConfig()
+        try {
+            probe.build()
+        } finally {
+            config = live
+        }
         val scope = PanelScope(left, w)
         scope.build()
-        host.installPanelRows(scope.rows, left, top, w, host.panelContentBottom() - top)
+        val resets = decorate(scope, probe)
+        val sink = collecting
+        if (sink != null) {
+            sink.add(Collected(collectGroup, scope.entries))
+            return
+        }
+        val rows = ArrayList<Pair<AbstractWidget, Int>>()
+        if (resets.isNotEmpty()) {
+            val label = "Reset ${resets.size} changed setting${if (resets.size == 1) "" else "s"} on this page"
+            rows += OwButton(left, 0, w, OwTheme.ROW_H - 2, Component.literal(label)) {
+                resets.forEach { it() }
+                host.rebuildPanels()
+            } to OwTheme.ROW_H
+        }
+        rows += scope.rows
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
+    }
+
+    private var settingsQuery = ""
+    private var searchRefocus = -1
+
+    private fun buildSearchResults(left: Int, w: Int, top: Int) {
+        val gathered = ArrayList<Collected>()
+        collecting = gathered
+        try {
+            val sources = listOf<Pair<String, (Int, Int, Int) -> Unit>>(
+                "HUD" to this::buildHudTab,
+                "Combat" to this::buildCombatTab,
+                "Menus" to this::buildMenusTab,
+                "Notifications" to this::buildToastsTab,
+                "Notifications" to this::buildAlertsTab,
+                "Animations" to this::buildAnimationsTab,
+                "Camera" to this::buildCameraTab,
+                "QoL" to this::buildQolTab,
+                "Lootrun" to this::buildLootrunTab,
+                "Discord" to this::buildDiscordTab,
+                "Advanced" to this::buildOverridesTab,
+            )
+            for ((group, build) in sources) {
+                collectGroup = group
+                build(left, w, top)
+            }
+        } finally {
+            collecting = null
+        }
+        val words = settingsQuery.lowercase().split(' ').filter { it.isNotEmpty() }
+        val rows = ArrayList<Pair<AbstractWidget, Int>>()
+        for (collected in gathered) {
+            val hits = collected.entries.filter { entry ->
+                val haystack = "${entry.label} ${entry.tooltip} ${entry.section} ${collected.group}".lowercase()
+                words.all { it in haystack }
+            }
+            if (hits.isEmpty()) continue
+            rows += OwSectionHeader(left, 0, w, collected.group) to 18
+            for (entry in hits) rows += entry.widget to entry.height
+        }
+        if (rows.isEmpty()) rows += OwLabel(left, 0, w, OwTheme.ROW_H, "No settings match \"${settingsQuery.trim()}\"", OwTheme.TEXT_DIM) to OwTheme.ROW_H
+        host.installPanelRows(rows, left, top, w, host.panelContentBottom() - top)
     }
 
     private fun buildTrackerTab(left: Int, w: Int, top: Int) {
