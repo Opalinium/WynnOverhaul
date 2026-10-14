@@ -106,6 +106,7 @@ data class WynnOverhaulConfig(
     var hitFeedbackArcs: Boolean = true,
     var damageNumberStyle: String = "POP",
     var damageNumberCompact: Boolean = true,
+    var damageNumberAggregate: Boolean = true,
     var damageNumberScale: Int = 100,
     var questLogHudEnabled: Boolean = true,
     var partyHudEnabled: Boolean = true,

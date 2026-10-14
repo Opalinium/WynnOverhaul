@@ -22,7 +22,9 @@ object DamageNumbers {
 
     private class Segment(val text: String, val rgb: Int)
 
-    private class Popup(val at: Vec3, val segments: List<Segment>, val weight: Float, val startNanos: Long, val drift: Float, val style: Style) {
+    private class Popup(var at: Vec3, var segments: List<Segment>, var weight: Float, var startNanos: Long, val drift: Float, val style: Style) {
+        val totals = LinkedHashMap<WynnDamageTracker.Element, Long>()
+        var lastHitNanos = startNanos
         var ndcX = 0f
         var ndcY = 0f
         var onScreen = false
@@ -33,11 +35,28 @@ object DamageNumbers {
 
     fun spawn(at: Vec3, delta: Map<WynnDamageTracker.Element, Long>, weight: Float) {
         if (!WynnOverhaulConfig.current.hitFeedbackNumbers || !WynnOverhaulGate.inGame) return
-        val compact = WynnOverhaulConfig.current.damageNumberCompact
-        val segments = delta.entries.sortedByDescending { it.value }.map { Segment(format(it.value, compact), it.key.rgb) }
+        val config = WynnOverhaulConfig.current
+        val now = System.nanoTime()
+        if (config.damageNumberAggregate) {
+            val target = active.lastOrNull { now - it.lastHitNanos <= MERGE_NANOS && it.at.distanceToSqr(at) <= MERGE_DISTANCE_SQ }
+            if (target != null) {
+                for ((element, value) in delta) target.totals.merge(element, value, Long::plus)
+                target.segments = segmentsOf(target.totals, config.damageNumberCompact)
+                target.weight = maxOf(target.weight, weight) + MERGE_WEIGHT_STEP
+                target.at = at
+                target.startNanos = now
+                target.lastHitNanos = now
+                return
+            }
+        }
         if (active.size >= MAX_ACTIVE) active.removeFirst()
-        active.add(Popup(at, segments, weight, System.nanoTime(), ThreadLocalRandom.current().nextFloat() * 2f - 1f, Style.of(WynnOverhaulConfig.current.damageNumberStyle)))
+        val popup = Popup(at, segmentsOf(delta, config.damageNumberCompact), weight, now, ThreadLocalRandom.current().nextFloat() * 2f - 1f, Style.of(config.damageNumberStyle))
+        popup.totals.putAll(delta)
+        active.add(popup)
     }
+
+    private fun segmentsOf(values: Map<WynnDamageTracker.Element, Long>, compact: Boolean): List<Segment> =
+        values.entries.sortedByDescending { it.value }.map { Segment(format(it.value, compact), it.key.rgb) }
 
     fun clear() {
         active.clear()
@@ -125,6 +144,9 @@ object DamageNumbers {
     }
 
     private const val LIFE_NANOS = 900_000_000L
+    private const val MERGE_NANOS = 500_000_000L
+    private const val MERGE_DISTANCE_SQ = 6.25
+    private const val MERGE_WEIGHT_STEP = 0.12f
     private const val MAX_ACTIVE = 40
     private const val POP_SHARE = 0.18f
     private const val POP_OVERSHOOT = 0.55f

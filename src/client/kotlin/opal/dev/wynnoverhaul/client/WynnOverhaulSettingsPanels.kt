@@ -1084,6 +1084,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Shortens numbers from 1,000 up, so 2400 shows as 2.4k and 1,500,000 as 1.5m.",
                 config.damageNumberCompact,
             ) { config.damageNumberCompact = it }
+            checkbox(
+                "Merge rapid hits",
+                "Adds hits on the same target that land within half a second into one growing number instead of a stack of separate ones.",
+                config.damageNumberAggregate,
+            ) { config.damageNumberAggregate = it }
 
             header("Ultimates")
             checkbox(
