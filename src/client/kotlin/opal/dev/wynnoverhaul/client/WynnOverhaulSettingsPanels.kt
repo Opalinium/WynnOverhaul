@@ -1034,6 +1034,23 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "How many seconds of recent damage the DPS figure averages over. Shorter reacts faster, longer is steadier.",
             ) { config.dpsWindowSeconds = it.toInt() }
 
+            header("Waypoints")
+            checkbox(
+                "Pinned waypoints",
+                "Lets you pin several activities or places at once. Pin an activity from its journal entry, drop one at your feet with /owpin here, and cycle which one is the main target with the Cycle Waypoint hotkey, which is unbound by default. The main one is drawn in full, the rest dimmer.",
+                config.pinsEnabled,
+            ) { config.pinsEnabled = it }
+            checkbox(
+                "Waypoint list",
+                "Shows your pinned waypoints with distances in a list you can place in the HUD designer.",
+                config.pinListEnabled,
+            ) { config.pinListEnabled = it }
+            checkbox(
+                "Clear waypoints on arrival",
+                "Removes a pinned waypoint when you get within a few blocks of its exact location.",
+                config.pinAutoClear,
+            ) { config.pinAutoClear = it }
+
             header("Low health")
             dropdown(
                 "Low health effect",

@@ -19,6 +19,7 @@ class WynnQolClient : ClientModInitializer {
         ChatHud.init()
         WynnDirectMessages.register()
         PartyFriendModel.register()
+        PinBoard.register()
         PartyBuffTracker.register()
         WynnBuffTracker.register()
         WynnLevelTracker.register()
@@ -117,6 +118,10 @@ class WynnQolClient : ClientModInitializer {
             HudVisibility.hideable(WynnPartyHudElement()),
         )
         HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "pins"),
+            HudVisibility.hideable(PinListHudElement()),
+        )
+        HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "compass"),
             HudVisibility.hideable(WynnCompassHudElement()),
         )
@@ -188,6 +193,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("guild", "Guild", "TOP_LEFT", defaultOffsetY = 44, fallbackW = 160, fallbackH = 26))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("quest_log", "Quest Log", "TOP_RIGHT", fallbackW = 260, fallbackH = 80))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("party", "Party", "TOP_RIGHT", defaultOffsetY = 400, fallbackW = 150, fallbackH = 70))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("pins", "Waypoints", "TOP_LEFT", defaultOffsetY = 190, fallbackW = 170, fallbackH = 60))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("compass", "Compass", "TOP_LEFT", defaultOffsetX = 4, defaultOffsetY = 100, fallbackW = 300, fallbackH = 48))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("chat", "Chat", "BOTTOM_LEFT", defaultOffsetX = 0, defaultOffsetY = 40, fallbackW = 320, fallbackH = 180, barStretch = true))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("hotbar", "Hotbar", "BOTTOM_LEFT", defaultOffsetX = 220, defaultOffsetY = 4, fallbackW = 211, fallbackH = 24, barStretch = true))
@@ -245,6 +251,7 @@ class WynnQolClient : ClientModInitializer {
         VoxyVista.tick(client)
         PartyFriendModel.tick(client)
         PartyBuffTracker.tick()
+        PinBoard.tick(client)
         WynnBuffTracker.tick(client)
         WynnCutsceneTracker.tick(client)
         WynnTotemTracker.tick(client)

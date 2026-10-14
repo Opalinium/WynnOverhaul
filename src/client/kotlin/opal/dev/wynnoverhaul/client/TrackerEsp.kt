@@ -50,6 +50,7 @@ object TrackerEsp {
         val questMatches = QuestBeaconTracker.current
         val npcMatches = if (config.townNpcMarkersEnabled) TownNpcTracker.current else emptyList()
         val discoveryMatches = DiscoveryTracker.matches()
+        val pinEntries = if (config.pinsEnabled) PinBoard.entries() else emptyList()
         val lootrunMatches = if (config.lootrunEnabled && LootrunModel.state != LootrunModel.State.NOT_RUNNING) {
             val playerPos = client.player?.position()
             val pathMatches = if (playerPos != null) LootrunRecorder.renderMatches(playerPos) else emptyList()
@@ -57,7 +58,7 @@ object TrackerEsp {
         } else {
             emptyList()
         }
-        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty() && npcMatches.isEmpty() && discoveryMatches.isEmpty()) {
+        if (liveMatches.isEmpty() && discoveredMatches.isEmpty() && questMatches.isEmpty() && lootrunMatches.isEmpty() && npcMatches.isEmpty() && discoveryMatches.isEmpty() && pinEntries.isEmpty()) {
             if (waypoints.isNotEmpty()) waypoints = emptyList()
             return
         }
@@ -96,6 +97,9 @@ object TrackerEsp {
             }
             for (match in npcMatches) {
                 projectWaypoint(match, level, player, camPos, vp, view, clip, now, out, subtle = true)
+            }
+            for (entry in pinEntries) {
+                projectWaypoint(entry.match, level, player, camPos, vp, view, clip, now, out, subtle = !entry.primary)
             }
 
             waypoints = out

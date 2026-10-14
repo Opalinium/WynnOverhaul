@@ -38,6 +38,12 @@ class WynnCompassHudElement : HudElement {
             val c = match.center()
             markers.add(Marker(c, match.label, match.colorArgb, horizontalDistance(playerPos, c)))
         }
+        if (WynnOverhaulConfig.current.pinsEnabled) {
+            for (entry in PinBoard.entries()) {
+                val c = entry.match.center()
+                markers.add(Marker(c, entry.match.label, entry.match.colorArgb, horizontalDistance(playerPos, c)))
+            }
+        }
         if (LootrunModel.state != LootrunModel.State.NOT_RUNNING) {
             LootrunParticleFeature.taskCenter?.let { c ->
                 markers.add(Marker(c, "Lootrun Task", MARKER_LOOTRUN, horizontalDistance(playerPos, c)))

@@ -95,6 +95,7 @@ class WynnOverhaulInventoryScreen(
     private val journalCategoryButtons = ArrayList<Pair<OwButton, Int>>()
     private var journalTrackButton: OwButton? = null
     private var journalWikiButton: OwButton? = null
+    private var journalPinButton: OwButton? = null
     private var journalActionsTop: Int = 0
     private var journalRefreshButton: OwButton? = null
     private var selectedJournal: ActivityInfo? = null
@@ -322,9 +323,20 @@ class WynnOverhaulInventoryScreen(
                 journalWikiButton = OwButton(gx + JOURNAL_CARD_PAD + 124, rowY(header.actionsTop), 100, JOURNAL_ACTION_BTN_H, Component.literal("Wiki Info")) {
                     Minecraft.getInstance().setScreenAndShow(WynnOverhaulQuestWikiScreen(selected.type, selected.name, this))
                 }.also { addRenderableWidget(it) }
+                val pinLocated = DiscoveryTracker.locate(selected)
+                val pinned = PinBoard.isPinned(PinBoard.activityId(selected.type, selected.name))
+                journalPinButton = OwButton(
+                    gx + JOURNAL_CARD_PAD + 228, rowY(header.actionsTop), 80, JOURNAL_ACTION_BTN_H, Component.literal(if (pinned) "Unpin" else "Pin"),
+                    enabled = { pinned || pinLocated != null },
+                ) {
+                    val located = pinLocated
+                    if (located != null) PinBoard.toggleActivity(selected, located) else PinBoard.remove(PinBoard.activityId(selected.type, selected.name))
+                    rebuildWidgets()
+                }.also { addRenderableWidget(it) }
             } else {
                 journalTrackButton = null
                 journalWikiButton = null
+                journalPinButton = null
             }
         } else {
             journalSearchField = null
@@ -332,6 +344,7 @@ class WynnOverhaulInventoryScreen(
             journalCategoryButtons.clear()
             journalTrackButton = null
             journalWikiButton = null
+            journalPinButton = null
             journalRefreshButton = null
         }
         if (invTab == InvTab.CHARACTER) {
@@ -519,6 +532,7 @@ class WynnOverhaulInventoryScreen(
                 for ((button, relY) in journalCategoryButtons) button.y = pt + CONTENT_TOP_REL + relY
                 journalTrackButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
                 journalWikiButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
+                journalPinButton?.let { button -> button.y = pt + CONTENT_TOP_REL + journalActionsTop }
                 drawOuterPanel(graphics, pt, it.panelH)
                 when (invTab) {
                     InvTab.INVENTORY -> {
