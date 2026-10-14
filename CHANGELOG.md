@@ -16,6 +16,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Search filters for items and journal activities.
 - Compared tooltips show the difference from your equipped item after each stat.
 - A settings search, markers on changed settings and a per-page reset.
+- A Ping hotkey marks the spot you are looking at and sends it to your party in the same format Wynntils uses. Locations other players send in chat, including wynnmod pings, become waypoints.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

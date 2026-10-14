@@ -1193,6 +1193,28 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.pinAutoClear,
             ) { config.pinAutoClear = it }
 
+            header("Ping")
+            checkbox(
+                "Ping system",
+                "Marks the spot you are looking at with a waypoint when you press the Ping hotkey, which is unbound by default. It shows in the world, on the compass and in the waypoint list, and disappears after a while.",
+                config.pingEnabled,
+            ) { config.pingEnabled = it }
+            checkbox(
+                "Share pings with the party",
+                "Also sends the ping to your party in chat as My compass is at [x, y, z], the same wording Wynntils uses. Wynntils users see clickable coordinates they can set as a compass or save as a waypoint.",
+                config.pingShareParty,
+            ) { config.pingShareParty = it }
+            checkbox(
+                "Show pings and locations from chat",
+                "Turns My compass is at [x, y, z] and My location is at [x, y, z] messages from other players, including ones sent by Wynntils, into waypoints.",
+                config.pingReceive,
+            ) { config.pingReceive = it }
+            checkbox("Ping sound", "Plays a soft chime when you place a ping or receive one.", config.pingSound) { config.pingSound = it }
+            slider(
+                "Ping lifetime (seconds)", 10.0, 300.0, 0, config.pingLifetimeSeconds.toDouble(),
+                "How long your own pings stay before they fade away. Pings you receive last half as long again.",
+            ) { config.pingLifetimeSeconds = it.toInt() }
+
             header("Low health")
             dropdown(
                 "Low health effect",

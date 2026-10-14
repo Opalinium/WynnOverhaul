@@ -62,6 +62,8 @@ object WynnOverhaulGate {
             ObjectiveClaims.clear()
             DiscoveryTracker.clear()
             XaeroHook.clear()
+            PinBoard.clearKind(PinBoard.Kind.PING)
+            PinBoard.clearKind(PinBoard.Kind.RECEIVED)
         }
         onWynncraft = onWynn
         inGame = inGameNow

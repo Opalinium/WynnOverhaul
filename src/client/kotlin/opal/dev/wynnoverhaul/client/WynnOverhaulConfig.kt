@@ -108,6 +108,11 @@ data class WynnOverhaulConfig(
     var pinsEnabled: Boolean = true,
     var pinListEnabled: Boolean = true,
     var pinAutoClear: Boolean = true,
+    var pingEnabled: Boolean = true,
+    var pingShareParty: Boolean = true,
+    var pingReceive: Boolean = true,
+    var pingSound: Boolean = true,
+    var pingLifetimeSeconds: Int = 45,
     var lowHealthThreshold: Int = 30,
     var lowHealthIntensity: Int = 70,
     var hitFeedbackArcs: Boolean = true,
@@ -254,6 +259,7 @@ data class WynnOverhaulConfig(
         dpsWindowSeconds = dpsWindowSeconds.coerceIn(1, 30)
         hitFeedbackIntensity = hitFeedbackIntensity.coerceIn(0, 200)
         lowHealthThreshold = lowHealthThreshold.coerceIn(5, 80)
+        pingLifetimeSeconds = pingLifetimeSeconds.coerceIn(10, 300)
         lowHealthIntensity = lowHealthIntensity.coerceIn(10, 100)
         damageNumberScale = damageNumberScale.coerceIn(50, 200)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)

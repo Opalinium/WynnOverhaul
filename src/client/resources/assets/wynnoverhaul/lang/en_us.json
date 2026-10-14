@@ -7,6 +7,8 @@
   "key.wynnoverhaul.weapon_anim": "Register Weapon for Animations",
   "key.wynnoverhaul.tracker.toggle": "Toggle Entity Tracker",
   "key.wynnoverhaul.pins.cycle": "Cycle Main Waypoint",
+  "key.wynnoverhaul.ping": "Ping Looked-At Spot",
+  "key.wynnoverhaul.hud_reveal": "Reveal Faded HUD",
   "key.wynnoverhaul.quick_cast_1": "Cast 1st Spell",
   "key.wynnoverhaul.quick_cast_2": "Cast 2nd Spell",
   "key.wynnoverhaul.quick_cast_3": "Cast 3rd Spell",
