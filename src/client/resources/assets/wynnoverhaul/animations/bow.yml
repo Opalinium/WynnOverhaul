@@ -129,6 +129,11 @@ stances:
 movesets:
   "BOW":
     label: "Bow: Archer"
+    cast:
+      seconds: 1.0
+      body: 1.1
+      addSounds:
+        - {at: 0.4, sound: "minecraft:entity.arrow.shoot", pitch: 1.3, volume: 0.3}
     light:
       - {pose: "BOW"}
       - {pose: "BOW:SNAP"}
@@ -136,6 +141,14 @@ movesets:
       - {pose: "BOW:VOLLEY", finisher: true}
   "BOW:FIREARM":
     label: "Bow: Firearm"
+    cast:
+      seconds: 0.85
+      arc: 0.8
+      body: 0.9
+      reach: 1.4
+      hit: -0.06
+      addSounds:
+        - {at: 0.4, sound: "minecraft:entity.firework_rocket.blast", pitch: 1.4, volume: 0.35}
     light:
       - {pose: "BOW:FIREARM"}
       - {pose: "BOW:FIREARM_KICK"}

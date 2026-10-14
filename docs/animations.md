@@ -68,6 +68,12 @@ movesets:
 | `stance` | Stance to hold the weapon in. Defaults to the stance with the moveset's own key, then the family stance |
 | `opener` | A `pose` (and optional `mirror`) played instead of the first stroke when a chain starts from idle, so the first swing can draw the weapon out of its carried pose. When the weapon is already in its ready stance the first stroke plays as normal |
 | `light` | The strokes, each with a `pose`, optional `mirror` and optional `finisher` |
+| `cast` | How spell casts look with this moveset, below |
+| `spells` | Maps a spell name (lowercase letters only) to a pose, to give this moveset its own animation for that spell |
+
+`cast` reshapes the shared spell pose for the spell being cast, so each moveset casts in its own manner without a pose per spell. All fields are optional: `seconds` multiplies the length, `arc` the arm and weapon tip channels, `body` the lean, step, turn, leg and hip channels, `reach` the hand push, `raise` lifts the arms (negative lowers them), `turn` adds a swing of the torso, `mirror` plays the cast in the opposite direction, `grip` forces one handed (0) or two handed (1), `hit` shifts when the strike lands, `blend` multiplies the ease in, `twirl` adds an oscillation to a channel (`{channel, amplitude, cycles}`), `sounds` replaces the spell's sounds and `addSounds` adds sounds on top. A pose named in `spells` is used as written and ignores `cast`.
+
+`movesetSpells` is a top-level section that does the same as `spells` for several movesets at once: `movesetSpells: {"SPEAR:HAMMER": {bash: "SPELL:BASH@SPEAR:HAMMER"}}`. The bundled `spell_moves.yml` uses it to give each moveset its own cast for most spells. It is generated from each moveset's own strokes by `python tools/spell_compose.py`, which reads the strokes in the other files and writes the file again. A spell without an entry falls back to the shared pose reshaped by `cast`.
 
 `mirror` plays the stroke in the opposite direction, so an alternating chain reads as forehand and backhand. `finisher` adds the heavy hit sound. Every pose named must exist. The moveset key is what a weapon is assigned in the menu, so it does not need a pose of the same name. The menu lists movesets, plus any pose that no moveset uses.
 

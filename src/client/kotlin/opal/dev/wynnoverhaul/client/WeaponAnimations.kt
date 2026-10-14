@@ -229,7 +229,6 @@ object WeaponAnimations {
     private val HAND_SPRINT_EXTRA: Map<String, Float> get() = AnimationLibrary.tables().handSprintExtra
     private val TRAIL_SPANS: Map<String, Pair<Float, Float>> get() = AnimationLibrary.tables().trailSpans
     private val LABELS: Map<String, String> get() = AnimationLibrary.tables().labels
-    private val SPELL_KEYS: Map<String, String> get() = AnimationLibrary.tables().spellKeys
 
     private fun stanceFor(key: String?): Stance? {
         if (key == null) return null
@@ -784,7 +783,7 @@ object WeaponAnimations {
             suppress = true
             val now = System.nanoTime()
             readyUntil = now + READY_NANOS
-            cues = SFX[chosen.key] ?: emptyList()
+            cues = SpellCasts.cuesOf(chosen) ?: SFX[chosen.key] ?: emptyList()
             cueFired = BooleanArray(cues.size)
             cueFinisher = false
             trailStrength = 1f
@@ -1068,8 +1067,8 @@ object WeaponAnimations {
         val config = WynnOverhaulConfig.current
         if (!config.weaponAnimationSpells || config.weaponAnimationPreview) return
         val player = Minecraft.getInstance().player ?: return
-        val key = SPELL_KEYS[name.lowercase().filter { it.isLetter() }] ?: "SPELL:CAST"
-        val chosen = POSES[key] ?: return
+        val styleKey = resolveKey(player.mainHandItem)
+        val chosen = SpellCasts.choose(styleKey, name.lowercase().filter { it.isLetter() }) ?: return
         SwingClock.beginSpell(player, chosen)
     }
 

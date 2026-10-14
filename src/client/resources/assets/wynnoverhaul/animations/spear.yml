@@ -923,6 +923,17 @@ stances:
 movesets:
   "SPEAR:GREATSWORD":
     label: "Spear: Greatsword"
+    cast:
+      seconds: 1.18
+      arc: 1.12
+      body: 1.3
+      reach: 0.9
+      raise: 0.25
+      turn: 0.3
+      grip: 1
+      hit: 0.04
+      addSounds:
+        - {at: 0.5, sound: "minecraft:entity.player.attack.sweep", pitch: 0.7, volume: 0.5}
     opener: {pose: "SPEAR:GREATSWORD_DRAW"}
     light:
       - {pose: "SPEAR:GREATSWORD"}
@@ -931,6 +942,13 @@ movesets:
       - {pose: "SPEAR:GREATSWORD_CLEAVE", finisher: true}
   "SPEAR":
     label: "Spear: Lancer"
+    cast:
+      seconds: 0.92
+      body: 1.15
+      reach: 1.45
+      hit: -0.04
+      addSounds:
+        - {at: 0.45, sound: "minecraft:item.trident.throw", pitch: 1.2, volume: 0.35}
     light:
       - {pose: "SPEAR"}
       - {pose: "SPEAR:JAB"}
@@ -938,6 +956,14 @@ movesets:
       - {pose: "SPEAR:SKEWER", finisher: true}
   "SPEAR:SWEEP":
     label: "Spear: Quarterstaff"
+    cast:
+      seconds: 1.0
+      arc: 0.95
+      grip: 1
+      twirl: {channel: twist, amplitude: 0.9, cycles: 2}
+      addSounds:
+        - {at: 0.2, sound: "minecraft:entity.player.attack.sweep", pitch: 1.5, volume: 0.3}
+        - {at: 0.6, sound: "minecraft:entity.player.attack.sweep", pitch: 1.3, volume: 0.3}
     light:
       - {pose: "SPEAR:SWEEP"}
       - {pose: "SPEAR:SWEEP", mirror: true}
@@ -945,6 +971,14 @@ movesets:
       - {pose: "SPEAR:TWIRL", finisher: true}
   "SPEAR:SCYTHE":
     label: "Spear: Halberd"
+    cast:
+      seconds: 1.12
+      arc: 1.2
+      body: 1.2
+      turn: 0.55
+      grip: 1
+      addSounds:
+        - {at: 0.4, sound: "minecraft:entity.player.attack.sweep", pitch: 0.8, volume: 0.5}
     light:
       - {pose: "SPEAR:SCYTHE"}
       - {pose: "SPEAR:SCYTHE", mirror: true}
@@ -952,6 +986,15 @@ movesets:
       - {pose: "SPEAR:SLAM", finisher: true}
   "SPEAR:GLAIVE":
     label: "Spear: Naginata"
+    cast:
+      seconds: 0.98
+      arc: 1.05
+      body: 1.1
+      turn: 0.35
+      grip: 1
+      twirl: {channel: headY, amplitude: 0.6, cycles: 1.5}
+      addSounds:
+        - {at: 0.35, sound: "minecraft:entity.player.attack.sweep", pitch: 1.1, volume: 0.4}
     opener: {pose: "SPEAR:GLAIVE_DRAW"}
     light:
       - {pose: "SPEAR:GLAIVE"}
@@ -960,6 +1003,15 @@ movesets:
       - {pose: "SPEAR:GLAIVE_CLEAVE", finisher: true}
   "SPEAR:TWIN":
     label: "Spear: Twinblades"
+    cast:
+      seconds: 0.8
+      arc: 1.1
+      body: 1.05
+      mirror: true
+      twirl: {channel: twist, amplitude: 0.7, cycles: 3}
+      addSounds:
+        - {at: 0.3, sound: "minecraft:entity.player.attack.weak", pitch: 1.5, volume: 0.4}
+        - {at: 0.55, sound: "minecraft:entity.player.attack.weak", pitch: 1.7, volume: 0.4}
     light:
       - {pose: "SPEAR:TWIN"}
       - {pose: "SPEAR:TWIN_REND"}
@@ -967,6 +1019,14 @@ movesets:
       - {pose: "SPEAR:TWIN_X", finisher: true}
   "SPEAR:AXE":
     label: "Spear: Axe"
+    cast:
+      seconds: 0.96
+      arc: 1.1
+      body: 1.25
+      raise: 0.3
+      hit: 0.03
+      addSounds:
+        - {at: 0.55, sound: "minecraft:entity.player.attack.crit", pitch: 0.9, volume: 0.4}
     light:
       - {pose: "SPEAR:AXE"}
       - {pose: "SPEAR:AXE_HEW"}
@@ -974,6 +1034,16 @@ movesets:
       - {pose: "SPEAR:AXE_MAUL", finisher: true}
   "SPEAR:GREATAXE":
     label: "Spear: Great axe"
+    cast:
+      seconds: 1.28
+      arc: 1.2
+      body: 1.5
+      reach: 0.8
+      raise: 0.4
+      grip: 1
+      hit: 0.06
+      addSounds:
+        - {at: 0.55, sound: "minecraft:item.mace.smash_ground", pitch: 0.8, volume: 0.6}
     light:
       - {pose: "SPEAR:GREATAXE"}
       - {pose: "SPEAR:GREATAXE_UP"}
@@ -981,6 +1051,15 @@ movesets:
       - {pose: "SPEAR:GREATAXE_X", finisher: true}
   "SPEAR:HAMMER":
     label: "Spear: Hammer"
+    cast:
+      seconds: 1.34
+      arc: 1.25
+      body: 1.65
+      raise: 0.5
+      grip: 1
+      hit: 0.08
+      addSounds:
+        - {at: 0.6, sound: "minecraft:item.mace.smash_ground_heavy", pitch: 0.9, volume: 0.6}
     light:
       - {pose: "SPEAR:HAMMER"}
       - {pose: "SPEAR:HAMMER_SWEEP"}

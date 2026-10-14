@@ -504,10 +504,10 @@ def render_moveset(src, key, out_dir):
         plt.close(fig)
 
 
-def render_swing(src, key, path, frames=8):
+def render_swing(src, key, path, frames=8, stance=None):
     stances = load_stances(src)
     poses = load_poses(src)
-    stance_key = SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
+    stance_key = stance or SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
     carry, ready, offset = stances[stance_key]
     base = ready.copy()
     fig, axes = plt.subplots(3, frames, figsize=(2.2 * frames, 6.6))
@@ -515,7 +515,7 @@ def render_swing(src, key, path, frames=8):
         t = f / (frames - 1)
         out = sample_pose(poses[key], t, base, key)
         for r, view in enumerate(("front", "side", "top")):
-            scene(axes[r][f], out, view, offset, WEAPON_LEN.get(stance_key, (4, 14)), f"{key} t={t:.2f} {view}", BLADES.get(key))
+            scene(axes[r][f], out, view, offset, WEAPON_LEN.get(stance_key, (4, 14)), f"{key} t={t:.2f} {view}", BLADES.get(key) or BLADES.get(stance_key))
     fig.tight_layout()
     fig.savefig(path, dpi=80)
 
@@ -734,5 +734,7 @@ if __name__ == "__main__":
     if fps and not swings and not only:
         sys.exit(0)
     render_stances(src, out_dir, only or None)
-    for key in swings:
-        render_swing(src, key, out_dir / f"swing_{key.replace(':', '_')}.png")
+    for entry in swings:
+        key, _, stance = entry.partition("=")
+        suffix = "_" + stance.replace(":", "_") if stance else ""
+        render_swing(src, key, out_dir / f"swing_{key.replace(':', '_')}{suffix}.png", stance=stance or None)

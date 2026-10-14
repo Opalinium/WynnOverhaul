@@ -23,6 +23,8 @@ internal class AnimationTables(
     val trailSpans: Map<String, Pair<Float, Float>>,
     val labels: Map<String, String>,
     val spellKeys: Map<String, String>,
+    val castStyles: Map<String, CastStyle>,
+    val movesetSpells: Map<String, Map<String, String>>,
     val locomotion: LocomotionTables,
     val firstPerson: FirstPersonTables,
 )

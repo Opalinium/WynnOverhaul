@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 internal object AnimationLibrary {
-    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "spell", "tool", "locomotion")
+    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "spell", "spell_moves", "tool", "locomotion")
     private const val RESOURCE_ROOT = "/assets/wynnoverhaul/animations/"
     private const val README_NAME = "README.txt"
     private const val CHECK_TICKS = 20
@@ -198,6 +198,8 @@ internal object AnimationLibrary {
         val trailSpans = HashMap<String, Pair<Float, Float>>()
         val labels = HashMap<String, String>()
         val spellKeys = HashMap<String, String>()
+        val castStyles = HashMap<String, CastStyle>()
+        val movesetSpells = HashMap<String, Map<String, String>>()
         val styleDefaults = LinkedHashMap<String, Float>()
         val styleDefs = LinkedHashMap<String, Pair<String, Map<String, Any?>>>()
         val stateDefs = LinkedHashMap<String, Pair<String, Map<String, Any?>>>()
@@ -224,6 +226,19 @@ internal object AnimationLibrary {
                     map(m["opener"])?.let { o -> openers[key] = ComboStep(o["pose"]?.toString() ?: bad("opener is missing pose"), o["mirror"] == true, false) }
                     m["stance"]?.toString()?.let { movesetStances[key] = it }
                     (m["label"] as? String)?.let { labels[key] = it }
+                    castStyles.remove(key)
+                    movesetSpells.remove(key)
+                    map(m["cast"])?.let { castStyles[key] = castStyle(it) }
+                    map(m["spells"])?.let { spells ->
+                        movesetSpells[key] = spells.entries.associate { (name, pose) -> name.lowercase().filter { it.isLetter() } to pose.toString() }
+                    }
+                }
+            }
+            map(d["movesetSpells"])?.forEach { (moveset, value) ->
+                guarded("spells for $moveset") {
+                    val spells = map(value) ?: bad("not a mapping")
+                    movesetSpells[moveset] = movesetSpells[moveset].orEmpty() +
+                        spells.entries.associate { (name, pose) -> name.lowercase().filter { it.isLetter() } to pose.toString() }
                 }
             }
             map(d["trails"])?.forEach { (key, value) -> guarded("trail $key") { trailSpans[key] = trail(value) } }
@@ -275,10 +290,18 @@ internal object AnimationLibrary {
             (openers.keys - validOpeners.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown opener pose and plays its first stroke instead") }
             val validStances = movesetStances.filter { it.key in validCombos && it.value in stances }
             (movesetStances.keys - validStances.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown stance and uses its family stance") }
+            val validCasts = castStyles.filter { it.key in validCombos }
+            val validSpells = HashMap<String, Map<String, String>>()
+            for ((moveset, spells) in movesetSpells) {
+                if (moveset !in validCombos) continue
+                val known = spells.filterValues { it in poses }
+                (spells.keys - known.keys).forEach { warnings.add("moveset $moveset names an unknown pose for spell $it and uses the shared spell animation") }
+                validSpells[moveset] = known
+            }
             val locomotion = buildLocomotion() ?: return null
             return AnimationTables(
                 poses, stances, validCombos, validStances, validOpeners, sfx, impact, finisher!!, thump!!, tail!!, slam!!,
-                lungeFamilies!!, handShift, handSprintExtra, trailSpans, labels, spellKeys, locomotion,
+                lungeFamilies!!, handShift, handSprintExtra, trailSpans, labels, spellKeys, validCasts, validSpells, locomotion,
                 FirstPersonTables(firstPersonHidden ?: emptySet(), firstPersonShift),
             )
         }
@@ -472,6 +495,25 @@ internal object AnimationLibrary {
             val pair = list(value) ?: bad("trail must be [from, to]")
             if (pair.size != 2) bad("trail must be [from, to]")
             return float(pair[0], "trail from") to float(pair[1], "trail to")
+        }
+
+        private fun castStyle(d: Map<String, Any?>): CastStyle {
+            fun f(name: String, default: Float): Float = floatOr(d[name], default, "cast $name")
+            val twirl = map(d["twirl"])
+            val twirlName = twirl?.get("channel")?.toString() ?: "twist"
+            val twirlChannel = AnimationChannels.indexOf(twirlName)
+            if (twirl != null && twirlChannel < 0) bad("unknown twirl channel $twirlName")
+            val style = CastStyle(
+                f("seconds", 1f), f("arc", 1f), f("body", 1f), f("reach", 1f), f("raise", 0f), f("turn", 0f), d["mirror"] == true,
+                f("grip", -1f), f("hit", 0f), f("blend", 1f),
+                if (twirl != null) twirlChannel else -1,
+                floatOr(twirl?.get("amplitude"), 0f, "cast twirl amplitude"),
+                floatOr(twirl?.get("cycles"), 1f, "cast twirl cycles"),
+                list(d["sounds"])?.let { cues(it, true) }.orEmpty(),
+                list(d["addSounds"])?.let { cues(it, true) }.orEmpty(),
+            )
+            if (style.seconds <= 0f || style.blend <= 0f) bad("cast seconds and blend must be positive")
+            return style
         }
 
         private fun cues(value: Any?, timed: Boolean): List<Cue> =
