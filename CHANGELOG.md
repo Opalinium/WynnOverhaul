@@ -11,6 +11,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The spell bar shows the next expected spell cost and tints it when repeated casts have raised it.
 - Rapid hits on one target within half a second merge into one growing damage number.
 - Buff and debuff rows keep a fixed order with harmful effects marked, and effects pulse during their last five seconds.
+- Low health effects: Vignette, Heartbeat, Pulsing border and Dripping blood, with threshold and strength sliders.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

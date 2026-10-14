@@ -53,6 +53,7 @@ class WynnQolClient : ClientModInitializer {
         HudElementRegistry.addFirst(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "damage_numbers"),
             HudElement { graphics, _ ->
+                LowHealthEffect.draw(graphics)
                 ImpactSparks.draw(graphics)
                 DamageNumbers.draw(graphics)
                 LootBeams.draw(graphics)

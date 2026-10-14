@@ -104,6 +104,9 @@ data class WynnOverhaulConfig(
     var hitFeedbackSparks: Boolean = true,
     var hitFeedbackSound: Boolean = true,
     var hitFeedbackNumbers: Boolean = true,
+    var lowHealthStyle: String = "VIGNETTE",
+    var lowHealthThreshold: Int = 30,
+    var lowHealthIntensity: Int = 70,
     var hitFeedbackArcs: Boolean = true,
     var damageNumberStyle: String = "POP",
     var damageNumberCompact: Boolean = true,
@@ -246,6 +249,8 @@ data class WynnOverhaulConfig(
         maxCps = maxCps.coerceIn(1.0, 12.0)
         dpsWindowSeconds = dpsWindowSeconds.coerceIn(1, 30)
         hitFeedbackIntensity = hitFeedbackIntensity.coerceIn(0, 200)
+        lowHealthThreshold = lowHealthThreshold.coerceIn(5, 80)
+        lowHealthIntensity = lowHealthIntensity.coerceIn(10, 100)
         damageNumberScale = damageNumberScale.coerceIn(50, 200)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)
         trackerRange = trackerRange.coerceIn(8.0, 128.0)

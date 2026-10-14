@@ -1034,6 +1034,22 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "How many seconds of recent damage the DPS figure averages over. Shorter reacts faster, longer is steadier.",
             ) { config.dpsWindowSeconds = it.toInt() }
 
+            header("Low health")
+            dropdown(
+                "Low health effect",
+                "Vignette: red edges that deepen as health drops. Heartbeat: the vignette pulses with a double beat that quickens. Pulsing border: a red frame. Dripping blood: streaks running down from the top edge.",
+                LowHealthEffect.Style.entries.map { it.name to it.label },
+                config.lowHealthStyle,
+            ) { config.lowHealthStyle = it }
+            slider(
+                "Low health threshold (%)", 5.0, 80.0, 0, config.lowHealthThreshold.toDouble(),
+                "The effect starts below this percentage of your health and reaches full strength at zero.",
+            ) { config.lowHealthThreshold = it.toInt() }
+            slider(
+                "Low health strength (%)", 10.0, 100.0, 0, config.lowHealthIntensity.toDouble(),
+                "How strong the effect is at its peak.",
+            ) { config.lowHealthIntensity = it.toInt() }
+
             header("Combat feel")
             checkbox(
                 "Hit feedback",
