@@ -14,6 +14,17 @@ import net.minecraft.world.item.ItemStack
 import org.joml.Vector2i
 
 object EquipCompareTooltip {
+    @Volatile
+    var building = false
+        private set
+
+    fun primaryTarget(stack: ItemStack): Pair<String, ItemStack>? {
+        val player = Minecraft.getInstance().player ?: return null
+        val targets = resolveTargets(player, stack)
+        if (targets.isEmpty() || targets.any { it.stack === stack }) return null
+        return targets.first().let { it.label to it.stack }
+    }
+
     private class Target(val label: String, val stack: ItemStack)
 
     private class Laid(val components: List<ClientTooltipComponent>, val width: Int, val height: Int)
@@ -37,7 +48,12 @@ object EquipCompareTooltip {
         for (target in targets) {
             val lines = ArrayList<Component>()
             lines.add(Component.literal("Equipped: ${target.label}").withColor(HEADER_COLOR))
-            lines.addAll(Screen.getTooltipFromItem(mc, target.stack))
+            building = true
+            try {
+                lines.addAll(Screen.getTooltipFromItem(mc, target.stack))
+            } finally {
+                building = false
+            }
             val laid = lay(font, lines)
 
             val fitsRight = nearRight + laid.width + MARGIN <= screenW

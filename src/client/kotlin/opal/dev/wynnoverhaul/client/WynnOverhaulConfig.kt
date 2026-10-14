@@ -150,6 +150,7 @@ data class WynnOverhaulConfig(
     var partyBuffTrackerEnabled: Boolean = true,
     var mountTooltipEnabled: Boolean = true,
     var equipComparisonEnabled: Boolean = true,
+    var equipCompareDeltas: Boolean = true,
     var powderSpecialsTooltipEnabled: Boolean = true,
     var itemRollPercentEnabled: Boolean = true,
     var itemRollOverallEnabled: Boolean = true,

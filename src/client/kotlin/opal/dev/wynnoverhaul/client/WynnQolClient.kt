@@ -44,6 +44,7 @@ class WynnQolClient : ClientModInitializer {
         PowderSpecialsTooltip.register()
         AnimationLibrary.register()
         ItemRollTooltip.register()
+        StatDeltaTooltip.register()
         ObjectiveClaims.register()
         WynnActionBar.registerDebug()
         PriceCheck.register()

@@ -805,6 +805,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.equipComparisonEnabled,
             ) { config.equipComparisonEnabled = it }
             checkbox(
+                "Stat differences",
+                "Adds the difference from your equipped item after each stat on the hovered item, green for better and red for worse, and lists stats you would lose.",
+                config.equipCompareDeltas,
+            ) { config.equipCompareDeltas = it }
+            checkbox(
                 "Powder special effects",
                 "Adds the weapon and armour special effect of a powder to its tooltip (unlocked with two Tier 4+ powders of the same element).",
                 config.powderSpecialsTooltipEnabled,
