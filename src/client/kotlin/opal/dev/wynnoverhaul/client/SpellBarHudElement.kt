@@ -80,6 +80,7 @@ class SpellBarHudElement : HudElement {
         val preview: Boolean,
         val style: String,
         val builtAt: Long,
+        val revision: Int,
         val names: List<String?>,
         val keys: List<String?>,
         val nameParts: List<Component>,
@@ -93,26 +94,32 @@ class SpellBarHudElement : HudElement {
 
     private fun derivedFor(font: net.minecraft.client.gui.Font, base: List<String>?, preview: Boolean, style: String, now: Long): Derived {
         val cached = derived
-        if (cached != null && cached.base === base && cached.preview == preview && cached.style == style && now - cached.builtAt < DERIVED_MAX_AGE_MS) return cached
+        if (cached != null && cached.base === base && cached.preview == preview && cached.style == style && cached.revision == WynnSpellTracker.costRevision && now - cached.builtAt < DERIVED_MAX_AGE_MS) return cached
         val showPlaceholder = preview && base == null
         val names = (0 until SLOT_COUNT).map { slot ->
             base?.getOrNull(slot) ?: DEMO_NAMES.getOrNull(slot).takeIf { showPlaceholder }
         }
         val keys = (0 until SLOT_COUNT).map { QuickCast.keyLabel(it) }
         val costs = (0 until SLOT_COUNT).map { slot ->
-            names[slot]?.let { WynnSpellTracker.spellCosts(it) }?.ifEmpty { null }
+            names[slot]?.let { WynnSpellTracker.nextSpellCosts(it, now) }?.ifEmpty { null }
                 ?: if (showPlaceholder) DEMO_COSTS.getOrNull(slot) ?: emptyList() else emptyList()
         }
         val nameParts = (0 until SLOT_COUNT).map { slot -> Component.literal("${slot + 1}  ${names[slot] ?: UNKNOWN_NAME}") }
         val costParts = (0 until SLOT_COUNT).map { slot ->
             val cost = costs[slot].firstOrNull { it.mana } ?: costs[slot].firstOrNull()
-            cost?.let { it to Component.literal("-${it.amount}") }
+            cost?.let {
+                val raised = it.amount > (names[slot]?.let { name -> WynnSpellTracker.spellCosts(name).firstOrNull { c -> c.mana == it.mana }?.amount } ?: it.amount)
+                val label = Component.literal("-${it.amount}")
+                it to if (raised) label.withColor(RAISED_COST) else label
+            }
         }
         val badgeW = (0 until SLOT_COUNT).maxOf { slot -> keyBadgeWidth(font, keys[slot], slot) }
         val costW = costParts.maxOf { it?.second?.let { c -> font.width(c) } ?: 0 }
         val (contentW, contentH) = sizeFor(style, font, names, nameParts, badgeW, costW)
-        return Derived(base, preview, style, now, names, keys, nameParts, costParts, badgeW, contentW, contentH).also { derived = it }
+        return Derived(base, preview, style, now, WynnSpellTracker.costRevision, names, keys, nameParts, costParts, badgeW, contentW, contentH).also { derived = it }
     }
+
+    private fun raisedOr(part: Component, color: Int): Int = part.style.color?.value?.let { 0xFF000000.toInt() or it } ?: color
 
     private fun comboStartsWith(combo: List<Boolean>, prefix: List<Boolean>): Boolean {
         if (combo.size < prefix.size) return false
@@ -150,7 +157,7 @@ class SpellBarHudElement : HudElement {
             costParts[slot]?.let { (cost, part) ->
                 val cw = font.width(part)
                 val costColor = if (!lit[slot]) OwTheme.TEXT_FAINT else if (cost.mana) MANA_TEXT else HP_TEXT
-                graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(costColor)), tx - GAP - cw, cy + TEXT_Y, 0xFFFFFFFF.toInt(), true)
+                graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(raisedOr(part, costColor))), tx - GAP - cw, cy + TEXT_Y, 0xFFFFFFFF.toInt(), true)
             }
 
             if (fired[slot]) HudStyle.brackets(graphics, ox + 1, cy + 1, boxW - 2, ROW_H - 2, OwTheme.ACCENT)
@@ -270,7 +277,7 @@ class SpellBarHudElement : HudElement {
         costParts[mainSlot]?.let { (cost, part) ->
             val color = if (cost.mana) MANA_TEXT else HP_TEXT
             val cw = font.width(part)
-            graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(color)), ox + CROSS_MAIN_W - PAD - cw, badgeY + 2, 0xFFFFFFFF.toInt(), true)
+            graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(raisedOr(part, color))), ox + CROSS_MAIN_W - PAD - cw, badgeY + 2, 0xFFFFFFFF.toInt(), true)
         }
         if (fired[mainSlot]) HudStyle.brackets(graphics, ox, oy, CROSS_MAIN_W, CROSS_MAIN_H, OwTheme.ACCENT)
 
@@ -318,7 +325,7 @@ class SpellBarHudElement : HudElement {
         graphics.text(font, name, tx, oy, OwTheme.TEXT, true)
         cost?.let { (c, part) ->
             val color = if (c.mana) MANA_TEXT else HP_TEXT
-            graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(color)), tx + nw + font.width("  "), oy, 0xFFFFFFFF.toInt(), true)
+            graphics.text(font, part.copy().setStyle(Style.EMPTY.withColor(raisedOr(part, color))), tx + nw + font.width("  "), oy, 0xFFFFFFFF.toInt(), true)
         }
     }
 
@@ -406,6 +413,7 @@ class SpellBarHudElement : HudElement {
         const val ID = "spell_bar"
         const val SLOT_COUNT = 4
         const val DERIVED_MAX_AGE_MS = 250L
+        val RAISED_COST = 0xFFFFB347.toInt()
         const val ROW_H = 16
         const val PAD = 4
         const val GAP = 6

@@ -38,18 +38,43 @@ object WynnSpellTracker {
     @Volatile
     private var displayedCosts: List<WynnSpellSegments.SpellCost>? = null
 
-    private class CostRecord(var costs: List<WynnSpellSegments.SpellCost>, var lastMillis: Long)
+    private class CostRecord(
+        var costs: List<WynnSpellSegments.SpellCost>,
+        var current: List<WynnSpellSegments.SpellCost>,
+        var previous: List<WynnSpellSegments.SpellCost>?,
+        var lastMillis: Long,
+    )
 
     private val baseCostsByName = HashMap<String, CostRecord>()
 
+    @Volatile
+    var costRevision = 0
+        private set
+
     fun spellCosts(name: String): List<WynnSpellSegments.SpellCost> = baseCostsByName[name]?.costs ?: emptyList()
 
+    fun nextSpellCosts(name: String, now: Long): List<WynnSpellSegments.SpellCost> {
+        val record = baseCostsByName[name] ?: return emptyList()
+        if (now - record.lastMillis > SPAM_RESET_MS) return record.costs
+        val previous = record.previous ?: return record.current
+        if (previous.size != record.current.size) return record.current
+        return record.current.mapIndexed { i, cost ->
+            val step = cost.amount - previous[i].amount
+            if (step > 0 && previous[i].mana == cost.mana) WynnSpellSegments.SpellCost(cost.amount + step, cost.mana) else cost
+        }
+    }
+
     private fun noteCastCost(name: String, observed: List<WynnSpellSegments.SpellCost>, now: Long) {
+        costRevision++
         val record = baseCostsByName[name]
         val observedTotal = observed.sumOf { it.amount }
         if (record == null || now - record.lastMillis > SPAM_RESET_MS || observedTotal <= record.costs.sumOf { it.amount }) {
-            baseCostsByName[name] = CostRecord(observed, now)
+            baseCostsByName[name] = CostRecord(observed, observed, null, now)
         } else {
+            if (observed != record.current) {
+                record.previous = record.current
+                record.current = observed
+            }
             record.lastMillis = now
         }
     }
