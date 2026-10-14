@@ -20,6 +20,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Chat highlights mentions of your name with an optional chime, and has a reply hotkey, unread counts for party and guild, a longer history and a SYS channel for system messages.
 - Alt+click locks an inventory slot so shift-clicks, sell-all and drops skip it. Optional rarity letters mark Unique, Rare, Legendary, Fabled and Mythic items.
 - Search bars have a clear button and Ctrl+F, and the last inventory and merchant search is kept.
+- Merchant offers you cannot buy yet are dimmed, and hovered offers compare against your equipped gear.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

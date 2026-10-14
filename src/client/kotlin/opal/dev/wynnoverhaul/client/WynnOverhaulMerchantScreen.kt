@@ -239,7 +239,10 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
                 hoverDock != null -> hoverDock
                 else -> ItemStack.EMPTY
             }
-            if (!stack.isEmpty) graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
+            if (!stack.isEmpty) {
+                graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY)
+                if (hoverControl == null) EquipCompareTooltip.draw(graphics, font, stack, mouseX, mouseY)
+            }
         }
     }
 
@@ -260,6 +263,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val rx = rect.x + rect.w - 6
         if (priceText.isNotEmpty()) graphics.text(font, priceText, rx - font.width(priceText), rect.y + 4, if (offer.affordable) OwTheme.GOOD else OwTheme.BAD)
         if (levelText.isNotEmpty()) graphics.text(font, levelText, rx - font.width(levelText), rect.y + 15, if (offer.levelOk) OwTheme.TEXT_DIM else OwTheme.BAD)
+        if (!offer.affordable || !offer.levelOk) graphics.fill(rect.x + 1, rect.y + 1, rect.x + rect.w - 1, rect.y + rect.h - 1, UNAVAILABLE_WASH)
     }
 
     private fun drawScroll(graphics: GuiGraphicsExtractor) {
@@ -331,6 +335,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
 
     companion object {
         private const val PLAYER_SLOTS = 36
+        private const val UNAVAILABLE_WASH = 0x70100C08
         private const val SHOP_COLS = 9
         private const val HEADER_SLOT = 4
         private const val KEY_ESCAPE = 256
