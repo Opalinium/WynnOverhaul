@@ -1193,6 +1193,18 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.pinAutoClear,
             ) { config.pinAutoClear = it }
 
+            header("Chat")
+            checkbox(
+                "Highlight mentions",
+                "Makes your name, and any words you list below, stand out in bold in other players' chat messages.",
+                config.chatMentionsEnabled,
+            ) { config.chatMentionsEnabled = it }
+            checkbox("Mention sound", "Plays a short chime when a message mentions you.", config.chatMentionSound) { config.chatMentionSound = it }
+            slider(
+                "Chat history (messages)", 100.0, 2000.0, 0, config.chatHistoryLimit.toDouble(),
+                "How many messages the chat remembers for scrolling, the SYS channel and its notification history. Vanilla keeps 100.",
+            ) { config.chatHistoryLimit = it.toInt() }
+
             header("Ping")
             checkbox(
                 "Ping system",

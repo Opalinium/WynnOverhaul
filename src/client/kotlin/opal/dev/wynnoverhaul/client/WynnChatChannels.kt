@@ -15,6 +15,7 @@ object WynnChatChannels {
         ALL("all", "ALL", ChatFormatting.WHITE, null),
         PARTY("party", "PARTY", ChatFormatting.YELLOW, "p"),
         GUILD("guild", "GUILD", ChatFormatting.AQUA, "g"),
+        SYSTEM("system", "SYS", ChatFormatting.GRAY, null),
     }
 
     @Volatile
@@ -100,6 +101,8 @@ object WynnChatChannels {
         directTarget = null
         directAuto = false
         current = channel
+        ChatActivity.clear(channel)
+        if (channel == Channel.SYSTEM) return
         WynnOverhaulConfig.current.chatChannel = channel.id
         WynnOverhaulConfig.current.save()
         printChat(
@@ -130,9 +133,9 @@ object WynnChatChannels {
             return false
         }
         val channel = overridden ?: current
-        if (channel == Channel.ALL) return true
+        val command = channel.command ?: return true
         val connection = Minecraft.getInstance().connection ?: return true
-        connection.sendCommand("${channel.command} $message")
+        connection.sendCommand("$command $message")
         return false
     }
 

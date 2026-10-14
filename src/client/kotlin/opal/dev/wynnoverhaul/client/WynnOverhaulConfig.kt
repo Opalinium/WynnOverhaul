@@ -108,6 +108,11 @@ data class WynnOverhaulConfig(
     var pinsEnabled: Boolean = true,
     var pinListEnabled: Boolean = true,
     var pinAutoClear: Boolean = true,
+    var chatMentionsEnabled: Boolean = true,
+    var chatMentionSound: Boolean = true,
+    var chatMentionKeywords: String = "",
+    var chatMentionColor: Int = 0xFFD866,
+    var chatHistoryLimit: Int = 300,
     var pingEnabled: Boolean = true,
     var pingShareParty: Boolean = true,
     var pingReceive: Boolean = true,
@@ -260,6 +265,8 @@ data class WynnOverhaulConfig(
         hitFeedbackIntensity = hitFeedbackIntensity.coerceIn(0, 200)
         lowHealthThreshold = lowHealthThreshold.coerceIn(5, 80)
         pingLifetimeSeconds = pingLifetimeSeconds.coerceIn(10, 300)
+        chatHistoryLimit = chatHistoryLimit.coerceIn(100, 2000)
+        chatMentionKeywords = chatMentionKeywords.take(200)
         lowHealthIntensity = lowHealthIntensity.coerceIn(10, 100)
         damageNumberScale = damageNumberScale.coerceIn(50, 200)
         combatSpellGuardMs = combatSpellGuardMs.coerceIn(300.0, 4000.0)

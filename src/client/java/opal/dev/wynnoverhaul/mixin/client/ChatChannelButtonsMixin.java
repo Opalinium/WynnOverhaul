@@ -13,6 +13,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import opal.dev.wynnoverhaul.client.ChatActivity;
 import opal.dev.wynnoverhaul.client.ChatDirectPanel;
 import opal.dev.wynnoverhaul.client.ChatHud;
 import opal.dev.wynnoverhaul.client.WynnOverhaulGate;
@@ -59,7 +60,7 @@ public abstract class ChatChannelButtonsMixin extends Screen {
 
         for (WynnChatChannels.Channel channel : WynnChatChannels.Channel.values()) {
             Supplier<String> label = () -> wynnoverhaul$channelLabel(channel);
-            x = wynnoverhaul$addButton(x, y, 54, buttonHeight, label, () -> {
+            x = wynnoverhaul$addButton(x, y, 64, buttonHeight, label, () -> {
                 WynnChatChannels.INSTANCE.select(channel);
                 WynnDirectMessages.INSTANCE.applyView(true);
             });
@@ -119,7 +120,8 @@ public abstract class ChatChannelButtonsMixin extends Screen {
     private static String wynnoverhaul$channelLabel(WynnChatChannels.Channel channel) {
         boolean direct = WynnChatChannels.INSTANCE.getDirectTarget() != null;
         boolean active = !direct && WynnChatChannels.INSTANCE.getCurrent() == channel;
-        return (active ? "▶ " : "") + channel.getLabel();
+        int unread = active ? 0 : ChatActivity.INSTANCE.unread(channel);
+        return (active ? "▶ " : "") + channel.getLabel() + (unread > 0 ? " (" + unread + ")" : "");
     }
 
     private static String wynnoverhaul$chipLabel(String name) {

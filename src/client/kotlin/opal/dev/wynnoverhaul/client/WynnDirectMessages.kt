@@ -42,6 +42,8 @@ object WynnDirectMessages {
     private var lastWorldKey: String? = null
     private var lastIncomingPartner: String? = null
 
+    val lastIncoming: String? get() = lastIncomingPartner
+
     fun register() {
         ClientReceiveMessageEvents.GAME.register { message, _ -> onMessage(message) }
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, _ -> allow(message) }
@@ -255,13 +257,17 @@ object WynnDirectMessages {
         val client = Minecraft.getInstance()
         val chat = client.gui.hud.chat
         val target = WynnChatChannels.directTarget
-        if (open && target != null && WynnOverhaulConfig.current.chatConversationView) {
+        if (open && target == null && WynnChatChannels.current == WynnChatChannels.Channel.SYSTEM) {
+            chat.setVisibleMessageFilter { message ->
+                NotificationLog.isNotification(message.content()) || ChatKinds.classify(message.content()) == ChatKinds.Kind.SYSTEM
+            }
+        } else if (open && target != null && WynnOverhaulConfig.current.chatConversationView) {
             chat.setVisibleMessageFilter { message ->
                 val pm = parse(message.content().string)
-                pm != null && pm.partner.equals(target, ignoreCase = true)
+                pm != null && pm.partner.equals(target, ignoreCase = true) && !NotificationLog.isNotification(message.content())
             }
         } else {
-            chat.setVisibleMessageFilter { true }
+            chat.setVisibleMessageFilter { message -> !NotificationLog.isNotification(message.content()) }
         }
         chat.rescaleChat()
     }

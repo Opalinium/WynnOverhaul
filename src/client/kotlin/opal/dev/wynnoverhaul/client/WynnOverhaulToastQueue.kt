@@ -54,6 +54,7 @@ object WynnOverhaulToastQueue {
 
     fun show(toast: Toast) {
         pending.add(toast)
+        NotificationLog.record(toast)
     }
 
     fun dropPending(predicate: (Toast) -> Boolean) {

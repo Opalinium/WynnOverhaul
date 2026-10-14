@@ -62,6 +62,7 @@ object WynnOverhaulGate {
             ObjectiveClaims.clear()
             DiscoveryTracker.clear()
             XaeroHook.clear()
+            ChatActivity.clearAll()
             PinBoard.clearKind(PinBoard.Kind.PING)
             PinBoard.clearKind(PinBoard.Kind.RECEIVED)
         }

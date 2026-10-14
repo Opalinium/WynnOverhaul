@@ -29,6 +29,9 @@ object ChatHud {
         else -> "Classic"
     }
 
+    @JvmStatic
+    fun historyLimit(): Int = WynnOverhaulConfig.current.chatHistoryLimit
+
     fun init() {
         ClientTickEvents.END_CLIENT_TICK.register { client -> tick(client) }
     }
