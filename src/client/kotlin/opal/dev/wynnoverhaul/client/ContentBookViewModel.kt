@@ -49,7 +49,7 @@ class ContentBookViewModel(initialActivities: List<ActivityInfo>) {
         val f = filter
         if (f != null) list = list.filter { it.type.filterName == f }
         val q = query.trim()
-        if (q.isNotEmpty()) list = list.filter { it.name.contains(q, ignoreCase = true) }
+        if (q.isNotEmpty()) list = list.filter { ActivitySearch.matches(it, q) }
         val filtered = list.toList()
         val sorted = when (sort) {
             Sort.RECOMMENDED -> filtered.sortedBy { if (it.status == ActivityStatus.COMPLETED) 1 else 0 }

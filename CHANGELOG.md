@@ -13,6 +13,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Buff and debuff rows keep a fixed order with harmful effects marked, and effects pulse during their last five seconds.
 - Low health effects: Vignette, Heartbeat, Pulsing border and Dripping blood, with threshold and strength sliders.
 - Pinned waypoints: pin several activities or places, choose a main target with the Cycle Main Waypoint hotkey, and see them in a list with distances. /owpin commands and journal pinning are included.
+- Search filters for items and journal activities.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

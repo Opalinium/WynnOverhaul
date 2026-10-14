@@ -55,6 +55,8 @@ class WynnOverhaulInventoryScreen(
     )
 
     private var searchField: OwTextField? = null
+    private var searchHelpButton: OwButton? = null
+    private var journalHelpButton: OwButton? = null
     private var inventorySortButton: AbstractWidget? = null
     private var searchText: String = ""
     private val tabButtons = ArrayList<OwButton>()
@@ -239,10 +241,12 @@ class WynnOverhaulInventoryScreen(
             val fieldX = ox + MARGIN
             val fieldY = pt + SEARCH_Y_REL
             val sortW = font.width("Sort: Default") + 34
-            searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2 - sortW - 4, SEARCH_H).also {
+            searchField = OwTextField(font, fieldX, fieldY, panelWidth() - MARGIN * 2 - sortW - 8 - SEARCH_H, SEARCH_H).also {
                 it.value = searchText
                 addRenderableWidget(it)
             }
+            searchHelpButton = SearchHelpScreen.button(fieldX + panelWidth() - MARGIN * 2 - sortW - 4 - SEARCH_H - 4, fieldY, SEARCH_H, SearchHelpScreen.Kind.ITEMS, this)
+                .also { addRenderableWidget(it) }
             inventorySortButton = OwDropdown(
                 fieldX + panelWidth() - MARGIN * 2 - sortW, fieldY, sortW, SEARCH_H,
                 "Sort",
@@ -256,6 +260,7 @@ class WynnOverhaulInventoryScreen(
             }.also { addRenderableWidget(it) }
         } else {
             searchField = null
+            searchHelpButton = null
             inventorySortButton = null
         }
         if (invTab == InvTab.JOURNAL) {
@@ -264,7 +269,9 @@ class WynnOverhaulInventoryScreen(
             val rowY = { dy: Int -> pt + CONTENT_TOP_REL + dy }
             val sortW = 100
             val refreshW = 56
-            journalSearchField = OwTextField(font, gx, rowY(-JOURNAL_TOP_SHIFT), gw - sortW - refreshW - 8, SEARCH_H).also {
+            journalHelpButton = SearchHelpScreen.button(gx + gw - sortW - refreshW - 8 - SEARCH_H - 4, rowY(-JOURNAL_TOP_SHIFT), SEARCH_H, SearchHelpScreen.Kind.JOURNAL, this)
+                .also { addRenderableWidget(it) }
+            journalSearchField = OwTextField(font, gx, rowY(-JOURNAL_TOP_SHIFT), gw - sortW - refreshW - 12 - SEARCH_H, SEARCH_H).also {
                 it.setValue(journal.query)
                 it.setResponder { v ->
                     journal.query = v
@@ -340,6 +347,7 @@ class WynnOverhaulInventoryScreen(
             }
         } else {
             journalSearchField = null
+            journalHelpButton = null
             journalSortButton = null
             journalCategoryButtons.clear()
             journalTrackButton = null
@@ -525,6 +533,8 @@ class WynnOverhaulInventoryScreen(
 
                 for (button in tabButtons) button.y = pt + TAB_Y_REL
                 searchField?.let { field -> field.y = pt + SEARCH_Y_REL }
+                searchHelpButton?.let { button -> button.y = pt + SEARCH_Y_REL }
+                journalHelpButton?.let { button -> button.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
                 inventorySortButton?.let { button -> button.y = pt + SEARCH_Y_REL }
                 journalSearchField?.let { field -> field.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
                 journalSortButton?.let { button -> button.y = pt + CONTENT_TOP_REL - JOURNAL_TOP_SHIFT }
@@ -969,11 +979,7 @@ class WynnOverhaulInventoryScreen(
 
     private fun extraSlots(): List<Int> = (VANILLA_MENU_SIZE until menu.slots.size).toList()
 
-    private fun matchesQuery(stack: ItemStack, query: String): Boolean {
-        if (query.isEmpty()) return true
-        if (plainName(stack).lowercase().contains(query)) return true
-        return WynnItemRarity.loreLines(stack).any { it.lowercase().contains(query) }
-    }
+    private fun matchesQuery(stack: ItemStack, query: String): Boolean = ItemSearch.matches(stack, query)
 
     private fun panelWidth(): Int =
 

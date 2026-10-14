@@ -47,6 +47,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
     private val containerSlots = menu.slots.size - PLAYER_SLOTS
     private var searchField: OwTextField? = null
     private var orderDropdown: OwDropdown? = null
+    private var searchHelpButton: OwButton? = null
     private var query = ""
     private var order = Order.SHOP
     private var scroll = 0
@@ -68,7 +69,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val x0 = sidePanelX() + MARGIN
         val inner = sidePanelW() - MARGIN * 2
         val orderW = font.width("Sort: Price: high to low") + 34
-        searchField = OwTextField(font, x0, 0, inner - orderW - 4, SEARCH_H).also {
+        searchField = OwTextField(font, x0, 0, inner - orderW - 8 - SEARCH_H, SEARCH_H).also {
             it.value = query
             it.setResponder { v ->
                 query = v
@@ -76,6 +77,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
             }
             addRenderableWidget(it)
         }
+        searchHelpButton = SearchHelpScreen.button(x0 + inner - orderW - 4 - SEARCH_H - 4, 0, SEARCH_H, SearchHelpScreen.Kind.ITEMS, this).also { addRenderableWidget(it) }
         orderDropdown = OwDropdown(
             x0 + inner - orderW, 0, orderW, SEARCH_H,
             "Sort",
@@ -115,7 +117,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val list = (0 until containerSlots)
             .filter { it != HEADER_SLOT && isOffer(stackAt(it)) }
             .map { parseOffer(it, stackAt(it)) }
-            .filter { q.isEmpty() || it.name.lowercase().contains(q) || it.detail.lowercase().contains(q) }
+            .filter { q.isEmpty() || ItemSearch.matches(it.stack, q) }
         return when (order) {
             Order.SHOP -> list
             Order.PRICE_LOW -> list.sortedBy { it.price ?: Long.MAX_VALUE }
@@ -171,6 +173,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val countText = "${list.size} items"
         graphics.text(font, countText, gridX + inner - font.width(countText), top + TITLE_Y, OwTheme.ACCENT)
         searchField?.y = top + SEARCH_Y
+        searchHelpButton?.y = top + SEARCH_Y
         orderDropdown?.y = top + SEARCH_Y
 
         val builtControls = ArrayList<Control>()

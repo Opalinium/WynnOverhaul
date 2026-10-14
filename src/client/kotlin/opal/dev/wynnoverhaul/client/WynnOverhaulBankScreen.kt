@@ -61,6 +61,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
     private var bankScroll = 0
     private var searchField: OwTextField? = null
     private var sortButton: OwDropdown? = null
+    private var searchHelpButton: OwButton? = null
     private var storageDropdown: OwDropdown? = null
     private var warnText: String? = null
     private var warnUntilNanos = 0L
@@ -121,7 +122,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
             if (it != storageName()) switchStorage()
         }.also { addRenderableWidget(it) }
         val sortW = font.width("Sort: Default") + 34
-        searchField = OwTextField(font, x0, 0, inner - sortW - 4, SEARCH_H).also {
+        searchField = OwTextField(font, x0, 0, inner - sortW - 8 - SEARCH_H, SEARCH_H).also {
             it.value = BankSession.search
             it.setResponder { v ->
                 BankSession.search = v
@@ -129,6 +130,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
             }
             addRenderableWidget(it)
         }
+        searchHelpButton = SearchHelpScreen.button(x0 + inner - sortW - 4 - SEARCH_H - 4, 0, SEARCH_H, SearchHelpScreen.Kind.ITEMS, this).also { addRenderableWidget(it) }
         sortButton = OwDropdown(
             x0 + inner - sortW, 0, sortW, SEARCH_H,
             "Sort",
@@ -447,6 +449,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
         frame = f
         storageDropdown?.y = f.pt + TOP_ROW_Y
         searchField?.y = f.pt + SEARCH_ROW_Y
+        searchHelpButton?.y = f.pt + SEARCH_ROW_Y
         sortButton?.y = f.pt + SEARCH_ROW_Y
 
         val storage = storageName()

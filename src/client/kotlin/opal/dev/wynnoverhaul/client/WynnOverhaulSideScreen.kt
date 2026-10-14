@@ -56,10 +56,7 @@ abstract class WynnOverhaulSideScreen(
     protected fun plainName(stack: ItemStack): String = TextClean.clean(stack.hoverName.string)
 
     protected fun matches(stack: ItemStack, query: String): Boolean {
-        if (query.isEmpty()) return true
-        if (stack.isEmpty) return false
-        if (plainName(stack).lowercase().contains(query)) return true
-        return WynnItemRarity.loreLines(stack).any { it.lowercase().contains(query) }
+        return ItemSearch.matches(stack, query)
     }
 
     protected fun inventoryHidden(slot: Int): Boolean {
