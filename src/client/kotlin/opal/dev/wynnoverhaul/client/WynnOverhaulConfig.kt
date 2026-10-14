@@ -92,6 +92,7 @@ data class WynnOverhaulConfig(
     var hideVanillaPotionHud: Boolean = false,
     var hideHudInCutscenes: Boolean = true,
     var customPotionHudEnabled: Boolean = false,
+    var potionHudExpiryPulse: Boolean = true,
     var abilityCooldownHudEnabled: Boolean = true,
     var totemHudEnabled: Boolean = true,
     var dpsHudEnabled: Boolean = true,

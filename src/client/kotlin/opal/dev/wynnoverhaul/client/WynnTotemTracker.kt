@@ -39,10 +39,13 @@ object WynnTotemTracker {
             }
         }
         byId.keys.retainAll(seen)
-        totems = byId.values.filter { it.seconds > 0 }.sortedWith(compareBy({ it.kind }, { it.seconds })).take(MAX_TOTEMS)
+        totems = totemOrder.sort(byId.values.filter { it.seconds > 0 }, { it.id }, { it.kind }).take(MAX_TOTEMS)
     }
 
+    private val totemOrder = StableOrder()
+
     fun clear() {
+        totemOrder.clear()
         byId.clear()
         totems = emptyList()
     }

@@ -24,7 +24,7 @@ class AbilityCooldownHudElement : HudElement {
         if (!WynnOverhaulGate.inGame) return
         val config = WynnOverhaulConfig.current
         if (!config.abilityCooldownHudEnabled) return
-        val live = WynnStatusEffectTracker.activeCooldowns.sortedBy { it.displaySeconds() }
+        val live = cooldownOrder.sort(WynnStatusEffectTracker.activeCooldowns, { it.name })
         val cooldowns = live.takeIf { it.isNotEmpty() } ?: if (isHudDesignerOpen()) {
             listOf(
                 WynnStatusEffectTracker.Cooldown("War Scream", 12, 20, System.currentTimeMillis()),
@@ -62,6 +62,8 @@ class AbilityCooldownHudElement : HudElement {
 
         if (scaled) graphics.pose().popMatrix()
     }
+
+    private val cooldownOrder = StableOrder()
 
     private fun timerText(cooldown: WynnStatusEffectTracker.Cooldown): String {
         val seconds = cooldown.displaySeconds()

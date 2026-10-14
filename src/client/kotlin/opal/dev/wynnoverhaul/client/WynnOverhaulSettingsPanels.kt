@@ -1145,6 +1145,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Shows active effects as an icon + name + remaining-time list instead.",
                 config.customPotionHudEnabled,
             ) { config.customPotionHudEnabled = it }
+            checkbox(
+                "Pulse effects about to expire",
+                "Flashes an effect row and turns its timer red during its last five seconds. Effects stay in a fixed order, with helpful ones first and harmful ones after, so rows never shuffle as timers tick down.",
+                config.potionHudExpiryPulse,
+            ) { config.potionHudExpiryPulse = it }
 
             header("Quest Log")
             checkbox(

@@ -10,6 +10,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Fishing rods cast a bobber at the node when a fishing gather starts and reel it in when it finishes.
 - The spell bar shows the next expected spell cost and tints it when repeated casts have raised it.
 - Rapid hits on one target within half a second merge into one growing damage number.
+- Buff and debuff rows keep a fixed order with harmful effects marked, and effects pulse during their last five seconds.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
