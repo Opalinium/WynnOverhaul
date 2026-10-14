@@ -53,7 +53,7 @@ object WynnStateDump {
 
     fun register() {
         dumpKey = KeyMappingHelper.registerKeyMapping(
-            KeyMapping("key.wynnoverhaul.dump_container", InputConstants.Type.KEYSYM, DEFAULT_DUMP_KEY, WynnOverhaulKeyCategory.CATEGORY),
+            KeyMapping("key.wynnoverhaul.contextual_debug", InputConstants.Type.KEYSYM, DEFAULT_DUMP_KEY, WynnOverhaulKeyCategory.CATEGORY),
         )
         ClientReceiveMessageEvents.GAME.register { message, overlay ->
             if (overlay) {
@@ -65,7 +65,7 @@ object WynnStateDump {
             if (client.gui.screen() == null) {
                 var pressed = false
                 while (dumpKey.consumeClick()) pressed = true
-                if (pressed) run(DEFAULT_RADIUS)
+                if (pressed) contextual()
             }
         }
         ScreenEvents.BEFORE_INIT.register { _, screen, _, _ ->
@@ -139,6 +139,10 @@ object WynnStateDump {
         player.sendSystemMessage(
             Component.literal("Copied game state (${text.length} chars) to the clipboard.").withStyle(ChatFormatting.GRAY),
         )
+    }
+
+    private fun contextual() {
+        if (WynnDialogueTracker.dialogueVisible(System.currentTimeMillis())) runDialogue() else run(DEFAULT_RADIUS)
     }
 
     private fun runDialogue() {
