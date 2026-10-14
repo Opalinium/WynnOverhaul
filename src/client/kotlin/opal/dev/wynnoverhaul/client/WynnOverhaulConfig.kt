@@ -63,6 +63,7 @@ data class WynnOverhaulConfig(
     var soulsCameraTurnSpeed: Double = 0.55,
     var soulsCameraFaceHoldMs: Double = 700.0,
     var soulsCameraReticle: Boolean = true,
+    var soulsCameraProjectReticle: Boolean = true,
     var firstPersonBodyEnabled: Boolean = false,
     var debugItemCopyEnabled: Boolean = false,
     var debugActionBarLog: Boolean = false,

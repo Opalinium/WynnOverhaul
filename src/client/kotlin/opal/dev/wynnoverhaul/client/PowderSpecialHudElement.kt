@@ -47,7 +47,10 @@ class PowderSpecialHudElement : HudElement {
         }
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, contentH)
         val scale = HudLayoutManager.scale(ID)
-        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
+        val layout = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
+        val projected = !isHudDesignerOpen() && ProjectedReticle.update(Minecraft.getInstance(), graphics)
+        val baseX = if (projected) (ProjectedReticle.screenX - boxW * scale / 2f).roundToInt() else layout.first
+        val baseY = if (projected) (ProjectedReticle.screenY + PROJECTED_GAP).roundToInt() else layout.second
 
         val scaled = scale != 1f
         if (scaled) {
@@ -211,6 +214,7 @@ class PowderSpecialHudElement : HudElement {
         private const val CONTENT_RING = 22
         private const val RING_TRACK = 0x804A3117.toInt()
         private const val PREVIEW_CHARGE = 0.7f
+        private const val PROJECTED_GAP = 12f
 
         private val PREVIEW_GLYPH = 0xE035.toChar()
     }

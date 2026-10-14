@@ -152,7 +152,12 @@ object SoulsCamera {
         )
     }
 
-    private fun aimAngles(player: LocalPlayer, partial: Float): Pair<Float, Float> {
+    @JvmStatic
+    fun isActive(): Boolean = active
+
+    fun focusReach(): Double = WynnOverhaulConfig.current.soulsCameraDistance + FOCUS_DISTANCE
+
+    fun aimDirection(player: LocalPlayer, partial: Float): Vec3 {
         val config = WynnOverhaulConfig.current
         val yawRad = Math.toRadians(camYaw.toDouble())
         val pitchRad = Math.toRadians(camPitch.toDouble())
@@ -163,7 +168,11 @@ object SoulsCamera {
             .add(0.0, config.soulsCameraHeight, 0.0)
             .subtract(left.scale(config.soulsCameraShoulder))
             .subtract(forward.scale(config.soulsCameraDistance))
-        val direction = cameraPos.add(forward.scale(config.soulsCameraDistance + FOCUS_DISTANCE)).subtract(eye).normalize()
+        return cameraPos.add(forward.scale(config.soulsCameraDistance + FOCUS_DISTANCE)).subtract(eye).normalize()
+    }
+
+    private fun aimAngles(player: LocalPlayer, partial: Float): Pair<Float, Float> {
+        val direction = aimDirection(player, partial)
         val yaw = Math.toDegrees(atan2(-direction.x, direction.z)).toFloat()
         val pitch = Math.toDegrees(-asin(direction.y.coerceIn(-1.0, 1.0))).toFloat()
         return yaw to pitch

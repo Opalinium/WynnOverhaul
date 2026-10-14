@@ -722,6 +722,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 "Draws the crosshair in third person so you can see what your attacks will target.",
                 config.soulsCameraReticle,
             ) { config.soulsCameraReticle = it }
+            checkbox(
+                "Project reticle onto the aim point",
+                "Moves the crosshair to where your attacks and casts will actually land, found by tracing from your character toward the camera's focus point. Camera distance, height and shoulder offset make that spot differ from the middle of the screen. The powder special is drawn at the same spot.",
+                config.soulsCameraProjectReticle,
+            ) { config.soulsCameraProjectReticle = it }
             slider("Camera distance", 1.5, 12.0, config.soulsCameraDistance, "How far behind your character the camera sits.") { config.soulsCameraDistance = it }
             slider("Camera height", -1.0, 2.0, config.soulsCameraHeight, "Raises or lowers the point the camera orbits, relative to your eyes.") { config.soulsCameraHeight = it }
             slider("Shoulder offset", -1.5, 1.5, config.soulsCameraShoulder, "Shifts the camera sideways. Positive is over the right shoulder.") { config.soulsCameraShoulder = it }
