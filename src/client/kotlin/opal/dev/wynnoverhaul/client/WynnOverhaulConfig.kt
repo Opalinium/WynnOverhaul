@@ -106,6 +106,7 @@ data class WynnOverhaulConfig(
     var hitFeedbackNumbers: Boolean = true,
     var lowHealthStyle: String = "VIGNETTE",
     var pinsEnabled: Boolean = true,
+    var weaponAnimationOthers: Boolean = true,
     var slotLocksEnabled: Boolean = true,
     var lockedSlots: List<Int> = emptyList(),
     var slotRarityMarkers: Boolean = false,

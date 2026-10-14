@@ -827,6 +827,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.weaponAnimationSpells,
             ) { config.weaponAnimationSpells = it }
             checkbox(
+                "Animate other players",
+                "Plays the same weapon strokes, stances and walk poses on other players within 48 blocks when their weapon is recognised, from a weapon skin or a weapon you have held. Spell casts are not shown on others because the game only announces your own.",
+                config.weaponAnimationOthers,
+            ) { config.weaponAnimationOthers = it }
+            checkbox(
                 "Swing sound effects",
                 "Plays a local whoosh, and a heavier hit on finishers, timed to each stroke. Only you hear these.",
                 config.weaponAnimationSfx,

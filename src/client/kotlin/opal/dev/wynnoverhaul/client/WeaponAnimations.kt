@@ -15,6 +15,8 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.HumanoidArm
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
@@ -124,12 +126,9 @@ object WeaponAnimations {
     private const val CLIP_STEPS = 36
     private const val GRIP_BISECT = 6
     private const val GRIP_RELAX_TAU = 0.06f
-    private var gripRelax = 1f
-    private var gripSlide = 0f
     private const val GRIP_SLIDE_STEP = 1f
     private const val GRIP_SLIDE_STEPS = 8
     private const val GRIP_MIN_OFFSET = 3f
-    private var gripRelaxNanos = 0L
     private const val SPRING_OMEGA = 26f
     private const val SPRING_DAMPING = 0.5f
     private const val SPRING_MIX = 0.85f
@@ -139,12 +138,6 @@ object WeaponAnimations {
     private const val SPRING_STEPS = 2
     private const val TWO_PI = 6.2831855f
     private const val PI_F = 3.1415927f
-    private var springReady = false
-    private var springNanos = 0L
-    private var springA = 0f
-    private var springAV = 0f
-    private var springY = 0f
-    private var springYV = 0f
 
     private fun wrapPi(v: Float): Float {
         val r = v % TWO_PI
@@ -153,27 +146,27 @@ object WeaponAnimations {
 
     private fun springTip(out: FloatArray) {
         val now = System.nanoTime()
-        val gap = (now - springNanos) / 1_000_000_000f
-        springNanos = now
-        if (!springReady || gap > SPRING_RESET_GAP) {
-            springA = out[HEAD_A]
-            springY = out[HEAD_Y]
-            springAV = 0f
-            springYV = 0f
-            springReady = true
+        val gap = (now - clock.springNanos) / 1_000_000_000f
+        clock.springNanos = now
+        if (!clock.springReady || gap > SPRING_RESET_GAP) {
+            clock.springA = out[HEAD_A]
+            clock.springY = out[HEAD_Y]
+            clock.springAV = 0f
+            clock.springYV = 0f
+            clock.springReady = true
             return
         }
         val h = gap.coerceIn(0f, SPRING_MAX_DT) / SPRING_STEPS
         val k = SPRING_OMEGA * SPRING_OMEGA
         val c = 2f * SPRING_DAMPING * SPRING_OMEGA
         repeat(SPRING_STEPS) {
-            springAV += (k * (out[HEAD_A] - springA) - c * springAV) * h
-            springA += springAV * h
-            springYV += (k * wrapPi(out[HEAD_Y] - springY) - c * springYV) * h
-            springY += springYV * h
+            clock.springAV += (k * (out[HEAD_A] - clock.springA) - c * clock.springAV) * h
+            clock.springA += clock.springAV * h
+            clock.springYV += (k * wrapPi(out[HEAD_Y] - clock.springY) - c * clock.springYV) * h
+            clock.springY += clock.springYV * h
         }
-        val lagA = (out[HEAD_A] - springA).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
-        val lagY = wrapPi(out[HEAD_Y] - springY).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
+        val lagA = (out[HEAD_A] - clock.springA).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
+        val lagY = wrapPi(out[HEAD_Y] - clock.springY).coerceIn(-SPRING_MAX_LAG, SPRING_MAX_LAG)
         out[HEAD_A] -= lagA * SPRING_MIX
         out[HEAD_Y] -= lagY * SPRING_MIX
     }
@@ -356,7 +349,7 @@ object WeaponAnimations {
     }
 
     private fun impactFamily(client: Minecraft): String =
-        (SwingClock.pose?.key ?: client.player?.mainHandItem?.let { autoStyleKey(it) })?.substringBefore(':') ?: "SPEAR"
+        (clock.pose?.key ?: client.player?.mainHandItem?.let { autoStyleKey(it) })?.substringBefore(':') ?: "SPEAR"
 
     fun playImpact(at: Vec3, weight: Float, spell: Boolean) {
         val client = Minecraft.getInstance()
@@ -451,7 +444,27 @@ object WeaponAnimations {
         return c * c * (3f - 2f * c)
     }
 
-    private object SwingClock {
+    private class Clock {
+        var owner: Player? = null
+        var gripRelax = 1f
+        var gripSlide = 0f
+        var gripRelaxNanos = 0L
+        var springReady = false
+        var springNanos = 0L
+        var springA = 0f
+        var springAV = 0f
+        var springY = 0f
+        var springYV = 0f
+
+        fun keyFor(stack: ItemStack): String? = if (owner == null) resolveKey(stack) else remoteKey(stack)
+
+        fun tickRemote(player: Player) {
+            owner = player
+            applyReload()
+            if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
+            refreshIdle(player)
+        }
+
         var pose: Pose? = null
         var right = true
         var suppress = false
@@ -593,9 +606,15 @@ object WeaponAnimations {
             idleAmt += ((if (table == null) 0f else 1f) - idleAmt) * a
         }
 
-        private fun refreshIdle(player: LocalPlayer) {
+        private fun refreshIdle(player: Player) {
             idleRight = player.mainArm == HumanoidArm.RIGHT
-            val speedSq = player.deltaMovement.horizontalDistanceSqr()
+            val speedSq = if (owner == null) {
+                player.deltaMovement.horizontalDistanceSqr()
+            } else {
+                val dx = player.x - player.xOld
+                val dz = player.z - player.zOld
+                dx * dx + dz * dz
+            }
             val still = speedSq < STILL_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isUsingItem && !player.swinging
             stillTicks = if (still) stillTicks + 1 else 0
             sprintingNow = player.isSprinting && speedSq > SPRINT_SPEED_SQ
@@ -608,7 +627,7 @@ object WeaponAnimations {
             val stack = player.mainHandItem
             if (stack !== idleStack) {
                 idleStack = stack
-                idleStackKey = resolveKey(stack)
+                idleStackKey = keyFor(stack)
             }
             idleTable = stanceFor(idleStackKey)
         }
@@ -669,7 +688,7 @@ object WeaponAnimations {
             }
         }
 
-        fun begin(player: LocalPlayer) {
+        fun begin(player: Player) {
             if (!enabled()) {
                 pose = null
                 carry = null
@@ -678,13 +697,13 @@ object WeaponAnimations {
             }
             val hand = player.swingingArm ?: InteractionHand.MAIN_HAND
             val holdingTool = toolKey(player.getItemInHand(hand)) != null
-            if ((SpellComboGuard.isSuspended() && !holdingTool) || (pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) {
+            if ((owner == null && SpellComboGuard.isSuspended() && !holdingTool) || (pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) {
                 suppress = true
                 return
             }
             val arm = if (hand == InteractionHand.MAIN_HAND) player.mainArm else player.mainArm.opposite
             val stack = player.getItemInHand(hand)
-            val styleKey = resolveKey(stack)?.let { if (it == "TOOL:ROD" && player.fishing != null) "TOOL:ROD_REEL" else it }
+            val styleKey = keyFor(stack)?.let { if (it == "TOOL:ROD" && player.fishing != null) "TOOL:ROD_REEL" else it }
             val styleBase = styleKey?.let { basePose(it) }
             if (styleKey == null || styleBase == null) {
                 pose = null
@@ -732,7 +751,7 @@ object WeaponAnimations {
             reboundStart = 0L
             startP = if (chained) chosen.hit * CHAIN_SKIP else 0f
             lastBeginNanos = now
-            if (config.weaponAnimationLunge && chosen.key.substringBefore(':') in LUNGE_FAMILIES && moveAmt < MOVE_DUST_MAX) WynnHitFeedback.stepDust(player)
+            if (config.weaponAnimationLunge && chosen.key.substringBefore(':') in LUNGE_FAMILIES && moveAmt < MOVE_DUST_MAX) (player as? LocalPlayer)?.let { WynnHitFeedback.stepDust(it) }
             val style = swingStyle()
             swingBody = style.body
             swingArc = style.arc
@@ -823,7 +842,7 @@ object WeaponAnimations {
             if (cues.isEmpty()) return
             val config = WynnOverhaulConfig.current
             val client = Minecraft.getInstance()
-            val player = client.player
+            val player = owner ?: client.player
             val level = client.level
             for (i in cues.indices) {
                 if (cueFired[i] || t < cues[i].at) continue
@@ -1032,25 +1051,77 @@ object WeaponAnimations {
         }
     }
 
+    private val LOCAL_CLOCK = Clock()
+    private var clock: Clock = LOCAL_CLOCK
+    private val remotes = HashMap<Int, Clock>()
+    private val LOCAL_CLOCK_TICK = { client: Minecraft ->
+        LOCAL_CLOCK.tick(client)
+        tickRemotes(client)
+    }
+    private const val REMOTE_RANGE_SQ = 48.0 * 48.0
+
+    private fun tickRemotes(client: Minecraft) {
+        val level = client.level
+        val me = client.player
+        if (level == null || me == null || !enabled() || !WynnOverhaulConfig.current.weaponAnimationOthers) {
+            remotes.clear()
+            return
+        }
+        val seen = HashSet<Int>()
+        for (other in level.players()) {
+            if (other === me || other.distanceToSqr(me) > REMOTE_RANGE_SQ) continue
+            seen.add(other.id)
+            remotes.getOrPut(other.id) { Clock() }.tickRemote(other)
+        }
+        remotes.keys.retainAll(seen)
+    }
+
+    private fun clockFor(state: HumanoidRenderState): Clock? {
+        if (state !is AvatarRenderState) return null
+        val me = Minecraft.getInstance().player ?: return null
+        return if (state.id == me.id) LOCAL_CLOCK else remotes[state.id]
+    }
+
+    private fun remoteKey(stack: ItemStack): String? {
+        if (stack.isEmpty) return null
+        val entry = WeaponAnimationRegistry.entryFor(stack)
+        val key = entry?.style?.takeIf { it != WeaponAnimationRegistry.AUTO }
+            ?: WynnSkinStyles.styleFor(stack)
+            ?: entry?.autoStyle?.takeIf { it.isNotEmpty() }
+        return key?.takeIf { it in POSES || it in COMBOS }
+    }
+
+    @JvmStatic
+    fun onRemoteSwing(player: Player) {
+        if (!enabled() || !WynnOverhaulConfig.current.weaponAnimationOthers) return
+        remotes[player.id]?.begin(player)
+    }
+
+    @JvmStatic
+    fun suppressVanillaFor(entity: LivingEntity): Boolean {
+        if (entity is LocalPlayer) return LOCAL_CLOCK.suppress
+        return remotes[entity.id]?.suppress == true
+    }
+
     fun init() {
-        ClientTickEvents.END_CLIENT_TICK.register(SwingClock::tick)
+        ClientTickEvents.END_CLIENT_TICK.register { LOCAL_CLOCK_TICK(it) }
         ClientTickEvents.END_CLIENT_TICK.register(::playTails)
     }
 
     @JvmStatic
-    fun suppressVanilla(): Boolean = SwingClock.suppress
+    fun suppressVanilla(): Boolean = clock.suppress
 
     @JvmStatic
-    fun trailRight(): Boolean = SwingClock.right
+    fun trailRight(): Boolean = clock.right
 
     @JvmStatic
-    fun trailStrength(): Float = SwingClock.trailStrength
+    fun trailStrength(): Float = clock.trailStrength
 
-    fun holdAtImpact(nanos: Long, strength: Float) = SwingClock.hold(nanos, strength)
+    fun holdAtImpact(nanos: Long, strength: Float) = clock.hold(nanos, strength)
 
     @JvmStatic
     fun trailActive(): Boolean {
-        val pose = SwingClock.pose ?: return false
+        val pose = clock.pose ?: return false
         val family = pose.key.substringBefore(':')
         if (family == "WAND" || family == "RELIK") return false
         return trailSpan(pose.key) != null
@@ -1059,7 +1130,7 @@ object WeaponAnimations {
     @JvmStatic
     fun onSwing(player: LocalPlayer) {
         if (WynnOverhaulConfig.current.weaponAnimationPreview) return
-        SwingClock.begin(player)
+        clock.begin(player)
     }
 
     @JvmStatic
@@ -1069,7 +1140,7 @@ object WeaponAnimations {
         val player = Minecraft.getInstance().player ?: return
         val styleKey = resolveKey(player.mainHandItem)
         val chosen = SpellCasts.choose(styleKey, name.lowercase().filter { it.isLetter() }) ?: return
-        SwingClock.beginSpell(player, chosen)
+        clock.beginSpell(player, chosen)
     }
 
     fun styleKeys(): List<String> {
@@ -1150,6 +1221,7 @@ object WeaponAnimations {
     private val shiftVec = Vector3f()
     private var lastReach = 0f
     private var headActive = false
+    private var headEntity = -1
     private var headBow = false
     private var headFrame = -1L
     private var debugLine = ""
@@ -1174,31 +1246,37 @@ object WeaponAnimations {
 
     @JvmStatic
     fun claimsArms(state: HumanoidRenderState): Boolean {
-        if (state !is AvatarRenderState) return false
-        val player = Minecraft.getInstance().player ?: return false
-        if (state.id != player.id) return false
-        if (LocomotionAnimations.unseen(state)) return false
-        return (SwingClock.progress() >= 0f && SwingClock.pose != null) || SwingClock.idleActive()
+        val target = clockFor(state) ?: return false
+        if (LocomotionAnimations.unseen(state as AvatarRenderState)) return false
+        return (target.progress() >= 0f && target.pose != null) || target.idleActive()
     }
 
     @JvmStatic
     fun applyThirdPerson(model: HumanoidModel<*>, state: HumanoidRenderState): Boolean {
-        if (state !is AvatarRenderState) return false
-        val player = Minecraft.getInstance().player ?: return false
-        if (state.id != player.id) return false
+        val target = clockFor(state) ?: return false
+        val previous = clock
+        clock = target
+        try {
+            return applyThirdPersonWith(model, state as AvatarRenderState)
+        } finally {
+            clock = previous
+        }
+    }
+
+    private fun applyThirdPersonWith(model: HumanoidModel<*>, state: AvatarRenderState): Boolean {
         if (LocomotionAnimations.unseen(state)) return false
-        SwingClock.idleStep()
-        val t = SwingClock.progress()
-        val pose = SwingClock.pose
+        clock.idleStep()
+        val t = clock.progress()
+        val pose = clock.pose
         val swinging = t >= 0f && pose != null
-        if (!swinging && !SwingClock.idleActive()) {
+        if (!swinging && !clock.idleActive()) {
             headActive = false
-            springReady = false
+            clock.springReady = false
             return false
         }
 
         val k = 1f
-        val right = if (swinging) SwingClock.right else SwingClock.idleRight
+        val right = if (swinging) clock.right else clock.idleRight
         val s = if (right) 1f else -1f
         val main = if (right) model.rightArm else model.leftArm
         val off = if (right) model.leftArm else model.rightArm
@@ -1226,10 +1304,10 @@ object WeaponAnimations {
         base[HEAD_A] = asin(restDir.y.coerceIn(-1f, 1f))
         base[HEAD_Y] = atan2(s * restDir.x, -restDir.z)
 
-        SwingClock.blendIdle(base)
-        SwingClock.applyGait(base, state.walkAnimationPos, state.walkAnimationSpeed, s)
-        val breath = SwingClock.breath()
-        val sway = SwingClock.sway()
+        clock.blendIdle(base)
+        clock.applyGait(base, state.walkAnimationPos, state.walkAnimationSpeed, s)
+        val breath = clock.breath()
+        val sway = clock.sway()
         base[ACROSS] += sway
         base[HEAD_Y] += sway * 0.6f
         base[PITCH] += breath
@@ -1237,15 +1315,15 @@ object WeaponAnimations {
         base[HEAD_A] += breath * 0.5f
 
         val out = outBuffer
-        if (pose != null && swinging) SwingClock.sample(pose, t, base, k, out) else base.copyInto(out)
+        if (pose != null && swinging) clock.sample(pose, t, base, k, out) else base.copyInto(out)
         if (!swinging && FirstPersonBody.relaxArms(state)) {
             out[PITCH] += FirstPersonBody.ARM_DROP
             out[OFF_PITCH] += FirstPersonBody.ARM_DROP
         }
-        SwingClock.applyFlinch(out)
-        val moving = SwingClock.moveAmount()
-        val drive = SwingClock.moveStrike()
-        val run = SwingClock.runShare()
+        clock.applyFlinch(out)
+        val moving = clock.moveAmount()
+        val drive = clock.moveStrike()
+        val run = clock.runShare()
         out[STEP] *= 1f - moving
         out[LEG_L] *= 1f - moving
         out[LEG_R] *= 1f - moving
@@ -1272,14 +1350,14 @@ object WeaponAnimations {
         applyLegs(model, out)
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
-        val guardKey = if (swinging) pose.key else SwingClock.idleKey()
+        val guardKey = if (swinging) pose.key else clock.idleKey()
         if (guardKey != null && guardKey in HAND_SHIFT) {
             val guardSpan = trailSpan(guardKey)
             if (guardSpan != null) keepShaftClear(main, s, yaw, out, guardSpan, HAND_SHIFT.getValue(guardKey))
         }
         val offShoulder = -mainShoulder
         val gripWeight = out[GRIP].coerceIn(0f, 1f)
-        val gripOffset = SwingClock.idleGripOffset() ?: pose?.gripOffset ?: 7f
+        val gripOffset = clock.idleGripOffset() ?: pose?.gripOffset ?: 7f
         val offX = off.xRot
         val offY = off.yRot
         val offZ = off.zRot
@@ -1320,12 +1398,12 @@ object WeaponAnimations {
             }
         }
         val now = System.nanoTime()
-        val dt = if (gripRelaxNanos == 0L) 1f else ((now - gripRelaxNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
-        gripRelaxNanos = now
+        val dt = if (clock.gripRelaxNanos == 0L) 1f else ((now - clock.gripRelaxNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        clock.gripRelaxNanos = now
         val blend = MathX.expApproach(dt, GRIP_RELAX_TAU)
-        gripRelax += (relaxGoal - gripRelax) * blend
-        gripSlide += (slideGoal - gripSlide) * blend
-        gripFits(gripSlide, gripRelax)
+        clock.gripRelax += (relaxGoal - clock.gripRelax) * blend
+        clock.gripSlide += (slideGoal - clock.gripSlide) * blend
+        gripFits(clock.gripSlide, clock.gripRelax)
         keepOutOfBody(off, offShoulder, yaw)
 
         headA = out[HEAD_A]
@@ -1335,9 +1413,10 @@ object WeaponAnimations {
         headSide = s
         lastReach = out[REACH]
         headActive = true
-        val shiftKey = if (swinging) pose.key else SwingClock.idleKey()
-        headBow = shiftKey != "BOW:FIREARM" && Minecraft.getInstance().player?.let { ActiveWeapon.isRanged(it) } == true
-        handShift = (HAND_SHIFT[shiftKey] ?: 0f) + (HAND_SPRINT_EXTRA[shiftKey] ?: 0f) * SwingClock.sprintAmount()
+        val shiftKey = if (swinging) pose.key else clock.idleKey()
+        headEntity = state.id
+        headBow = shiftKey != "BOW:FIREARM" && (clock.owner ?: Minecraft.getInstance().player)?.let { ActiveWeapon.isRanged(it) } == true
+        handShift = (HAND_SHIFT[shiftKey] ?: 0f) + (HAND_SPRINT_EXTRA[shiftKey] ?: 0f) * clock.sprintAmount()
         headFrame = System.nanoTime()
         if (WynnOverhaulConfig.current.weaponAnimationPreview) {
             debugKey = pose?.key ?: "IDLE"
@@ -1480,9 +1559,7 @@ object WeaponAnimations {
 
     @JvmStatic
     fun applyWrist(state: ArmedEntityRenderState, arm: HumanoidArm, part: ModelPart, stack: PoseStack) {
-        if (state !is AvatarRenderState) return
-        val player = Minecraft.getInstance().player ?: return
-        if (state.id != player.id) return
+        if (state !is AvatarRenderState || state.id != headEntity) return
         if (!headActive || (arm == HumanoidArm.RIGHT) != (headSide > 0f)) return
         if (System.nanoTime() - headFrame > 100_000_000L) return
 
@@ -1516,31 +1593,31 @@ object WeaponAnimations {
 
     @JvmStatic
     fun applyFirstPerson(stack: PoseStack, arm: HumanoidArm, sign: Int): Boolean {
-        val t = SwingClock.progress()
-        val pose = SwingClock.pose
-        if (t < 0f || pose == null || (arm == HumanoidArm.RIGHT) != SwingClock.right) return false
+        val t = clock.progress()
+        val pose = clock.pose
+        if (t < 0f || pose == null || (arm == HumanoidArm.RIGHT) != clock.right) return false
 
         val out = outBuffer
         val fpBase = firstPersonBase
         REST_BASE.copyInto(fpBase)
-        SwingClock.blendIdle(fpBase)
-        SwingClock.sample(pose, t, fpBase, 1f, out)
-        out[REACH] -= SwingClock.flinch() * FLINCH_REACH
-        SwingClock.rawAt(pose, 0f, fpBase, fpStart)
+        clock.blendIdle(fpBase)
+        clock.sample(pose, t, fpBase, 1f, out)
+        out[REACH] -= clock.flinch() * FLINCH_REACH
+        clock.rawAt(pose, 0f, fpBase, fpStart)
         poseFirstPersonSwing(stack, sign, out, fpStart, t)
         return true
     }
 
     @JvmStatic
     fun applyFirstPersonIdle(stack: PoseStack, arm: HumanoidArm, sign: Int) {
-        SwingClock.idleStep()
-        if (!SwingClock.idleActive() || (arm == HumanoidArm.RIGHT) != SwingClock.idleRight) return
-        if (SwingClock.pose != null && SwingClock.progress() >= 0f && (arm == HumanoidArm.RIGHT) == SwingClock.right) return
-        val held = SwingClock.heldAmount()
-        val breath = SwingClock.breath() + SwingClock.sprintBob()
-        val sway = SwingClock.sway()
+        clock.idleStep()
+        if (!clock.idleActive() || (arm == HumanoidArm.RIGHT) != clock.idleRight) return
+        if (clock.pose != null && clock.progress() >= 0f && (arm == HumanoidArm.RIGHT) == clock.right) return
+        val held = clock.heldAmount()
+        val breath = clock.breath() + clock.sprintBob()
+        val sway = clock.sway()
         val scale = 1f - (1f - FP_SCALE) * held
-        stack.translate(sway * FP_SWAY_MOVE, breath, SwingClock.flinch() * FLINCH_REACH * FP_UNIT)
+        stack.translate(sway * FP_SWAY_MOVE, breath, clock.flinch() * FLINCH_REACH * FP_UNIT)
         stack.scale(scale, scale, scale)
         fpMix.rotationX(-breath * FP_BREATH_TILT).rotateZ(sway * FP_SWAY_TILT * sign)
         stack.mulPose(fpMix)
@@ -1624,7 +1701,7 @@ object WeaponAnimations {
         fpMix.mul(fpQuat)
 
         val ramp = smooth(minOf(t / FP_RAMP_IN, (1f - t) / FP_RAMP_OUT, 1f).coerceAtLeast(0f))
-        val held = SwingClock.heldAmount()
+        val held = clock.heldAmount()
         val scale = (1f - (1f - FP_SCALE) * held) * (1f - FP_SHRINK * ramp)
         stack.translate(dx, dy, dz)
         stack.scale(scale, scale, scale)

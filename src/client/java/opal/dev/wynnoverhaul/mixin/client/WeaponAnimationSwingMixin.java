@@ -1,5 +1,6 @@
 package opal.dev.wynnoverhaul.mixin.client;
 
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,6 +16,8 @@ public abstract class WeaponAnimationSwingMixin {
     private void wynnoverhaul$weaponSwingStarted(InteractionHand hand, boolean sendToSwingingEntity, CallbackInfo ci) {
         if ((Object) this instanceof LocalPlayer player) {
             WeaponAnimations.onSwing(player);
+        } else if ((Object) this instanceof AbstractClientPlayer other) {
+            WeaponAnimations.onRemoteSwing(other);
         }
     }
 }

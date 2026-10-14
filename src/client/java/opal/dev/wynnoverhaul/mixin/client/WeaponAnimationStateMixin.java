@@ -1,6 +1,6 @@
 package opal.dev.wynnoverhaul.mixin.client;
 
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +21,7 @@ public abstract class WeaponAnimationStateMixin {
             float partialTick,
             CallbackInfo ci
     ) {
-        if (entity instanceof LocalPlayer && WeaponAnimations.suppressVanilla()) {
+        if (entity instanceof AbstractClientPlayer && WeaponAnimations.suppressVanillaFor(entity)) {
             state.attackTime = 0.0F;
             state.swingAnimationType = SwingAnimationType.NONE;
         }
