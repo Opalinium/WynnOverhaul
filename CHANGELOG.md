@@ -25,6 +25,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
 - F8 is now a contextual debug capture: it dumps an open container, captures running dialogue or scans nearby entities.
+- Custom screen panels share one style with a drop shadow, a gold sheen and corner accents.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.

@@ -1029,11 +1029,7 @@ class WynnOverhaulInventoryScreen(
     private fun drawOuterPanel(graphics: GuiGraphicsExtractor, panelTop: Int, panelH: Int) {
         val ox = panelLeft()
 
-        graphics.fill(ox - 4, panelTop, ox + panelWidth() + 4, panelTop + panelH, GLASS_BG)
-        graphics.fill(ox - 4, panelTop, ox + panelWidth() + 4, panelTop + 1, OwTheme.HAIRLINE)
-        graphics.fill(ox - 4, panelTop + panelH - 1, ox + panelWidth() + 4, panelTop + panelH, OwTheme.HAIRLINE)
-        graphics.fill(ox - 4, panelTop, ox - 3, panelTop + panelH, OwTheme.HAIRLINE)
-        graphics.fill(ox + panelWidth() + 3, panelTop, ox + panelWidth() + 4, panelTop + panelH, OwTheme.HAIRLINE)
+        OwTheme.glassPanel(graphics, ox - 4, panelTop, panelWidth() + 8, panelH)
     }
 
     private fun drawFloatingCharacter(graphics: GuiGraphicsExtractor, player: Player?, layout: Layout) {

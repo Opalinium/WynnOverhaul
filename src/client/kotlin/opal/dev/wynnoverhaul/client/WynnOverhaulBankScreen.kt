@@ -15,7 +15,6 @@ import opal.dev.wynnoverhaul.WynnOverhaul
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.CAPTION_H
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.FOOTER_H
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.GAP
-import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.GLASS_BG
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.HOVER_BORDER
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.MARGIN
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.OUTSIDE_SLOT

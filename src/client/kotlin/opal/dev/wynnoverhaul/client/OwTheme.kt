@@ -26,6 +26,12 @@ object OwTheme {
     const val TILE_BORDER = 0xFF3A2E1C.toInt()
     const val TILE_NEW = 0xFF6FAE5E.toInt()
 
+    const val GLASS = 0xA812100D.toInt()
+    const val PANEL_SHADOW = 0x38000000
+    const val PANEL_SHEEN_TOP = 0x1CD4AF37
+    const val PANEL_SHEEN_BOTTOM = 0x00D4AF37
+    private const val CORNER = 6
+
     const val ROW_H = 22
     const val PAD = 12
     const val GAP = 6
@@ -56,6 +62,24 @@ object OwTheme {
         graphics.fill(x, y + h - 1, x + w, y + h, HAIRLINE)
         graphics.fill(x, y, x + 1, y + h, HAIRLINE)
         graphics.fill(x + w - 1, y, x + w, y + h, HAIRLINE)
+    }
+
+    fun glassPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
+        graphics.fill(x + 2, y + 3, x + w + 2, y + h + 3, PANEL_SHADOW)
+        graphics.fill(x, y, x + w, y + h, GLASS)
+        graphics.fillGradient(x + 1, y + 1, x + w - 1, y + 16, PANEL_SHEEN_TOP, PANEL_SHEEN_BOTTOM)
+        graphics.fill(x, y, x + w, y + 1, HAIRLINE)
+        graphics.fill(x, y + h - 1, x + w, y + h, HAIRLINE)
+        graphics.fill(x, y, x + 1, y + h, HAIRLINE)
+        graphics.fill(x + w - 1, y, x + w, y + h, HAIRLINE)
+        graphics.fill(x, y, x + CORNER, y + 1, ACCENT_DIM)
+        graphics.fill(x, y, x + 1, y + CORNER, ACCENT_DIM)
+        graphics.fill(x + w - CORNER, y, x + w, y + 1, ACCENT_DIM)
+        graphics.fill(x + w - 1, y, x + w, y + CORNER, ACCENT_DIM)
+        graphics.fill(x, y + h - 1, x + CORNER, y + h, ACCENT_DIM)
+        graphics.fill(x, y + h - CORNER, x + 1, y + h, ACCENT_DIM)
+        graphics.fill(x + w - CORNER, y + h - 1, x + w, y + h, ACCENT_DIM)
+        graphics.fill(x + w - 1, y + h - CORNER, x + w, y + h, ACCENT_DIM)
     }
 
     fun drawTile(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, borderArgb: Int, isNew: Boolean = false) {

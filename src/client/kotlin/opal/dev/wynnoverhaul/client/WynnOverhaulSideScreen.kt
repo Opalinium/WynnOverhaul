@@ -13,7 +13,6 @@ import opal.dev.wynnoverhaul.WynnOverhaul
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.CAPTION_H
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.FOOTER_H
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.GAP
-import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.GLASS_BG
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.HOVER_BORDER
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.MARGIN
 import opal.dev.wynnoverhaul.client.WynnOverhaulInventoryScreen.Companion.PREVIEW_ENTITY_SIZE
@@ -175,11 +174,7 @@ abstract class WynnOverhaulSideScreen(
     }
 
     protected fun panel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
-        graphics.fill(x, y, x + w, y + h, GLASS_BG)
-        graphics.fill(x, y, x + w, y + 1, OwTheme.HAIRLINE)
-        graphics.fill(x, y + h - 1, x + w, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x, y, x + 1, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x + w - 1, y, x + w, y + h, OwTheme.HAIRLINE)
+        OwTheme.glassPanel(graphics, x, y, w, h)
     }
 
     protected fun drawTile(graphics: GuiGraphicsExtractor, r: Rect, stack: ItemStack, hovered: Boolean, slot: Int = -1) {
