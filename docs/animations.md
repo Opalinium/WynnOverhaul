@@ -143,7 +143,7 @@ An effect names a `to` target and one operation:
 
 `add` adds the value, `sub` subtracts it, and `approach` moves the current value toward a goal by `rate` (0 to 1). `freeArms: true` applies the effect only when no weapon animation owns the arms.
 
-Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), `torso` with `pitch`, `roll`, `yaw` or `shift`, and `rig` with `drop` (how far the body dips while the feet are planted) or `lift` (a shift that only applies when the foot cycle is not driving the legs).
+Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), `torso` with `pitch`, `roll`, `yaw` or `shift`, and `rig` with `drop` (how far the body dips while the feet are planted), `lift` (a shift that only applies when no foot cycle or rig pose is driving the legs), `rootF` (the body shifted forward in pixels) or the foot targets `footLF`, `footLS`, `footLU`, `footRF`, `footRS` and `footRU` (left and right foot forward, to the left and up, in pixels from the standing stance). Foot and `rootF` targets add on top of the foot cycle, and the legs are solved from them with the knees bent and the hips lowered to keep the feet reachable. The jump, launch, land, crouch and climb states pose the legs this way.
 
 ### Expressions
 

@@ -370,10 +370,12 @@ states:
       - {to: leftArm.x, add: "-style.jumpArms * wRise * wAir * k", freeArms: true}
       - {to: rightArm.z, add: "style.fallSpread * wFall * wAir * k", freeArms: true}
       - {to: leftArm.z, sub: "style.fallSpread * wFall * wAir * k", freeArms: true}
-      - {to: rightLeg.x, add: "(-style.jumpLegs * wRise + 0.25 * wFall) * wAir * k"}
-      - {to: leftLeg.x, add: "(0.4 * style.jumpLegs * wRise + 0.1 * wFall) * wAir * k"}
-      - {to: rightLeg.z, add: "style.fallLegs * wFall * wAir * k"}
-      - {to: leftLeg.z, sub: "style.fallLegs * wFall * wAir * k"}
+      - {to: rig.footRF, add: "((1 + 5 * style.jumpLegs) * wRise + 2.5 * wFall) * wAir"}
+      - {to: rig.footRU, add: "((2 + 6 * style.jumpLegs) * wRise + 1.5 * wFall) * wAir"}
+      - {to: rig.footLF, sub: "((1 + 2 * style.jumpLegs) * wRise + 2.5 * wFall) * wAir"}
+      - {to: rig.footLU, add: "((1 + 3 * style.jumpLegs) * wRise + 1 * wFall) * wAir"}
+      - {to: rig.footLS, add: "(0.4 * wRise + (0.5 + 3 * style.fallLegs) * wFall) * wAir"}
+      - {to: rig.footRS, sub: "(0.4 * wRise + (0.5 + 3 * style.fallLegs) * wFall) * wAir"}
 
   - name: launch
     toggle: locomotionJump
@@ -386,12 +388,12 @@ states:
       speedLean: "clamp(pace, 0, 1) * 0.1"
       swing: "sin(clamp(u / 0.6, 0, 1) * pi) * style.launchArms"
     effects:
-      - {to: torso.shift, add: "compress * compress * style.launchDip * k - stretch * style.launchStretch * k"}
+      - {to: rig.drop, add: "compress * compress * style.launchDip * 1.5 - stretch * style.launchStretch"}
       - {to: torso.pitch, add: "(compress * 0.16 + speedLean * stretch) * k"}
-      - {to: rightLeg.x, sub: "drive * 0.9 * k * leadRight"}
-      - {to: leftLeg.x, sub: "drive * 0.9 * k * (1 - leadRight)"}
-      - {to: rightLeg.x, add: "(stretch * 0.6 + compress * 0.1) * k * (1 - leadRight)"}
-      - {to: leftLeg.x, add: "(stretch * 0.6 + compress * 0.1) * k * leadRight"}
+      - {to: rig.footRF, add: "stretch * 4 * leadRight - drive * 2.5 * (1 - leadRight)"}
+      - {to: rig.footLF, add: "stretch * 4 * (1 - leadRight) - drive * 2.5 * leadRight"}
+      - {to: rig.footRU, add: "stretch * 5 * leadRight + drive * 1.5 * (1 - leadRight)"}
+      - {to: rig.footLU, add: "stretch * 5 * (1 - leadRight) + drive * 1.5 * leadRight"}
       - {to: leftArm.x, sub: "swing * (0.9 * leadRight + 0.6 * (1 - leadRight)) * k", freeArms: true}
       - {to: rightArm.x, sub: "swing * (0.9 * (1 - leadRight) + 0.6 * leadRight) * k", freeArms: true}
 
@@ -399,10 +401,13 @@ states:
     toggle: locomotionJump
     gate: wLand
     effects:
-      - {to: torso.shift, add: "style.landDip * wLand * k"}
+      - {to: rig.drop, add: "(1.2 + style.landDip * 1.4) * wLand"}
+      - {to: rig.rootF, add: "1.2 * wLand"}
+      - {to: rig.footLS, add: "2 * wLand"}
+      - {to: rig.footRS, sub: "2 * wLand"}
+      - {to: rig.footRF, add: "2.5 * wLand"}
+      - {to: rig.footLF, sub: "1 * wLand"}
       - {to: torso.pitch, add: "style.landLean * wLand * k"}
-      - {to: rightLeg.x, sub: "0.5 * wLand * k"}
-      - {to: leftLeg.x, sub: "0.5 * wLand * k"}
       - {to: rightArm.z, add: "0.35 * wLand * k", freeArms: true}
       - {to: leftArm.z, sub: "0.35 * wLand * k", freeArms: true}
 
@@ -410,13 +415,17 @@ states:
     toggle: locomotionCrouch
     gate: wCrouch
     effects:
+      - {to: rig.drop, add: "(2.2 + 2.2 * min(style.crouchLean, 1.5) / 1.5) * wCrouch"}
+      - {to: rig.rootF, add: "0.8 * wCrouch"}
+      - {to: rig.footLS, add: "1.2 * wCrouch"}
+      - {to: rig.footRS, sub: "1.2 * wCrouch"}
+      - {to: rig.footLF, sub: "1 * wCrouch"}
+      - {to: rig.footRF, add: "1 * wCrouch"}
       - {to: torso.pitch, add: "style.crouchLean * 0.25 * wCrouch * k"}
       - {to: rightArm.x, sub: "style.crouchArm * 0.4 * wCrouch * k", freeArms: true}
       - {to: leftArm.x, sub: "style.crouchArm * 0.4 * wCrouch * k", freeArms: true}
       - {to: rightArm.z, sub: "0.1 * style.crouchArm * wCrouch * k", freeArms: true}
       - {to: leftArm.z, add: "0.1 * style.crouchArm * wCrouch * k", freeArms: true}
-      - {to: rightLeg.x, sub: "style.crouchLeg * wCrouch * k * (0.6 + 0.4 * gait * sp)"}
-      - {to: leftLeg.x, sub: "style.crouchLeg * wCrouch * k * (0.6 - 0.4 * gait * sp)"}
       - {to: head.x, add: "0.1 * wCrouch * k"}
 
   - name: swim
@@ -448,13 +457,18 @@ states:
     vars:
       ph: "age * 0.4"
       pull: "wClimb * min(k, 1)"
+      stepR: "max(sin(ph + pi), 0) * climbMove"
+      stepL: "max(sin(ph), 0) * climbMove"
     effects:
       - {to: rightArm.x, approach: "-1.9 + sin(ph) * style.climbArm * climbMove", rate: "pull", freeArms: true}
       - {to: leftArm.x, approach: "-1.9 - sin(ph) * style.climbArm * climbMove", rate: "pull", freeArms: true}
       - {to: rightArm.z, add: "0.15 * wClimb * k", freeArms: true}
       - {to: leftArm.z, sub: "0.15 * wClimb * k", freeArms: true}
-      - {to: rightLeg.x, add: "(-0.35 - sin(ph + pi) * style.climbLeg * climbMove) * wClimb * k"}
-      - {to: leftLeg.x, add: "(-0.35 - sin(ph) * style.climbLeg * climbMove) * wClimb * k"}
+      - {to: rig.footRU, add: "(1 + 6 * style.climbLeg * stepR) * wClimb"}
+      - {to: rig.footLU, add: "(1 + 6 * style.climbLeg * stepL) * wClimb"}
+      - {to: rig.footRF, add: "(1.2 + 2.5 * style.climbLeg * stepR) * wClimb"}
+      - {to: rig.footLF, add: "(1.2 + 2.5 * style.climbLeg * stepL) * wClimb"}
+      - {to: rig.rootF, add: "0.6 * wClimb"}
       - {to: torso.pitch, add: "0.08 * wClimb * k"}
 
   - name: ride

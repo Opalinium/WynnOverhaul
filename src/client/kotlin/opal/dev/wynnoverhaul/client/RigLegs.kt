@@ -107,6 +107,7 @@ internal object RigLegs {
 
     private val clip = Source()
     private val gait = Source()
+    private val pose = Source()
     private val mixed = FloatArray(10)
 
     fun submitClip(
@@ -121,6 +122,13 @@ internal object RigLegs {
         leftF: Float, leftS: Float, leftU: Float, rightF: Float, rightS: Float, rightU: Float,
     ) {
         store(gait, id, w, 0f, 0f, 0f, rootH, leftF, leftS, leftU, rightF, rightS, rightU)
+    }
+
+    fun submitPose(
+        id: Int, w: Float, rootF: Float, rootH: Float,
+        leftF: Float, leftS: Float, leftU: Float, rightF: Float, rightS: Float, rightU: Float,
+    ) {
+        store(pose, id, w, 0f, rootF, 0f, rootH, leftF, leftS, leftU, rightF, rightS, rightU)
     }
 
     private fun store(
@@ -144,15 +152,17 @@ internal object RigLegs {
     fun flush(model: HumanoidModel<*>, id: Int, yawSign: Float, groundLeft: Float, groundRight: Float) {
         val wc = if (clip.id == id) clip.weight else 0f
         val wg = if (gait.id == id) gait.weight else 0f
+        val wp = if (pose.id == id) pose.weight else 0f
         clip.id = -1
         gait.id = -1
+        pose.id = -1
         val total = wc + wg
-        if (total <= 0.001f) {
+        if (total + wp <= 0.001f) {
             knees.get(id)?.weight = 0f
             return
         }
-        for (i in 0 until 10) mixed[i] = (wc * clip.v[i] + wg * gait.v[i]) / total
-        val w = if (total > 1f) 1f else total
+        for (i in 0 until 10) mixed[i] = (if (total > 0.001f) (wc * clip.v[i] + wg * gait.v[i]) / total else 0f) + (if (wp > 0f) pose.v[i] else 0f)
+        val w = if (total + wp > 1f) 1f else total + wp
         compute(
             yawSign, mixed[0], mixed[1], mixed[2], mixed[3], mixed[4], mixed[5], mixed[6], mixed[7], mixed[8], mixed[9],
             groundLeft, groundRight,

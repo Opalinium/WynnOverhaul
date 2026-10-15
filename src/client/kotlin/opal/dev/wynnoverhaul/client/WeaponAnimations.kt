@@ -51,7 +51,7 @@ object WeaponAnimations {
     private const val SHORT_SWING_SECONDS = 0.22f
     private const val MIN_HOLD_NANOS = 15_000_000L
     private const val RELAX_SECONDS = 0.22f
-    private const val MIN_GAP_FRACTION = 0.75f
+    private const val MIN_GAP_FRACTION = 0.88f
     private const val MIN_GAP_LOW = 0.12f
     private const val MIN_GAP_HIGH = 0.9f
     private const val FALLBACK_GAP = 0.25f
@@ -748,7 +748,7 @@ object WeaponAnimations {
             swingArc = style.arc
             val styled = chosen.seconds * style.speed
             pace = if (gap < PACE_MAX) (if (pace == 0f) gap else pace + (gap - pace) * PACE_SMOOTH) else 0f
-            val expected = if (pace > 0f) pace else aps?.let { 1f / it.toFloat() } ?: 0f
+            val expected = aps?.let { 1f / it.toFloat() } ?: pace
             val stretched = if (expected > 0f) maxOf(styled, minOf(expected * GAP_FRACTION, styled * STRETCH_MAX)) else styled
             val total = if (gathering) gatherStrokeSeconds(chosen) else minOf(stretched, maxOf(MIN_SECONDS, gap * GAP_FRACTION))
             totalSeconds = total
@@ -1129,6 +1129,7 @@ object WeaponAnimations {
     fun styleKeys(): List<String> {
         val combos = COMBOS
         val steps = combos.values.flatMapTo(HashSet()) { chain -> chain.map { it.key } }
+        CHARGES.values.forEach { steps.add(it.key) }
         val movesets = combos.keys.filter { !it.startsWith("SPELL:") }
         val loose = POSES.keys.filter { !it.startsWith("SPELL:") && it !in combos && it !in steps }
         return listOf(WeaponAnimationRegistry.AUTO) + movesets + loose

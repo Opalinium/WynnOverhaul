@@ -47,7 +47,8 @@ internal object LocoTargets {
     val PARTS = listOf("head", "rightArm", "leftArm", "rightLeg", "leftLeg", "torso", "rig")
     val PART_AXES = listOf("x", "y", "z", "posY")
     val TORSO_AXES = listOf("pitch", "roll", "yaw", "shift")
-    val RIG_AXES = listOf("drop", "lift")
+    val RIG_AXES = listOf("drop", "lift", "rootF", "footLF", "footLS", "footLU", "footRF", "footRS", "footRU")
+    const val AXIS_STRIDE = 16
     const val TORSO = 5
     const val RIG = 6
     const val HEAD = 0
@@ -66,7 +67,7 @@ internal object LocoTargets {
             RIG -> RIG_AXES
             else -> PART_AXES
         }.indexOf(axis)
-        return if (a < 0) -1 else p * 4 + a
+        return if (a < 0) -1 else p * AXIS_STRIDE + a
     }
 }
 

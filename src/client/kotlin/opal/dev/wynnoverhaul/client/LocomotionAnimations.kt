@@ -41,6 +41,17 @@ object LocomotionAnimations {
     private const val TAU = 0.08f
     private const val STALE_NANOS = 5_000_000_000L
     private const val GAIT_PHASE = 0.6662f
+    private const val CROUCH_LIFT_CUT = 0.5f
+    private const val CROUCH_STRIDE_CUT = 0.35f
+    private const val RIG_DROP = 0
+    private const val RIG_LIFT = 1
+    private const val RIG_ROOT_F = 2
+    private const val RIG_FOOT_LF = 3
+    private const val RIG_FOOT_LS = 4
+    private const val RIG_FOOT_LU = 5
+    private const val RIG_FOOT_RF = 6
+    private const val RIG_FOOT_RS = 7
+    private const val RIG_FOOT_RU = 8
     private const val MASTER = 0.7f
     private const val GATE_MIN = 0.001f
     private const val PACE_REFERENCE = 0.22f
@@ -254,8 +265,9 @@ object LocomotionAnimations {
     }
 
     private val torso = Torso()
-    private var rigDrop = 0f
-    private var rigLift = 0f
+    private val rigPose = FloatArray(LocoTargets.RIG_AXES.size)
+    private val rigDrop get() = rigPose[RIG_DROP]
+    private val rigLift get() = rigPose[RIG_LIFT]
 
     private class Snapshot {
         val values = FloatArray(21)
@@ -440,8 +452,7 @@ object LocomotionAnimations {
         val armsFree = !armsClaimed
         val owned = armsClaimed
         torso.reset()
-        rigDrop = 0f
-        rigLift = 0f
+        rigPose.fill(0f)
         snapshot.capture(model)
         val rArm = model.rightArm
         val lArm = model.leftArm
@@ -458,7 +469,7 @@ object LocomotionAnimations {
         val gaitOpp = cos(phase + PI.toFloat())
 
         applyStates(model, state, body, style, config, k, armsFree, grounded, pace, sp, boost, vanillaSp, phase, gait, gaitOpp)
-        submitGait(state, body, style, grounded, phase)
+        submitPose(state, body, submitGait(state, body, style, grounded, phase))
 
         clampParts(model, armsFree, body.wClimb > 0.3f)
         applyTorso(model, armsFree)
@@ -490,13 +501,9 @@ object LocomotionAnimations {
 
     private val footStep = FloatArray(2)
 
-    private fun submitGait(state: AvatarRenderState, body: Body, style: StyleDef, grounded: Float, phase: Float) {
-        val weight = clamp01(body.wMove) * grounded * (1f - body.wCrouch) * (1f - body.wDead)
-        if (weight <= 0.01f) {
-            torso.shift += rigDrop + rigLift
-            return
-        }
-        torso.shift += (rigDrop + rigLift) * (1f - weight)
+    private fun submitGait(state: AvatarRenderState, body: Body, style: StyleDef, grounded: Float, phase: Float): Float {
+        val weight = clamp01(body.wMove) * grounded * (1f - body.wDead)
+        if (weight <= 0.01f) return 0f
         val spec = AnimationLibrary.tables().locomotion.gait
         val rate = GAIT_PHASE * state.walkAnimationSpeed
         val ground = hypot(body.stepX, body.stepZ) * BLOCK_PX
@@ -504,9 +511,9 @@ object LocomotionAnimations {
         body.strideK = approach(body.strideK, raw.coerceIn(STRIDE_K_MIN, STRIDE_K_MAX), STRIDE_SMOOTH)
         val sprint = body.wSprint
         val duty = max(GAIT_DUTY_MIN, spec.walkDuty + (spec.sprintDuty - spec.walkDuty) * sprint)
-        val lift = spec.walkLift + (spec.sprintLift - spec.walkLift) * sprint
+        val lift = (spec.walkLift + (spec.sprintLift - spec.walkLift) * sprint) * (1f - CROUCH_LIFT_CUT * body.wCrouch)
         val stride = (styleValue(style, "walkLeg") + (styleValue(style, "sprintLeg") - styleValue(style, "walkLeg")) * sprint).coerceIn(0.2f, 1.2f)
-        val travel = (body.strideK * (2.0 * PI).toFloat() * duty * stride).coerceAtMost(GAIT_TRAVEL_MAX)
+        val travel = (body.strideK * (2.0 * PI).toFloat() * duty * stride * (1f - CROUCH_STRIDE_CUT * body.wCrouch)).coerceAtMost(GAIT_TRAVEL_MAX)
         var df = body.moveFwd
         var ds = body.moveSide
         val dn = hypot(df, ds)
@@ -526,6 +533,20 @@ object LocomotionAnimations {
             footStep[0] * df, footStep[0] * ds, footStep[1],
             rightOffset * df, rightOffset * ds, rightLift,
         )
+        return weight
+    }
+
+    private fun submitPose(state: AvatarRenderState, body: Body, gaitWeight: Float) {
+        val launching = clamp01(1f - body.launchAge / LAUNCH_SECONDS)
+        val weight = clamp01(max(max(max(body.wAir, body.wCrouch), max(body.wClimb, body.wLand)), launching)) * (1f - body.wDead)
+        if (weight > 0.01f) {
+            RigLegs.submitPose(
+                state.id, weight, rigPose[RIG_ROOT_F], if (gaitWeight < 0.01f) rigDrop + rigLift else 0f,
+                rigPose[RIG_FOOT_LF], rigPose[RIG_FOOT_LS], rigPose[RIG_FOOT_LU],
+                rigPose[RIG_FOOT_RF], rigPose[RIG_FOOT_RS], rigPose[RIG_FOOT_RU],
+            )
+        }
+        torso.shift += (rigDrop + rigLift) * (1f - clamp01(gaitWeight + weight))
     }
 
     private var env = FloatArray(LocoSignals.COUNT)
@@ -541,9 +562,9 @@ object LocomotionAnimations {
     }
 
     private fun readTarget(model: HumanoidModel<*>, code: Int): Float {
-        val part = code shr 2
-        val axis = code and 3
-        if (part == LocoTargets.RIG) return if (axis == 0) rigDrop else rigLift
+        val part = code / LocoTargets.AXIS_STRIDE
+        val axis = code % LocoTargets.AXIS_STRIDE
+        if (part == LocoTargets.RIG) return rigPose[axis]
         if (part == LocoTargets.TORSO) {
             return when (axis) {
                 0 -> torso.pitch
@@ -562,10 +583,10 @@ object LocomotionAnimations {
     }
 
     private fun writeTarget(model: HumanoidModel<*>, code: Int, value: Float) {
-        val part = code shr 2
-        val axis = code and 3
+        val part = code / LocoTargets.AXIS_STRIDE
+        val axis = code % LocoTargets.AXIS_STRIDE
         if (part == LocoTargets.RIG) {
-            if (axis == 0) rigDrop = value else rigLift = value
+            rigPose[axis] = value
             return
         }
         if (part == LocoTargets.TORSO) {

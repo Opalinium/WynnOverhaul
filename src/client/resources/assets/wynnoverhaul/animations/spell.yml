@@ -65,10 +65,10 @@ poses:
       rootF: [[0, null], [0.1, -0.66], [0.3, 2.2], [0.55, 1.32], [0.8, 0.88], [1, null]]
   "SPELL:WAR_SCREAM":
     seconds: 0.9
-    hit: 0.3
+    hit: 0.35
     gripOffset: 7
     sounds:
-      - {at: 0.3, sound: "minecraft:entity.ravager.roar", pitch: 1.1, volume: 0.35}
+      - {at: 0.35, sound: "minecraft:entity.ravager.roar", pitch: 1.1, volume: 0.35}
     channels:
       pitch: [[0, null], [0.15, -0.98], [0.4, -1.4], [0.7, -1.26], [1, null]]
       across: [[0, null], [0.15, -0.3], [0.4, 0.5], [0.7, 0.35], [1, null]]
@@ -81,9 +81,13 @@ poses:
       headA: [[0, null], [0.15, -1.2], [0.4, -1.5], [0.7, -1.2], [1, null]]
       headY: [[0, null], [0.15, 2.24], [0.4, 3.2], [0.7, 2.56], [1, null]]
       twist: [[0, null], [0.15, 0.2], [0.4, -0.3], [0.7, -0.1], [1, null]]
-      grip: [[0, null], [0.12, 1], [0.65, 1], [1, null]]
-      lean: [[0, null], [0.15, -0.5], [0.4, -0.2], [0.7, -0.3], [1, null]]
-      rootF: [[0, null], [0.15, -0.44], [0.4, 1.1], [0.7, 0.66], [1, null]]
+      lean: [[0, null], [0.18, -0.12], [0.35, -0.28], [0.7, -0.2], [1, null]]
+      rootF: [[0, null], [0.18, -0.4], [0.35, -0.9], [0.7, -0.5], [1, null]]
+      rootH: [[0, null], [0.18, 1], [0.35, 1.8], [0.7, 1.2], [1, null]]
+      footLF: [[0, null], [0.18, 1.2], [0.35, 1.6], [0.7, 1.2], [1, null]]
+      footRF: [[0, null], [0.18, -1.2], [0.35, -1.6], [0.7, -1.2], [1, null]]
+      footLS: [[0, null], [0.18, 1], [0.35, 1.6], [0.7, 1.4], [1, null]]
+      footRS: [[0, null], [0.18, -1], [0.35, -1.6], [0.7, -1.4], [1, null]]
   "SPELL:HEAL":
     seconds: 0.9
     hit: 0.35

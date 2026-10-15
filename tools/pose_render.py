@@ -450,7 +450,7 @@ def load_poses(lib):
     return {key: {name: parse_curve(points) for name, points in (pose.get("channels") or {}).items()} for key, pose in lib["poses"].items()}
 
 
-PARAMS = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step", "legL", "legR", "bodyY", "bodyR"]
+PARAMS = CHANNEL_NAMES
 
 
 SPIN_KEYS = set()
