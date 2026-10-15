@@ -11,6 +11,7 @@ internal class AnimationTables(
     val combos: Map<String, List<ComboStep>>,
     val movesetStances: Map<String, String>,
     val openers: Map<String, ComboStep>,
+    val charges: Map<String, ComboStep>,
     val sfx: Map<String, List<Cue>>,
     val impact: Map<String, List<Cue>>,
     val finisher: Cue,
@@ -32,7 +33,7 @@ internal class AnimationTables(
 internal object AnimationChannels {
     val NAMES = listOf(
         "pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach",
-        "headA", "headY", "twist", "grip", "lean", "step", "legL", "legR", "bodyY", "bodyR",
+        "headA", "headY", "twist", "grip", "lean", "rootF", "footLF", "footRF", "bodyY", "bodyR", "hipY", "footLS", "footRS", "rootS", "rootH", "footLU", "footRU",
     )
     val ZERO_DEFAULT = setOf(6, 7, 10)
     fun indexOf(name: String): Int = NAMES.indexOf(name)

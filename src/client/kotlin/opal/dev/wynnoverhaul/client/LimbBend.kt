@@ -26,7 +26,7 @@ object LimbBend {
     @JvmStatic
     fun configured(): Boolean {
         val config = WynnOverhaulConfig.current
-        return config.locomotionBend && (config.locomotionEnabled || config.weaponAnimationsEnabled)
+        return config.locomotionEnabled || config.weaponAnimationsEnabled
     }
 
     @JvmStatic

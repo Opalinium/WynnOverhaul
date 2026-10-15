@@ -10,16 +10,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rig
+
 SRC = Path(__file__).resolve().parent.parent / "src/client/resources/assets/wynnoverhaul/animations"
 
-PITCH, ACROSS, ABDUCT, OFF_PITCH, OFF_ACROSS, OFF_ABDUCT, TURN, REACH, HEAD_A, HEAD_Y, TWIST, GRIP, LEAN, STEP, LEG_L, LEG_R, BODY_Y, BODY_R = range(18)
+PITCH, ACROSS, ABDUCT, OFF_PITCH, OFF_ACROSS, OFF_ABDUCT, TURN, REACH, HEAD_A, HEAD_Y, TWIST, GRIP, LEAN, ROOT_F, FOOT_LF, FOOT_RF, BODY_Y, BODY_R, HIPS_Y, FOOT_LS, FOOT_RS, ROOT_S, ROOT_H, FOOT_LU, FOOT_RU = range(25)
+N_CHANNELS = 25
 TURN_BOOST = 1.4
 HIP_Y = 12.0
-CHANNEL_NAMES = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "step", "legL", "legR", "bodyY", "bodyR"]
-REST_BASE = np.array([-0.3, 0, 0.05, 0, 0, 0.05, 0, 0, -0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=float)
+CHANNEL_NAMES = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "reach", "headA", "headY", "twist", "grip", "lean", "rootF", "footLF", "footRF", "bodyY", "bodyR", "hipY", "footLS", "footRS", "rootS", "rootH", "footLU", "footRU"]
+REST_BASE = np.array([-0.3, 0, 0.05, 0, 0, 0.05, 0, 0, -0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=float)
 GRIP_Y, GRIP_Z = 10.0, -2.0
 BODY_HALF_WIDTH, BODY_FRONT, BODY_BOTTOM = 4.5, -4.2, 14.0
 GUARD_POINTS = (0.6, 0.85, 1.0)
+LEG_BOUNDS = (-2.5, 2.5, 0, 12, -2.5, 2.5)
 TWIST_SCALE = 1.0
 BLADE_SIDE = -1.0
 BLADE_ROLL_OFFSET = math.pi / 2
@@ -97,6 +102,7 @@ class Part:
     def __init__(self, x, y, z):
         self.x, self.y, self.z = x, y, z
         self.xr = self.yr = self.zr = 0.0
+        self.bend = 0.0
 
     def matrix(self):
         return rot_zyx(self.zr, self.yr, self.xr)
@@ -184,7 +190,7 @@ def lean_point(p, yaw, lean):
 
 
 def solve(out, grip_offset=7.0, guard=True):
-    out = np.pad(np.array(out, dtype=float), (0, max(0, 18 - len(out))))
+    out = np.pad(np.array(out, dtype=float), (0, max(0, N_CHANNELS - len(out))))
     s = 1.0
     yaw = -s * out[TURN]
     lean = out[LEAN]
@@ -215,17 +221,20 @@ def solve(out, grip_offset=7.0, guard=True):
             break
     if guard:
         clipped |= keep_out_of_body(left, 5.0, yaw)
-    front = Part(-1.9, 12, 0.1)
-    back = Part(1.9, 12, 0.1)
-    step = out[STEP]
-    front.xr -= 0.55 * step
-    front.z -= 2.2 * step
-    back.xr += 0.25 * step
-    back.z += 0.6 * step
-    front.xr += out[LEG_R]
-    back.xr += out[LEG_L]
+    twist = -out[HIPS_Y]
+    drop, hips, legs = rig.place(out[ROOT_H], out[ROOT_F], out[ROOT_S], (out[FOOT_LF], out[FOOT_LS], out[FOOT_LU]), (out[FOOT_RF], out[FOOT_RS], out[FOOT_RU]), twist)
+    back = Part(*hips[0])
+    front = Part(*hips[1])
+    for part, (angles, bend, foot) in ((back, legs[0]), (front, legs[1])):
+        part.xr, part.yr, part.zr = angles
+        part.bend = bend
+        part.foot = foot
     body.yr += out[BODY_Y]
     body.zr += out[BODY_R]
+    for part in (right, left, head, body):
+        part.x += out[ROOT_S]
+        part.y += drop
+        part.z -= out[ROOT_F]
     return yaw, right, left, clipped, head, body, front, back, lean
 
 
@@ -448,7 +457,7 @@ SPIN_KEYS = set()
 
 
 def sample_pose(curves, t, base, key=None):
-    base = np.pad(np.array(base, dtype=float), (0, max(0, 18 - len(base))))
+    base = np.pad(np.array(base, dtype=float), (0, max(0, N_CHANNELS - len(base))))
     out = np.array(base, dtype=float)
     for i, name in enumerate(PARAMS):
         if name in curves:
@@ -504,10 +513,17 @@ def render_moveset(src, key, out_dir):
         plt.close(fig)
 
 
+def stance_of(key, stances):
+    if "@" in key:
+        return key.split("@", 1)[1]
+    key = re.sub(r":(L\d+|OPEN|SPRINT)$", "", key)
+    return SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
+
+
 def render_swing(src, key, path, frames=8, stance=None):
     stances = load_stances(src)
     poses = load_poses(src)
-    stance_key = stance or SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
+    stance_key = stance or stance_of(key, stances)
     carry, ready, offset = stances[stance_key]
     base = ready.copy()
     fig, axes = plt.subplots(3, frames, figsize=(2.2 * frames, 6.6))
@@ -520,17 +536,114 @@ def render_swing(src, key, path, frames=8, stance=None):
     fig.savefig(path, dpi=80)
 
 
-def audit(src):
+def to_local(part, p):
+    return part.matrix().T @ (p - np.array([part.x, part.y, part.z]))
+
+
+def bent_local(part, pt):
+    q = to_local(part, pt)
+    if part.bend and q[1] > rig.HALF:
+        knee = np.array([0.0, rig.HALF, 0.0])
+        q = knee + rot_x(-part.bend) @ (q - knee)
+    return q
+
+
+def weapon_clip(out, offset, weapon_len, solved=None):
+    yaw, right, left, clipped, head, body, front, back, lean = solved or solve(out, offset)
+    grip = right.matrix() @ np.array([0, GRIP_Y, GRIP_Z]) + np.array([right.x, right.y, right.z])
+    cos_a = math.cos(out[HEAD_A])
+    shaft = rot_y(yaw) @ np.array([math.sin(out[HEAD_Y]) * cos_a, math.sin(out[HEAD_A]), -math.cos(out[HEAD_Y]) * cos_a])
+    ground = hit_body = hit_head = False
+    for f in np.linspace(-weapon_len[0], weapon_len[1], 14):
+        pt = grip + shaft * f
+        if pt[1] > GROUND_Y:
+            ground = True
+        if f < 3:
+            continue
+        for part, bounds in ((body, (-5, 5, -0.5, 12.5, -3, 3)), (front, LEG_BOUNDS), (back, LEG_BOUNDS)):
+            x0, x1, y0, y1, z0, z1 = bounds
+            q = bent_local(part, pt)
+            if x0 < q[0] < x1 and y0 < q[1] < y1 and z0 < q[2] < z1:
+                hit_body = True
+        if point_in_box(pt, np.array([head.x, head.y, head.z]), (-4.5, 4.5, -8.5, 0.5, -4.5, 4.5)):
+            hit_head = True
+    return ground, hit_body, hit_head
+
+
+GROUND_Y = 25.0
+
+
+def box_depth(q, bounds):
+    x0, x1, y0, y1, z0, z1 = bounds
+    return min(q[0] - x0, x1 - q[0], q[1] - y0, y1 - q[1], q[2] - z0, z1 - q[2])
+
+
+def penetration(out, offset, weapon_len):
+    solved = solve(out, offset, guard=False)
+    yaw, right, left, clipped, head, body, front, back, lean = solved
+    total = 0.0
+    head_origin = np.array([head.x, head.y, head.z])
+    rpts = arm_points(right)
+    lpts = arm_points(left)
+    for part, shoulder, pts in ((right, -5.0, rpts), (left, 5.0, lpts)):
+        m = rot_zyx(part.zr, part.yr - yaw, part.xr)
+        for f in GUARD_POINTS:
+            p = m @ np.array([0, GRIP_Y * f, GRIP_Z * f])
+            x = shoulder + p[0]
+            y = part.y + p[1]
+            d = min(BODY_HALF_WIDTH + 0.5 - abs(x), p[2] - BODY_FRONT + 0.5, y + 0.5, BODY_BOTTOM - y)
+            if d > 0:
+                total += d
+        for pt in pts:
+            d = box_depth(pt - head_origin, (-4.5, 4.5, -8.5, 0.5, -4.5, 4.5))
+            if d > 0:
+                total += d
+    for rp in rpts:
+        for lp in lpts:
+            d = ARM_RADIUS - np.linalg.norm(rp - lp)
+            if d > 0:
+                total += d
+    grip = right.matrix() @ np.array([0, GRIP_Y, GRIP_Z]) + np.array([right.x, right.y, right.z])
+    cos_a = math.cos(out[HEAD_A])
+    shaft = rot_y(yaw) @ np.array([math.sin(out[HEAD_Y]) * cos_a, math.sin(out[HEAD_A]), -math.cos(out[HEAD_Y]) * cos_a])
+    for f in np.linspace(-weapon_len[0], weapon_len[1], 14):
+        pt = grip + shaft * f
+        if pt[1] > GROUND_Y - 0.5:
+            total += (pt[1] - GROUND_Y + 0.5) * 0.5
+        if f < 3:
+            continue
+        for part, bounds in ((body, (-5, 5, -0.5, 12.5, -3, 3)), (front, LEG_BOUNDS), (back, LEG_BOUNDS)):
+            d = box_depth(bent_local(part, pt), bounds)
+            if d > 0:
+                total += d
+        d = box_depth(pt - head_origin, (-4.5, 4.5, -8.5, 0.5, -4.5, 4.5))
+        if d > 0:
+            total += d
+    return total
+
+
+def frame_violations(out, offset, weapon_len):
+    solved = solve(out, offset)
+    yaw, right, left = solved[0], solved[1], solved[2]
+    arms = arm_inside(right, -5.0, yaw) or arm_inside(left, 5.0, yaw)
+    selfhit = self_intersects(right, left, solved[4])
+    ground, body, head = weapon_clip(out, offset, weapon_len, solved)
+    return arms, selfhit, ground, body, head
+
+
+def audit(src, only=None):
     stances = load_stances(src)
     poses = load_poses(src)
     total_pre = total_post = total_self = 0
     for key, curves in poses.items():
-        stance_key = SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
+        if only and not any(o in key for o in only):
+            continue
+        stance_key = stance_of(key, stances)
         if stance_key not in stances:
             continue
         base = stances[stance_key][1]
         offset = stances[stance_key][2]
-        pre = post = self_hit = 0
+        pre = post = self_hit = wg = wb = wh = 0
         for i in range(61):
             out = sample_pose(curves, i / 60, base, key)
             raw = solve(out, offset, guard=False)
@@ -541,11 +654,15 @@ def audit(src):
                 post += 1
             if self_intersects(fixed[1], fixed[2], fixed[4]):
                 self_hit += 1
+            g, b, h = weapon_clip(out, offset, WEAPON_LEN.get(stance_key, (4, 14)))
+            wg += g
+            wb += b
+            wh += h
         total_pre += pre
         total_post += post
-        total_self += self_hit
-        flag = " <-- SELF-CLIP" if self_hit else ""
-        print(f"{key:14s} clipped frames before guard: {pre:2d}/61   after: {post:2d}/61   arm/head overlap: {self_hit:2d}/61{flag}")
+        total_self += self_hit + wg + wb + wh
+        flag = " <-- CLIP" if self_hit or wg or wb or wh or post else ""
+        print(f"{key:34s} guard {pre:2d} post {post:2d} arm/head {self_hit:2d} weapon ground {wg:2d} body {wb:2d} head {wh:2d}{flag}")
     print("total", total_pre, total_post, total_self)
 
 
@@ -626,7 +743,7 @@ def fp_project(p):
 def render_fp(src, key, path, frames=8):
     stances = load_stances(src)
     poses = load_poses(src)
-    stance_key = SPELL_STANCE.get(key) or (key if key in stances else key.split(":")[0])
+    stance_key = stance_of(key, stances)
     ready = stances[stance_key][1]
     fig, axes = plt.subplots(2, frames // 2, figsize=(2.6 * frames / 2, 5.2))
     half_h = math.tan(math.radians(35))
@@ -710,7 +827,7 @@ def render_gait(src, key, mode, path, frames=8):
 if __name__ == "__main__":
     src = load_library(SRC)
     if sys.argv[1] == "--audit":
-        audit(src)
+        audit(src, sys.argv[2:] or None)
         sys.exit(0)
     out_dir = Path(sys.argv[1])
     out_dir.mkdir(parents=True, exist_ok=True)

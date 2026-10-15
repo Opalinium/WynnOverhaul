@@ -759,8 +759,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             ) { config.locomotionStyle = it }
             checkbox("Apply to other players", "Also restyles every other player you can see, not just you.", config.locomotionOtherPlayers) { config.locomotionOtherPlayers = it }
             checkbox("Randomize other players' styles", "Each other player gets one of the styles based on their identity, so a crowd does not move in lockstep. Turn off to give everyone your selected style.", config.locomotionRandomizeOthers) { config.locomotionRandomizeOthers = it }
-            checkbox("Joint bending", "Bends arms at the elbow and legs at the knee instead of swinging them as stiff blocks. Skin, sleeves, pants and armor bend together.", config.locomotionBend) { config.locomotionBend = it }
-            checkbox("Uneven terrain", "Legs reach up to steps, slabs and ledges and down to lower ground, and the hips drop to match. Needs Joint bending.", config.locomotionTerrain) { config.locomotionTerrain = it }
             checkbox("Walk and sprint", "Stride length, body bob, sway and forward lean while moving.", config.locomotionWalk) { config.locomotionWalk = it }
             checkbox("Jump, fall and landing", "Arms and legs react to leaping and falling, with a knee-bending impact when you land from a height.", config.locomotionJump) { config.locomotionJump = it }
             checkbox("Crouch", "Adds a deeper hunch, tucked arms and bent knees to sneaking.", config.locomotionCrouch) { config.locomotionCrouch = it }
@@ -807,10 +805,15 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.weaponAnimationCombo,
             ) { config.weaponAnimationCombo = it }
             checkbox(
-                "Attack lunge",
-                "Spear and dagger attacks step your body forward into the swing and ease back out of it.",
+                "Attack footwork dust",
+                "Spear and dagger attacks kick up a puff of dust at your feet when you swing while standing still.",
                 config.weaponAnimationLunge,
             ) { config.weaponAnimationLunge = it }
+            checkbox(
+                "Weapon pushback",
+                "Weapons stop and kick back against walls, floors and other blocks instead of passing through them. A small amount of overlap is allowed so strikes still look like they cut into things.",
+                config.weaponAnimationBlockPushback,
+            ) { config.weaponAnimationBlockPushback = it }
             checkbox(
                 "Anticipation and follow-through",
                 "Swings linger in the wind-up before accelerating into the strike and ease out after it. The effect is strongest on slow weapons and fades out as attack speed rises.",

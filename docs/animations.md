@@ -6,7 +6,7 @@ Edits apply without restarting: the folder is checked once a second and reloaded
 
 ## Files
 
-Any file may contain any section. The bundled files are split by weapon family (`spear`, `dagger`, `wand`, `relik`, `bow`, `tool`, `spell`) plus `shared`.
+Any file may contain any section. The bundled files are split by weapon family (`spear`, `dagger`, `wand`, `relik`, `bow`, `tool`, `spell`) plus `shared`, `locomotion`, and the generated `attack_moves`, `spell_moves` and `gait`.
 
 ## poses
 
@@ -39,9 +39,14 @@ Each channel is a list of `[time, value]` points. Time runs from 0 to 1 and must
 | `headA`, `headY` | Weapon tip pitch and yaw |
 | `twist` | Weapon roll |
 | `grip` | 0 one handed, 1 two handed |
-| `lean`, `step` | Torso lean and forward step |
-| `legL`, `legR` | Leg swing added to the walk cycle |
-| `bodyY`, `bodyR` | Hip twist and roll |
+| `lean` | Torso lean about the hips |
+| `bodyY`, `bodyR` | Torso twist and roll on top of `turn` |
+| `hipY` | Pelvis yaw. The hips and the feet point along it, so the legs follow a twist instead of staying square to the camera |
+| `rootF`, `rootS`, `rootH` | Move the whole body forward, to the left and down, in pixels |
+| `footLF`, `footLS`, `footLU` | Left foot target: forward, to the left and up off the ground, in pixels from the standing stance |
+| `footRF`, `footRS`, `footRU` | The same for the right foot |
+
+The legs are solved, not posed. Each foot target is a point relative to the standing stance, and a two-bone solver bends the thigh and shin so the foot reaches it. The hips are lowered as far as the stance needs, so a wide stance crouches and a foot with no lift is always on the ground. A foot lift raises it; the body does not float. While you move, the walk takes the legs back from the pose.
 
 ## stances
 
@@ -68,12 +73,15 @@ movesets:
 | `stance` | Stance to hold the weapon in. Defaults to the stance with the moveset's own key, then the family stance |
 | `opener` | A `pose` (and optional `mirror`) played instead of the first stroke when a chain starts from idle, so the first swing can draw the weapon out of its carried pose. When the weapon is already in its ready stance the first stroke plays as normal |
 | `light` | The strokes, each with a `pose`, optional `mirror` and optional `finisher` |
+| `sprint` | A `pose` (and optional `mirror`) played instead of the next chain stroke when a swing starts while sprinting forward. It plays as a finisher and leaves the chain where it was. Strafing, walking and backing up play the normal strokes |
 | `cast` | How spell casts look with this moveset, below |
 | `spells` | Maps a spell name (lowercase letters only) to a pose, to give this moveset its own animation for that spell |
 
 `cast` reshapes the shared spell pose for the spell being cast, so each moveset casts in its own manner without a pose per spell. All fields are optional: `seconds` multiplies the length, `arc` the arm and weapon tip channels, `body` the lean, step, turn, leg and hip channels, `reach` the hand push, `raise` lifts the arms (negative lowers them), `turn` adds a swing of the torso, `mirror` plays the cast in the opposite direction, `grip` forces one handed (0) or two handed (1), `hit` shifts when the strike lands, `blend` multiplies the ease in, `twirl` adds an oscillation to a channel (`{channel, amplitude, cycles}`), `sounds` replaces the spell's sounds and `addSounds` adds sounds on top. A pose named in `spells` is used as written and ignores `cast`.
 
-`movesetSpells` is a top-level section that does the same as `spells` for several movesets at once: `movesetSpells: {"SPEAR:HAMMER": {bash: "SPELL:BASH@SPEAR:HAMMER"}}`. The bundled `spell_moves.yml` uses it to give each moveset its own cast for most spells. It is generated from each moveset's own strokes by `python tools/spell_compose.py`, which reads the strokes in the other files and writes the file again. A spell without an entry falls back to the shared pose reshaped by `cast`.
+`movesetSpells` is a top-level section that does the same as `spells` for several movesets at once: `movesetSpells: {"SPEAR:HAMMER": {bash: "SPELL:BASH@SPEAR:HAMMER"}}`. The bundled `spell_moves.yml` uses it to give each moveset its own cast for most spells.
+
+A spell without an entry in `spell_moves.yml` falls back to the shared pose reshaped by `cast`.
 
 `mirror` plays the stroke in the opposite direction, so an alternating chain reads as forehand and backhand. `finisher` adds the heavy hit sound. Every pose named must exist. The moveset key is what a weapon is assigned in the menu, so it does not need a pose of the same name. The menu lists movesets, plus any pose that no moveset uses.
 
@@ -100,6 +108,10 @@ The locomotion style also shapes weapon strokes and spell casts, through four pa
 | `swingBlend` | Multiplies the time a stroke takes to ease in from the previous pose |
 
 Values are limited to 0.4 to 2. A heavy style makes the same moveset drive the whole body harder and ease in slower, a light one makes it quick and compact.
+
+## gait
+
+`gait` gives the walking and sprinting foot cycle its `duty` (the share of each step a foot is on the ground, never below 0.5) and `lift` (how high a foot rises in pixels). The feet are planted: each one slides back at exactly the speed the body moves, in whatever direction it moves, so walking sideways and backwards turn the same cycle toward that direction. The style's `walkLeg` and `sprintLeg` set how long the stride is. The body dips as far as the stride needs, and the `rig.drop` and `rig.lift` targets below add the style's bob.
 
 ## Body states (locomotion.yml)
 
@@ -131,7 +143,7 @@ An effect names a `to` target and one operation:
 
 `add` adds the value, `sub` subtracts it, and `approach` moves the current value toward a goal by `rate` (0 to 1). `freeArms: true` applies the effect only when no weapon animation owns the arms.
 
-Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), and `torso` with `pitch`, `roll`, `yaw` or `shift`.
+Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), `torso` with `pitch`, `roll`, `yaw` or `shift`, and `rig` with `drop` (how far the body dips while the feet are planted) or `lift` (a shift that only applies when the foot cycle is not driving the legs).
 
 ### Expressions
 
@@ -151,7 +163,8 @@ Numbers, `+ - * /`, parentheses, `pi`, signals, vars, `style.<name>` and the fun
 | `phase`, `gait`, `gaitOpp` | Walk cycle phase and its cosine on each leg |
 | `age` | Animation time in ticks |
 | `grounded` | 1 on the ground, lower when airborne, swimming, climbing, gliding or riding |
-| `turnRate`, `slopePitch` | Turning speed and ground slope |
+| `turnRate` | Turning speed |
+| `moveFwd`, `moveSide` | Direction of travel relative to the body, from -1 to 1, with forward and left positive |
 | `launchAge`, `leadRight`, `launch` | Time since jumping, which leg leads, jump push-off strength |
 
 ## First person body

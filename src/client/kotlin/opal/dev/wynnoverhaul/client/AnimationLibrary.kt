@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 internal object AnimationLibrary {
-    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "spell", "spell_moves", "tool", "locomotion")
+    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "attack_moves", "spell", "spell_moves", "tool", "locomotion", "gait")
     private const val RESOURCE_ROOT = "/assets/wynnoverhaul/animations/"
     private const val README_NAME = "README.txt"
     private const val CHECK_TICKS = 20
@@ -191,6 +191,7 @@ internal object AnimationLibrary {
         val combos = LinkedHashMap<String, List<ComboStep>>()
         val movesetStances = HashMap<String, String>()
         val openers = HashMap<String, ComboStep>()
+        val charges = HashMap<String, ComboStep>()
         val sfx = HashMap<String, List<Cue>>()
         val impact = HashMap<String, List<Cue>>()
         val handShift = HashMap<String, Float>()
@@ -203,6 +204,7 @@ internal object AnimationLibrary {
         val styleDefaults = LinkedHashMap<String, Float>()
         val styleDefs = LinkedHashMap<String, Pair<String, Map<String, Any?>>>()
         val stateDefs = LinkedHashMap<String, Pair<String, Map<String, Any?>>>()
+        val gaitValues = HashMap<String, Float>()
         var firstPersonHidden: Set<String>? = null
         val firstPersonShift = HashMap<String, Float>()
         var lungeFamilies: Set<String>? = null
@@ -223,7 +225,9 @@ internal object AnimationLibrary {
                     combos[key] = moveset(m)
                     movesetStances.remove(key)
                     openers.remove(key)
+                    charges.remove(key)
                     map(m["opener"])?.let { o -> openers[key] = ComboStep(o["pose"]?.toString() ?: bad("opener is missing pose"), o["mirror"] == true, false) }
+                    map(m["sprint"])?.let { o -> charges[key] = ComboStep(o["pose"]?.toString() ?: bad("sprint is missing pose"), o["mirror"] == true, true) }
                     m["stance"]?.toString()?.let { movesetStances[key] = it }
                     (m["label"] as? String)?.let { labels[key] = it }
                     castStyles.remove(key)
@@ -259,6 +263,13 @@ internal object AnimationLibrary {
             }
             map(d["styleDefaults"])?.forEach { (key, value) -> guarded("style default $key") { styleDefaults[key] = float(value, key) } }
             map(d["styles"])?.forEach { (key, value) -> guarded("style $key") { styleDefs[key] = source to (map(value) ?: bad("not a mapping")) } }
+            map(d["gait"])?.forEach { (kind, value) ->
+                guarded("gait $kind") {
+                    val m = map(value) ?: bad("not a mapping")
+                    gaitValues["$kind.duty"] = float(m["duty"] ?: bad("missing duty"), "duty")
+                    gaitValues["$kind.lift"] = float(m["lift"] ?: bad("missing lift"), "lift")
+                }
+            }
             list(d["states"])?.forEach { raw ->
                 guarded("state") {
                     val m = map(raw) ?: bad("not a mapping")
@@ -288,6 +299,8 @@ internal object AnimationLibrary {
             (combos.keys - validCombos.keys).forEach { warnings.add("moveset $it references an unknown pose and was skipped") }
             val validOpeners = openers.filter { it.key in validCombos && it.value.key in poses }
             (openers.keys - validOpeners.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown opener pose and plays its first stroke instead") }
+            val validCharges = charges.filter { it.key in validCombos && it.value.key in poses }
+            (charges.keys - validCharges.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown sprint pose and plays its chain stroke instead") }
             val validStances = movesetStances.filter { it.key in validCombos && it.value in stances }
             (movesetStances.keys - validStances.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown stance and uses its family stance") }
             val validCasts = castStyles.filter { it.key in validCombos }
@@ -300,7 +313,7 @@ internal object AnimationLibrary {
             }
             val locomotion = buildLocomotion() ?: return null
             return AnimationTables(
-                poses, stances, validCombos, validStances, validOpeners, sfx, impact, finisher!!, thump!!, tail!!, slam!!,
+                poses, stances, validCombos, validStances, validOpeners, validCharges, sfx, impact, finisher!!, thump!!, tail!!, slam!!,
                 lungeFamilies!!, handShift, handSprintExtra, trailSpans, labels, spellKeys, validCasts, validSpells, locomotion,
                 FirstPersonTables(firstPersonHidden ?: emptySet(), firstPersonShift),
             )
@@ -345,7 +358,12 @@ internal object AnimationLibrary {
                     states.add(state)
                 }
             }
-            return LocomotionTables(params, styles, states, envSize)
+            val fallback = GaitSpec.DEFAULT
+            val gait = GaitSpec(
+                gaitValues["walk.duty"] ?: fallback.walkDuty, gaitValues["walk.lift"] ?: fallback.walkLift,
+                gaitValues["sprint.duty"] ?: fallback.sprintDuty, gaitValues["sprint.lift"] ?: fallback.sprintLift,
+            )
+            return LocomotionTables(params, styles, states, envSize, gait)
         }
 
         private fun compileState(name: String, d: Map<String, Any?>, params: List<String>, base: Int): LocoState {

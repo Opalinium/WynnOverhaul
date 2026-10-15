@@ -1,0 +1,3 @@
+gait:
+  walk: {duty: 0.41, lift: 4.8}
+  sprint: {duty: 0.29, lift: 7.4}

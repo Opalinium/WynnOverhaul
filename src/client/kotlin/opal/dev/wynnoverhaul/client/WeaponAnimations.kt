@@ -18,7 +18,9 @@ import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
+import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import org.joml.Quaternionf
 import org.joml.Vector3f
@@ -69,7 +71,7 @@ object WeaponAnimations {
     private const val SPRINT_BOB_NANOS = 450_000_000L
     private const val SPRINT_BOB_AMP = 0.02f
     private const val WALK_SHARE = 0.35f
-    private const val GAIT_PHASE = 0.4f
+    private const val GAIT_PHASE = 0.6662f
     private const val WALK_MAIN_SWING = 0.2f
     private const val WALK_OFF_SWING = 0.5f
     private const val SPRINT_MAIN_SWING = 0.55f
@@ -102,19 +104,22 @@ object WeaponAnimations {
     private const val TWIST = 10
     private const val GRIP = 11
     private const val LEAN = 12
-    private const val STEP = 13
-    private const val LEG_L = 14
-    private const val LEG_R = 15
+    private const val ROOT_F = 13
+    private const val FOOT_LF = 14
+    private const val FOOT_RF = 15
     private const val BODY_Y = 16
     private const val BODY_R = 17
-    internal const val CHANNELS = 18
+    private const val HIPS_Y = 18
+    private const val FOOT_LS = 19
+    private const val FOOT_RS = 20
+    private const val ROOT_S = 21
+    private const val ROOT_H = 22
+    private const val FOOT_LU = 23
+    private const val FOOT_RU = 24
+    internal const val CHANNELS = 25
     private const val TURN_BOOST = 1.4f
     private const val LEAN_HEAD_SHARE = 0.3f
     private const val HIP_Y = 12f
-    private const val STEP_REACH = 2.2f
-    private const val STEP_LEG_PITCH = 0.55f
-    private const val STEP_BACK_PITCH = 0.25f
-    private const val STEP_BACK_REACH = 0.6f
     private const val GRIP_Y = 10f
     private const val GRIP_Z = -2f
     private const val SHOULDER_X = 5f
@@ -173,7 +178,7 @@ object WeaponAnimations {
     private val GUARD_POINTS = floatArrayOf(0.6f, 0.85f, 1f)
     private const val GRIP_LEN_SQ = GRIP_Y * GRIP_Y + GRIP_Z * GRIP_Z
 
-    internal val REST_BASE = floatArrayOf(-0.3f, 0f, 0.05f, 0f, 0f, 0.05f, 0f, 0f, -0.3f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+    internal val REST_BASE = floatArrayOf(-0.3f, 0f, 0.05f, 0f, 0f, 0.05f, 0f, 0f, -0.3f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
     internal val B = Float.NaN
 
@@ -211,6 +216,7 @@ object WeaponAnimations {
     private val STANCES: Map<String, Stance> get() = AnimationLibrary.tables().stances
     private val COMBOS: Map<String, List<ComboStep>> get() = AnimationLibrary.tables().combos
     private val OPENERS: Map<String, ComboStep> get() = AnimationLibrary.tables().openers
+    private val CHARGES: Map<String, ComboStep> get() = AnimationLibrary.tables().charges
     private val SFX: Map<String, List<Cue>> get() = AnimationLibrary.tables().sfx
     private val IMPACT: Map<String, List<Cue>> get() = AnimationLibrary.tables().impact
     private val FINISHER_CUE: Cue get() = AnimationLibrary.tables().finisher
@@ -233,7 +239,7 @@ object WeaponAnimations {
 
     private fun swingStyle(): SwingStyle = AnimationLibrary.tables().locomotion.swingFor(WynnOverhaulConfig.current.locomotionStyle)
 
-    private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1)
+    private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
     internal class Curve(val times: FloatArray, val values: FloatArray) {
         private fun value(i: Int, base: Float): Float = values[i].let { if (it.isNaN()) base else it }
@@ -270,26 +276,8 @@ object WeaponAnimations {
     internal val KEEP = curve(0f to B, 1f to B)
     internal val ZERO = curve(0f to 0f, 1f to 0f)
 
-    internal class Pose(
-        pitch: Curve = KEEP,
-        across: Curve = KEEP,
-        abduct: Curve = KEEP,
-        offPitch: Curve = KEEP,
-        offAcross: Curve = KEEP,
-        offAbduct: Curve = KEEP,
-        turn: Curve = ZERO,
-        reach: Curve = ZERO,
-        headA: Curve = KEEP,
-        headY: Curve = KEEP,
-        twist: Curve = ZERO,
-        grip: Curve = KEEP,
-        lean: Curve = KEEP,
-        step: Curve = KEEP,
-        legL: Curve = KEEP,
-        legR: Curve = KEEP,
-        bodyY: Curve = KEEP,
-        bodyR: Curve = KEEP,
-    ) {
+    internal class Pose {
+        val curves: Array<Curve> = Array(CHANNELS) { if (it == TURN || it == REACH || it == TWIST) ZERO else KEEP }
         var seconds = 0.36f
         var hit = 0.3f
         var recover = -1f
@@ -298,36 +286,34 @@ object WeaponAnimations {
         var spin = false
         var gripOffset = 7f
         var key = ""
-        fun mirrored(): Pose = Pose(
-            pitch = curves[PITCH],
-            across = curves[ACROSS].negated(),
-            abduct = curves[ABDUCT],
-            offPitch = curves[OFF_PITCH],
-            offAcross = curves[OFF_ACROSS].negated(),
-            offAbduct = curves[OFF_ABDUCT],
-            turn = curves[TURN].negated(),
-            reach = curves[REACH],
-            headA = curves[HEAD_A],
-            headY = curves[HEAD_Y].negated(),
-            twist = curves[TWIST].negated(),
-            grip = curves[GRIP],
-            lean = curves[LEAN],
-            step = curves[STEP],
-            legL = curves[LEG_R],
-            legR = curves[LEG_L],
-            bodyY = curves[BODY_Y].negated(),
-            bodyR = curves[BODY_R].negated(),
-        ).also {
-            it.seconds = seconds
-            it.hit = hit
-            it.recover = recover
-            it.blend = blend
-            it.holdEnd = holdEnd
-            it.spin = spin
-            it.gripOffset = gripOffset
-        }
 
-        val curves: Array<Curve> = arrayOf(pitch, across, abduct, offPitch, offAcross, offAbduct, turn, reach, headA, headY, twist, grip, lean, step, legL, legR, bodyY, bodyR)
+        fun mirrored(): Pose {
+            val out = Pose()
+            for (i in 0 until CHANNELS) {
+                val source = when (i) {
+                    FOOT_LF -> FOOT_RF
+                    FOOT_RF -> FOOT_LF
+                    FOOT_LS -> FOOT_RS
+                    FOOT_RS -> FOOT_LS
+                    FOOT_LU -> FOOT_RU
+                    FOOT_RU -> FOOT_LU
+                    else -> i
+                }
+                val flip = when (i) {
+                    ACROSS, OFF_ACROSS, TURN, HEAD_Y, TWIST, BODY_Y, BODY_R, HIPS_Y, FOOT_LS, FOOT_RS, ROOT_S -> true
+                    else -> false
+                }
+                out.curves[i] = if (flip) curves[source].negated() else curves[source]
+            }
+            out.seconds = seconds
+            out.hit = hit
+            out.recover = recover
+            out.blend = blend
+            out.holdEnd = holdEnd
+            out.spin = spin
+            out.gripOffset = gripOffset
+            return out
+        }
     }
 
     internal class ComboStep(val key: String, val mirror: Boolean = false, val finisher: Boolean = false)
@@ -386,9 +372,10 @@ object WeaponAnimations {
         tails.clear()
     }
 
-    private const val LUNGE_LEAN = 0.12f
-    private const val LUNGE_STEP = 0.55f
     private const val MOVE_LEAN_CUT = 0.6f
+    private const val CHARGE_SUFFIX = ":SPRINT"
+    private const val CHARGE_KEEP = 0.6f
+    private const val FORWARD_DOT = 0.6f
     private const val MOVE_TURN_CUT_WALK = 0.25f
     private const val MOVE_TURN_CUT_RUN = 0.45f
     private const val DRIVE_LEAN_WALK = 0.07f
@@ -449,6 +436,8 @@ object WeaponAnimations {
         var gripRelax = 1f
         var gripSlide = 0f
         var gripRelaxNanos = 0L
+        var blockPush = 0f
+        var blockPushNanos = 0L
         var springReady = false
         var springNanos = 0L
         var springA = 0f
@@ -504,6 +493,7 @@ object WeaponAnimations {
         private var walkAmt = 0f
         private var walkingNow = false
         private var movingNow = false
+        private var forwardNow = false
         private var moveAmt = 0f
         private var runAmt = 0f
         private var strikeWeight = 0f
@@ -565,6 +555,8 @@ object WeaponAnimations {
 
         fun moveAmount(): Float = moveAmt
 
+        fun charging(): Float = if (pose?.key?.endsWith(CHARGE_SUFFIX) == true) 1f else 0f
+
         fun rawAt(p: Pose, t: Float, base: FloatArray, out: FloatArray) = sampleRaw(p, t, base, out)
 
         fun breath(): Float {
@@ -608,13 +600,11 @@ object WeaponAnimations {
 
         private fun refreshIdle(player: Player) {
             idleRight = player.mainArm == HumanoidArm.RIGHT
-            val speedSq = if (owner == null) {
-                player.deltaMovement.horizontalDistanceSqr()
-            } else {
-                val dx = player.x - player.xOld
-                val dz = player.z - player.zOld
-                dx * dx + dz * dz
-            }
+            val dx = if (owner == null) player.deltaMovement.x else player.x - player.xOld
+            val dz = if (owner == null) player.deltaMovement.z else player.z - player.zOld
+            val speedSq = (dx * dx + dz * dz).toFloat()
+            val bodyYaw = player.yBodyRot * (Math.PI.toFloat() / 180f)
+            forwardNow = speedSq > WALK_SPEED_SQ && (-dx * sin(bodyYaw) + dz * cos(bodyYaw)).toFloat() > FORWARD_DOT * sqrt(speedSq)
             val still = speedSq < STILL_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isUsingItem && !player.swinging
             stillTicks = if (still) stillTicks + 1 else 0
             sprintingNow = player.isSprinting && speedSq > SPRINT_SPEED_SQ
@@ -730,9 +720,10 @@ object WeaponAnimations {
                 return
             }
             val config = WynnOverhaulConfig.current
-            val combo = advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
+            val charge = if (!gathering && config.weaponAnimationCombo && sprintingNow && forwardNow) CHARGES[styleKey] else null
+            val combo = if (charge != null) charge else advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
             val opener = if (!wasReady && comboIndex == 0 && config.weaponAnimationCombo) OPENERS[styleKey] else null
-            val standard = (if (opener != null) stepPose(opener) else null) ?: stepPose(combo) ?: styleBase
+            val standard = (if (charge != null) stepPose(charge) else null) ?: (if (opener != null) stepPose(opener) else null) ?: stepPose(combo) ?: styleBase
             val chosen = standard
             cues = buildList {
                 addAll(SFX[standard.key] ?: emptyList())
@@ -934,13 +925,6 @@ object WeaponAnimations {
             return if (t < hit) smooth(t / hit) else 1f - smooth((t - hit) / (1f - hit))
         }
 
-        private fun lunge(weight: Float, p: Pose, scale: Float, out: FloatArray) {
-            if (!WynnOverhaulConfig.current.weaponAnimationLunge || p.key.substringBefore(':') !in LUNGE_FAMILIES) return
-            val standing = 1f - moveAmt
-            out[LEAN] += LUNGE_LEAN * weight * scale * standing
-            out[STEP] += LUNGE_STEP * weight * scale * standing
-        }
-
         fun moveStrike(): Float =
             if (System.nanoTime() - strikeStamp > STRIKE_FRESH_NANOS) 0f else strikeWeight * moveAmt
 
@@ -1047,7 +1031,6 @@ object WeaponAnimations {
             val weight = strike(p, t)
             strikeWeight = weight * scale
             strikeStamp = System.nanoTime()
-            lunge(weight, p, scale, out)
         }
     }
 
@@ -1293,11 +1276,7 @@ object WeaponAnimations {
         base[TWIST] = 0f
         base[GRIP] = 0f
         base[LEAN] = 0f
-        base[STEP] = 0f
-        base[LEG_L] = 0f
-        base[LEG_R] = 0f
-        base[BODY_Y] = 0f
-        base[BODY_R] = 0f
+        for (i in ROOT_F..FOOT_RU) base[i] = 0f
 
         restQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
         restDir.set(HEAD_REST).rotate(restQuat)
@@ -1324,13 +1303,12 @@ object WeaponAnimations {
         val moving = clock.moveAmount()
         val drive = clock.moveStrike()
         val run = clock.runShare()
-        out[STEP] *= 1f - moving
-        out[LEG_L] *= 1f - moving
-        out[LEG_R] *= 1f - moving
-        out[BODY_Y] *= 1f - moving * MOVE_BODY_CUT
-        out[BODY_R] *= 1f - moving * MOVE_BODY_CUT
-        out[LEAN] = out[LEAN] * (1f - moving * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
-        out[TURN] *= 1f - moving * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
+        val charge = clock.charging() * CHARGE_KEEP
+        val cut = moving * (1f - charge)
+        out[BODY_Y] *= 1f - cut * MOVE_BODY_CUT
+        out[BODY_R] *= 1f - cut * MOVE_BODY_CUT
+        out[LEAN] = out[LEAN] * (1f - cut * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive * (1f - charge)
+        out[TURN] *= 1f - cut * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
         springTip(out)
 
         val yaw = if (swinging) -s * out[TURN] else 0f
@@ -1345,9 +1323,9 @@ object WeaponAnimations {
         applyArm(main, -s, s, yaw, out[PITCH], out[ACROSS], out[ABDUCT])
         applyArm(off, s, -s, yaw, out[OFF_PITCH], out[OFF_ACROSS], out[OFF_ABDUCT])
         main.z += out[REACH]
-        applyBody(model, right, yaw, out[LEAN], out[STEP])
+        applyBody(model, yaw, out[LEAN])
         plantLegs(model, drive)
-        applyLegs(model, out)
+        applyTorsoTwist(model, out)
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
         val guardKey = if (swinging) pose.key else clock.idleKey()
@@ -1355,6 +1333,7 @@ object WeaponAnimations {
             val guardSpan = trailSpan(guardKey)
             if (guardSpan != null) keepShaftClear(main, s, yaw, out, guardSpan, HAND_SHIFT.getValue(guardKey))
         }
+        guardBlocks(state, main, s, yaw, out, if (guardKey != null) trailSpan(guardKey)?.second else null)
         val offShoulder = -mainShoulder
         val gripWeight = out[GRIP].coerceIn(0f, 1f)
         val gripOffset = clock.idleGripOffset() ?: pose?.gripOffset ?: 7f
@@ -1405,6 +1384,10 @@ object WeaponAnimations {
         clock.gripSlide += (slideGoal - clock.gripSlide) * blend
         gripFits(clock.gripSlide, clock.gripRelax)
         keepOutOfBody(off, offShoulder, yaw)
+        RigLegs.submitClip(
+            state.id, if (swinging) 1f - moving else 0f, -s * out[HIPS_Y], out[ROOT_F], out[ROOT_S], out[ROOT_H],
+            out[FOOT_LF], out[FOOT_LS], out[FOOT_LU], out[FOOT_RF], out[FOOT_RS], out[FOOT_RU],
+        )
 
         headA = out[HEAD_A]
         headY = out[HEAD_Y]
@@ -1456,6 +1439,68 @@ object WeaponAnimations {
         return false
     }
 
+    private val blockFrom = DoubleArray(3)
+    private val blockTo = DoubleArray(3)
+
+    private fun worldPoint(state: AvatarRenderState, point: Vector3f, out: DoubleArray) {
+        val rad = state.bodyRot * (Math.PI.toFloat() / 180f)
+        val sinR = sin(rad).toDouble()
+        val cosR = cos(rad).toDouble()
+        val left = point.x / 16.0
+        val back = point.z / 16.0
+        out[0] = state.x + cosR * left + sinR * back
+        out[1] = state.y + (MODEL_FEET - point.y) / 16.0
+        out[2] = state.z + sinR * left - cosR * back
+    }
+
+    private fun guardBlocks(state: AvatarRenderState, main: ModelPart, side: Float, yaw: Float, out: FloatArray, tip: Float?) {
+        val entity = clock.owner ?: Minecraft.getInstance().player
+        var target = 0f
+        if (entity != null && WynnOverhaulConfig.current.weaponAnimationBlockPushback && state.distanceToCameraSq < BLOCK_GUARD_FAR_SQ) {
+            armQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
+            gripPoint.set(0f, GRIP_Y, GRIP_Z).rotate(armQuat).add(main.x, main.y, main.z)
+            val cosA = cos(out[HEAD_A])
+            gripShaft.set(side * sin(out[HEAD_Y]) * cosA, sin(out[HEAD_A]), -cos(out[HEAD_Y]) * cosA).rotateY(yaw)
+            val length = tip ?: BLOCK_TIP_DEFAULT
+            worldPoint(state, gripPoint, blockFrom)
+            clipPoint.set(gripPoint).fma(length, gripShaft)
+            worldPoint(state, clipPoint, blockTo)
+            val hit = entity.level().clip(
+                ClipContext(
+                    Vec3(blockFrom[0], blockFrom[1], blockFrom[2]), Vec3(blockTo[0], blockTo[1], blockTo[2]),
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity,
+                ),
+            )
+            if (hit.type == HitResult.Type.BLOCK && !hit.isInside) {
+                val reached = Math.sqrt(
+                    (hit.location.x - blockFrom[0]) * (hit.location.x - blockFrom[0]) +
+                        (hit.location.y - blockFrom[1]) * (hit.location.y - blockFrom[1]) +
+                        (hit.location.z - blockFrom[2]) * (hit.location.z - blockFrom[2]),
+                ).toFloat() * 16f
+                target = (length - reached - BLOCK_CUT_IN).coerceIn(0f, BLOCK_PUSH_MAX)
+            }
+        }
+        val now = System.nanoTime()
+        val dt = if (clock.blockPushNanos == 0L) 0f else ((now - clock.blockPushNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        clock.blockPushNanos = now
+        clock.blockPush += (target - clock.blockPush) * MathX.expApproach(dt, if (target > clock.blockPush) BLOCK_PUSH_IN else BLOCK_PUSH_OUT)
+        if (clock.blockPush < 0.02f) return
+        armQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
+        val cosA = cos(out[HEAD_A])
+        gripShaft.set(side * sin(out[HEAD_Y]) * cosA, sin(out[HEAD_A]), -cos(out[HEAD_Y]) * cosA).rotateY(yaw)
+        main.x -= gripShaft.x * clock.blockPush
+        main.y -= gripShaft.y * clock.blockPush
+        main.z -= gripShaft.z * clock.blockPush
+    }
+
+    private const val MODEL_FEET = 24f
+    private const val BLOCK_GUARD_FAR_SQ = 576.0
+    private const val BLOCK_TIP_DEFAULT = 14f
+    private const val BLOCK_CUT_IN = 2.5f
+    private const val BLOCK_PUSH_MAX = 9f
+    private const val BLOCK_PUSH_IN = 0.035f
+    private const val BLOCK_PUSH_OUT = 0.12f
+
     private const val SHAFT_GUARD_STEPS = 30
     private const val SHAFT_GUARD_STEP = 0.04f
     private const val SHAFT_SAMPLE = 3f
@@ -1478,14 +1523,12 @@ object WeaponAnimations {
         model.leftLeg.xRot *= keep
     }
 
-    private fun applyLegs(model: HumanoidModel<*>, out: FloatArray) {
-        model.leftLeg.xRot += out[LEG_L]
-        model.rightLeg.xRot += out[LEG_R]
+    private fun applyTorsoTwist(model: HumanoidModel<*>, out: FloatArray) {
         model.body.yRot += out[BODY_Y]
         model.body.zRot += out[BODY_R]
     }
 
-    private fun applyBody(model: HumanoidModel<*>, right: Boolean, yaw: Float, lean: Float, step: Float) {
+    private fun applyBody(model: HumanoidModel<*>, yaw: Float, lean: Float) {
         if (abs(lean) > 0.001f) {
             leanPart(model.body, yaw, lean)
             model.body.xRot += lean
@@ -1495,14 +1538,6 @@ object WeaponAnimations {
             model.rightArm.xRot += lean
             leanPart(model.leftArm, yaw, lean)
             model.leftArm.xRot += lean
-        }
-        if (abs(step) > 0.001f) {
-            val front = if (right) model.rightLeg else model.leftLeg
-            val back = if (right) model.leftLeg else model.rightLeg
-            front.xRot -= STEP_LEG_PITCH * step
-            front.z -= STEP_REACH * step
-            back.xRot += STEP_BACK_PITCH * step
-            back.z += STEP_BACK_REACH * step
         }
     }
 

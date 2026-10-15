@@ -4,7 +4,7 @@ internal object LocoSignals {
     val NAMES = listOf(
         "k", "wAir", "wRise", "wFall", "wLand", "wMove", "wSprint", "wClimb", "climbMove", "wSwim", "wTread", "wCrawl",
         "wRide", "wFly", "wUse", "wBlock", "wHurt", "wDead", "wCrouch", "pace", "sp", "boost", "vanillaSp", "phase",
-        "gait", "gaitOpp", "age", "grounded", "turnRate", "slopePitch", "launchAge", "leadRight", "launch",
+        "gait", "gaitOpp", "age", "grounded", "turnRate", "launchAge", "leadRight", "launch", "moveFwd", "moveSide",
     )
     const val K = 0
     const val W_AIR = 1
@@ -35,18 +35,21 @@ internal object LocoSignals {
     const val AGE = 26
     const val GROUNDED = 27
     const val TURN_RATE = 28
-    const val SLOPE_PITCH = 29
-    const val LAUNCH_AGE = 30
-    const val LEAD_RIGHT = 31
-    const val LAUNCH = 32
+    const val LAUNCH_AGE = 29
+    const val LEAD_RIGHT = 30
+    const val LAUNCH = 31
+    const val MOVE_FWD = 32
+    const val MOVE_SIDE = 33
     val COUNT = NAMES.size
 }
 
 internal object LocoTargets {
-    val PARTS = listOf("head", "rightArm", "leftArm", "rightLeg", "leftLeg", "torso")
+    val PARTS = listOf("head", "rightArm", "leftArm", "rightLeg", "leftLeg", "torso", "rig")
     val PART_AXES = listOf("x", "y", "z", "posY")
     val TORSO_AXES = listOf("pitch", "roll", "yaw", "shift")
+    val RIG_AXES = listOf("drop", "lift")
     const val TORSO = 5
+    const val RIG = 6
     const val HEAD = 0
     const val RIGHT_ARM = 1
     const val LEFT_ARM = 2
@@ -58,7 +61,11 @@ internal object LocoTargets {
         val axis = target.substringAfter('.', "")
         val p = PARTS.indexOf(part)
         if (p < 0) return -1
-        val a = (if (p == TORSO) TORSO_AXES else PART_AXES).indexOf(axis)
+        val a = when (p) {
+            TORSO -> TORSO_AXES
+            RIG -> RIG_AXES
+            else -> PART_AXES
+        }.indexOf(axis)
         return if (a < 0) -1 else p * 4 + a
     }
 }
@@ -89,11 +96,18 @@ internal class LocoState(
     val effects: List<LocoEffect>,
 )
 
+internal class GaitSpec(val walkDuty: Float, val walkLift: Float, val sprintDuty: Float, val sprintLift: Float) {
+    companion object {
+        val DEFAULT = GaitSpec(0.5f, 4.8f, 0.5f, 7f)
+    }
+}
+
 internal class LocomotionTables(
     val styleParams: List<String>,
     val styles: LinkedHashMap<String, StyleDef>,
     val states: List<LocoState>,
     val envSize: Int,
+    val gait: GaitSpec = GaitSpec.DEFAULT,
 ) {
     fun styleSlot(param: String): Int = LocoSignals.COUNT + styleParams.indexOf(param)
 

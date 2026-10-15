@@ -34,7 +34,7 @@ internal object SpellCasts {
     private const val TWIRL_STEPS = 18
     private const val ARC = 0
     private const val BODY = 1
-    private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1)
+    private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
     private var builtFor: AnimationTables? = null
     private val poses = HashMap<String, Pose>()

@@ -29,6 +29,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Custom screen panels share one style with a drop shadow, a gold sheen and corner accents.
 - Every moveset has its own spell casts, with their own timing, arcs and sounds. Charge and Escape are airborne leaps with a landing slam.
 - The orbit camera crosshair and the powder special aim at the point your attacks will actually hit.
+- Spell casts, light attack chains, tool strokes and the walk and sprint cycles were reworked. Legs follow planted foot targets, and strafe and backpedal cycles and sprint charge attacks were added.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.

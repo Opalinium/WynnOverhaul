@@ -1,145 +1,4 @@
 poses:
-  "RELIK":
-    label: "Relik: Sweep"
-    seconds: 0.34
-    hit: 0.2
-    gripOffset: 7
-    sounds:
-      - {at: 0.15, sound: "minecraft:entity.player.attack.sweep", pitch: 0.9, volume: 0.55}
-      - {at: 0.3, sound: "minecraft:block.amethyst_block.resonate", pitch: 0.9, volume: 0.35}
-    channels:
-      pitch: [[0, null], [0.2, -1.1], [0.65, -1.05], [1, null]]
-      across: [[0, null], [0.2, 0.5], [0.5, 0], [0.75, -0.4], [1, null]]
-      abduct: [[0, null], [0.2, 0.15], [0.75, -0.15], [1, null]]
-      offPitch: [[0, null], [0.2, -0.6], [0.7, -0.6], [1, null]]
-      offAcross: [[0, null], [0.2, 0.4], [0.75, -0.1], [1, null]]
-      turn: [[0, null], [0.2, 0.21], [0.75, -0.21], [1, null]]
-      reach: [[0, null], [0.2, -1.2], [0.7, -1.2], [1, null]]
-      headA: [[0, null], [0.2, -0.3], [0.5, -0.1], [0.75, -0.3], [1, null]]
-      headY: [[0, null], [0.2, 0.4], [0.5, 0], [0.75, -0.4], [1, null]]
-      lean: [[0, null], [0.2, -0.05], [0.5, 0.1], [0.75, 0.05], [1, null]]
-      legL: [[0, null], [0.1, -0.14], [0.2, -0.35], [1, null]]
-      legR: [[0, null], [0.1, 0.12], [0.2, 0.3], [1, null]]
-      bodyY: [[0, null], [0.08, -0.12], [0.2, 0.3], [1, null]]
-      bodyR: [[0, null], [0.2, 0.05], [1, null]]
-  "RELIK:PULSE":
-    label: "Relik: Pulse"
-    seconds: 0.36
-    hit: 0.3
-    gripOffset: 7
-    sounds:
-      - {at: 0.12, sound: "minecraft:entity.wind_charge.throw", pitch: 1, volume: 0.4}
-      - {at: 0.3, sound: "minecraft:block.amethyst_block.resonate", pitch: 0.8, volume: 0.35}
-    channels:
-      pitch: [[0, null], [0.2, -1.3], [0.6, -1.3], [1, null]]
-      across: [[0, null], [0.2, 0.3], [0.6, 0.3], [1, null]]
-      abduct: [[0, null], [0.2, 0.1], [1, null]]
-      offPitch: [[0, null], [0.2, -1.3], [0.6, -1.3], [1, null]]
-      offAcross: [[0, null], [0.2, 0.6], [0.6, 0.6], [1, null]]
-      turn: [[0, null], [0.12, -0.21], [0.3, 0.07], [1, null]]
-      reach: [[0, null], [0.1, 0.8], [0.3, -1.6], [0.6, -1.2], [1, null]]
-      headA: [[0, null], [0.2, -0.2], [0.6, -0.2], [1, null]]
-      legL: [[0, null], [0.15, -0.12], [0.3, -0.3], [1, null]]
-      legR: [[0, null], [0.15, 0.1], [0.3, 0.25], [1, null]]
-      bodyY: [[0, null], [0.12, -0.08], [0.3, 0.2], [1, null]]
-  "RELIK:WAVE":
-    label: "Relik: Wave"
-    seconds: 0.4
-    hit: 0.55
-    blend: 0.12
-    gripOffset: 7
-    sounds:
-      - {at: 0.22, sound: "minecraft:entity.player.attack.sweep", pitch: 0.8, volume: 0.55}
-      - {at: 0.55, sound: "minecraft:block.amethyst_block.resonate", pitch: 1.1, volume: 0.4}
-    channels:
-      pitch: [[0, null], [0.22, -0.4], [0.55, -1.7], [0.8, -1.4], [1, null]]
-      across: [[0, null], [0.22, -0.7], [0.55, 0.6], [0.8, 0.3], [1, null]]
-      abduct: [[0, null], [0.22, 0.5], [0.55, 0.2], [1, null]]
-      offPitch: [[0, null], [0.22, -0.3], [0.55, -1.4], [1, null]]
-      offAcross: [[0, null], [0.22, -0.4], [0.55, 0.7], [1, null]]
-      turn: [[0, null], [0.22, -0.56], [0.55, 0.56], [1, null]]
-      reach: [[0, null], [0.55, -1], [1, null]]
-      headA: [[0, null], [0.22, 0.4], [0.55, -0.6], [1, null]]
-      headY: [[0, null], [0.22, -0.6], [0.55, 0.5], [1, null]]
-      legL: [[0, null], [0.275, -0.16], [0.55, -0.4], [1, null]]
-      legR: [[0, null], [0.275, 0.14], [0.55, 0.35], [1, null]]
-      bodyY: [[0, null], [0.22, -0.14], [0.55, 0.35], [1, null]]
-      bodyR: [[0, null], [0.55, 0.08], [1, null]]
-  "RELIK:LIFT":
-    label: "Relik: Lift"
-    seconds: 0.4
-    hit: 0.4
-    blend: 0.1
-    gripOffset: 7
-    sounds:
-      - {at: 0.16, sound: "minecraft:block.amethyst_block.resonate", pitch: 1.2, volume: 0.35}
-      - {at: 0.4, sound: "minecraft:entity.wind_charge.throw", pitch: 1, volume: 0.4}
-    channels:
-      pitch: [[0, null], [0.2, -2.1], [0.4, -1.2], [0.64, -1.1], [1, null]]
-      across: [[0, null], [0.2, 0.2], [0.4, 0.2], [0.64, 0.15], [1, null]]
-      abduct: [[0, null], [0.2, 0.1], [0.4, 0.05], [0.64, 0], [1, null]]
-      offPitch: [[0, null], [0.2, -1.8], [0.4, -1], [0.64, -0.9], [1, null]]
-      offAcross: [[0, null], [0.2, 0.4], [0.4, 0.5], [0.64, 0.4], [1, null]]
-      turn: [[0, null], [0.2, -0.154], [0.4, 0.224], [0.64, 0.118], [1, null]]
-      reach: [[0, null], [0.2, 0.6], [0.4, -1.4], [0.64, -1.1], [1, null]]
-      headA: [[0, null], [0.2, -0.9], [0.4, -0.1], [0.64, -0.2], [1, null]]
-      headY: [[0, null], [0.2, 0.2], [0.4, 0], [0.64, 0], [1, null]]
-      lean: [[0, null], [0.2, -0.07], [0.4, 0.256], [0.64, 0.174], [1, null]]
-      step: [[0, null], [0.2, -0.056], [0.4, 0.4], [0.64, 0.3], [1, null]]
-      legL: [[0, null], [0.24, -0.112], [0.4, -0.264], [1, null]]
-      legR: [[0, null], [0.24, 0.096], [0.4, 0.232], [1, null]]
-      bodyY: [[0, null], [0.18, -0.042], [0.4, 0.126], [1, null]]
-      bodyR: [[0, null], [0.4, 0.02], [1, null]]
-  "RELIK:CIRCLE":
-    label: "Relik: Circle"
-    seconds: 0.44
-    hit: 0.44
-    blend: 0.1
-    gripOffset: 7
-    sounds:
-      - {at: 0.12, sound: "minecraft:entity.wind_charge.throw", pitch: 1.2, volume: 0.35}
-      - {at: 0.44, sound: "minecraft:block.amethyst_block.resonate", pitch: 0.9, volume: 0.4}
-    channels:
-      pitch: [[0, null], [0.15, -1], [0.3, -1.5], [0.44, -1.2], [0.62, -0.9], [0.8, -1], [1, null]]
-      across: [[0, null], [0.15, -0.6], [0.3, 0], [0.44, 0.6], [0.62, 0], [0.8, -0.3], [1, null]]
-      abduct: [[0, null], [0.15, 0.2], [0.44, 0.1], [1, null]]
-      offPitch: [[0, null], [0.15, -0.5], [0.44, -0.9], [0.8, -0.6], [1, null]]
-      offAcross: [[0, null], [0.15, 0.2], [0.44, 0.5], [1, null]]
-      turn: [[0, null], [0.15, -0.308], [0.44, 0.448], [0.66, 0.235], [1, null]]
-      reach: [[0, null], [0.3, 0.2], [0.44, -1.4], [0.7, -0.8], [1, null]]
-      headA: [[0, null], [0.15, -0.3], [0.3, -0.7], [0.44, -0.2], [0.62, -0.4], [1, null]]
-      headY: [[0, null], [0.15, -0.5], [0.3, 0], [0.44, 0.5], [0.62, 0.1], [1, null]]
-      twist: [[0, null], [0.15, -0.4], [0.44, 0.7], [1, null]]
-      lean: [[0, null], [0.15, -0.08], [0.44, 0.239], [0.66, 0.162], [1, null]]
-      step: [[0, null], [0.15, -0.042], [0.44, 0.3], [0.66, 0.225], [1, null]]
-      legL: [[0, null], [0.18, -0.112], [0.44, -0.248], [1, null]]
-      legR: [[0, null], [0.18, 0.096], [0.44, 0.224], [1, null]]
-      bodyY: [[0, null], [0.135, -0.084], [0.44, 0.252], [1, null]]
-      bodyR: [[0, null], [0.44, 0.039], [1, null]]
-  "RELIK:TOLL":
-    label: "Relik: Toll"
-    seconds: 0.5
-    hit: 0.5
-    blend: 0.14
-    gripOffset: 7
-    sounds:
-      - {at: 0.22, sound: "minecraft:block.amethyst_block.resonate", pitch: 0.8, volume: 0.4}
-      - {at: 0.5, sound: "minecraft:item.mace.smash_ground", pitch: 1.1, volume: 0.45}
-    channels:
-      pitch: [[0, null], [0.26, -2.3], [0.5, -1], [0.74, -0.95], [1, null]]
-      across: [[0, null], [0.26, 0.15], [0.5, 0.2], [0.74, 0.15], [1, null]]
-      offPitch: [[0, null], [0.26, -2.1], [0.5, -0.9], [0.74, -0.85], [1, null]]
-      offAcross: [[0, null], [0.26, 0.4], [0.5, 0.5], [0.74, 0.45], [1, null]]
-      turn: [[0, null], [0.26, -0.149], [0.5, 0.216], [0.74, 0.113], [1, null]]
-      reach: [[0, null], [0.26, 1], [0.5, -2.2], [0.74, -1.8], [1, null]]
-      headA: [[0, null], [0.26, -1.5], [0.5, 0.5], [0.74, 0.4], [1, null]]
-      grip: [[0, null], [0.12, 1], [0.65, 1], [1, null]]
-      lean: [[0, null], [0.26, -0.35], [0.5, 0.6], [0.74, 0.5], [1, null]]
-      step: [[0, null], [0.26, -0.126], [0.5, 0.9], [0.74, 0.675], [1, null]]
-      legL: [[0, null], [0.312, -0.154], [0.5, -0.473], [1, null]]
-      legR: [[0, null], [0.312, 0.132], [0.5, 0.374], [1, null]]
-      bodyY: [[0, null], [0.234, -0.041], [0.5, 0.122], [1, null]]
-      bodyR: [[0, null], [0.5, 0.019], [1, null]]
 stances:
   "RELIK":
     gripOffset: 7
@@ -151,12 +10,12 @@ stances:
     gait: {mainWalk: 0.2, offWalk: 0.5, mainSprint: 0.55, offSprint: 1.05, across: 0.18, lean: 0.14, leanBounce: 0.05, tipWalk: 0.05, tipSprint: 0.14, yaw: 0.06, armBob: 0, twist: 0}
   "RELIK:RITE":
     gripOffset: 7
-    carry: {pitch: -0.8, across: 0.1, offPitch: -0.6, offAcross: 0.3, turn: 0.05, headA: -0.2, headY: 0.05}
-    ready: {pitch: -1.2, across: 0.2, abduct: 0.08, offPitch: -1, offAcross: 0.45, offAbduct: 0.1, turn: 0.1, headA: -0.5, headY: 0.1}
-    idle: {pitch: -0.35, across: 0.1, abduct: 0.06, offPitch: -0.3, offAcross: 0.15, offAbduct: 0.1, turn: 0.03, headA: -0.1}
-    walk: {pitch: -0.75, across: 0.15, abduct: 0.06, offPitch: -0.6, offAcross: 0.3, turn: 0.04, headA: -0.15, lean: 0.05}
-    sprint: {pitch: -0.7, across: 0.15, abduct: 0.06, offPitch: -0.55, offAcross: 0.3, offAbduct: 0.1, turn: 0.05, headY: 0.05, lean: 0.2}
-    gait: {mainWalk: 0.1, offWalk: 0.2, mainSprint: 0.3, offSprint: 0.6, across: 0.08, lean: 0.1, leanBounce: 0.03, tipWalk: 0.03, tipSprint: 0.08, yaw: 0.04, armBob: 0.04, twist: 0}
+    carry: {pitch: -0.98, across: 0.77, offPitch: 0.11, offAcross: -0.3, turn: -0.1, headA: -0.24, headY: 3.11, abduct: 1.15, offAbduct: 0.93, lean: 0.07}
+    ready: {pitch: -0.34, across: 0.58, abduct: 0.37, offPitch: -0.18, offAcross: 1.27, offAbduct: 0.29, turn: 0.23, headA: 0.69, headY: 3.28, lean: 0.07}
+    idle: {pitch: -1.66, across: 1.55, abduct: 1.85, offPitch: 0.93, offAcross: -1.26, offAbduct: 0.6, turn: -0.08, headA: -0.08, headY: 2.81, lean: 0}
+    sprint: {pitch: 0.81, across: -0.31, abduct: 0.13, offPitch: 0.34, offAcross: 0.59, offAbduct: -0.21, turn: -0.23, headY: 1.28, lean: 0.54, headA: -0.43}
+    walk: {pitch: 0.32, across: -0.7, abduct: 0.07, offPitch: -1.4, offAcross: 1.33, turn: -0.14, headA: -0.56, lean: 0.15, offAbduct: 1.53, headY: 2.87}
+    gait: {mainWalk: 0.024, offWalk: -0.25, mainSprint: 0.045, offSprint: 0.105, across: 0.079, lean: 0, leanBounce: 0.006, tipWalk: 0.01, tipSprint: 0.007, yaw: 0.124, armBob: 0.007, twist: 0.053}
 movesets:
   "RELIK":
     label: "Relik: Channeler"
@@ -168,10 +27,10 @@ movesets:
       addSounds:
         - {at: 0.4, sound: "minecraft:block.amethyst_block.resonate", pitch: 0.8, volume: 0.4}
     light:
-      - {pose: "RELIK"}
-      - {pose: "RELIK:PULSE"}
-      - {pose: "RELIK", mirror: true}
-      - {pose: "RELIK:WAVE", finisher: true}
+      - {pose: "RELIK:L1"}
+      - {pose: "RELIK:L2"}
+      - {pose: "RELIK:L3"}
+      - {pose: "RELIK:L4", finisher: true}
   "RELIK:RITE":
     label: "Relik: Ritualist"
     cast:
@@ -182,9 +41,9 @@ movesets:
       addSounds:
         - {at: 0.3, sound: "minecraft:entity.evoker.cast_spell", pitch: 1.3, volume: 0.3}
     light:
-      - {pose: "RELIK:LIFT"}
-      - {pose: "RELIK:CIRCLE"}
-      - {pose: "RELIK:LIFT", mirror: true}
-      - {pose: "RELIK:TOLL", finisher: true}
+      - {pose: "RELIK:RITE:L1"}
+      - {pose: "RELIK:RITE:L2"}
+      - {pose: "RELIK:RITE:L3"}
+      - {pose: "RELIK:RITE:L4", finisher: true}
 trails:
   "RELIK": [2, 25]
