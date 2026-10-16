@@ -29,6 +29,7 @@ object MenuSkin {
     private const val WYNNCRAFT_ADDRESS = "play.wynncraft.com"
     private const val PLAY_H = 34
     private const val LINK_H = 16
+    private const val BRANDING_CLEARANCE = 22
 
     private enum class Kind { TITLE, PAUSE }
 
@@ -77,11 +78,19 @@ object MenuSkin {
             val state = layout(screen, kind, width, height)
             states[screen] = state
             val token = state.token
-            ScreenEvents.afterBackground(screen).register { _, graphics, _, _, _ ->
-                states[screen]?.takeIf { it.token === token }?.let { drawBackdrop(graphics, it, width, height) }
+            ScreenEvents.afterBackground(screen).register { _, graphics, mouseX, _, _ ->
+                states[screen]?.takeIf { it.token === token }?.let { drawBackdrop(graphics, it, width, height, mouseX) }
             }
             ScreenEvents.afterExtract(screen).register { _, graphics, mouseX, mouseY, _ ->
                 states[screen]?.takeIf { it.token === token }?.let { drawSlots(graphics, it, mouseX, mouseY) }
+            }
+            if (kind == Kind.TITLE) {
+                ScreenMouseEvents.allowMouseScroll(screen).register { _, mouseX, _, _, vertical ->
+                    val current = states[screen]
+                    if (current == null || current.token !== token || mouseX <= current.panelW || vertical == 0.0) return@register true
+                    TitleScene.step(if (vertical > 0) -1 else 1)
+                    false
+                }
             }
             ScreenMouseEvents.allowMouseClick(screen).register { _, event ->
                 val current = states[screen]
@@ -196,6 +205,7 @@ object MenuSkin {
         val links = ArrayList<Slot>()
         for (w in widgets) {
             val text = w.message.string
+            if (text.contains("Copyright", true)) continue
             if (text.contains("Realms", true)) {
                 w.visible = false
                 w.active = false
@@ -212,13 +222,16 @@ object MenuSkin {
             y += LINK_H + 2
         }
         var sx = PAD
-        val sy = height - PAD - SMALL_SIZE
+        val sy = height - PAD - SMALL_SIZE - BRANDING_CLEARANCE
         for (s in small) {
             s.x = sx; s.y = sy; s.w = SMALL_SIZE; s.h = SMALL_SIZE
             sx += SMALL_SIZE + GAP
         }
         slots += links
         slots += small
+        val arrowY = height - PAD - SMALL_SIZE
+        slots += Slot(null, Component.literal(">"), { TitleScene.step(1) }, x = width - PAD - SMALL_SIZE, y = arrowY, w = SMALL_SIZE, h = SMALL_SIZE)
+        slots += Slot(null, Component.literal("<"), { TitleScene.step(-1) }, x = width - PAD - SMALL_SIZE * 2 - GAP, y = arrowY, w = SMALL_SIZE, h = SMALL_SIZE)
         for (s in slots) s.widget?.let {
             it.x = s.x
             it.y = s.y
@@ -246,10 +259,10 @@ object MenuSkin {
         return rows
     }
 
-    private fun drawBackdrop(graphics: GuiGraphicsExtractor, state: State, width: Int, height: Int) {
+    private fun drawBackdrop(graphics: GuiGraphicsExtractor, state: State, width: Int, height: Int, mouseX: Int) {
         val font = Minecraft.getInstance().font
         if (state.kind == Kind.TITLE) {
-            graphics.fill(0, 0, width, height, 0x30000000)
+            TitleScene.draw(graphics, width, height, state.panelW)
             graphics.fill(0, 0, state.panelW, height, OwTheme.PAGE_WASH)
             graphics.fill(state.panelW - 1, 0, state.panelW, height, OwTheme.HAIRLINE)
             graphics.fill(state.panelW, 0, state.panelW + 1, height, 0x40D4AF37)
@@ -264,6 +277,16 @@ object MenuSkin {
             graphics.fill(PAD + 20, ruleY, state.panelW - PAD - 20, ruleY + 1, OwTheme.ACCENT_DIM)
             val sub = "Minecraft ${net.minecraft.SharedConstants.getCurrentVersion().name()}"
             graphics.centeredText(font, sub, state.panelW / 2, ruleY + 8, OwTheme.TEXT_FAINT)
+            val label = TitleScene.currentName
+            val right = width - PAD
+            val arrowsLeft = right - SMALL_SIZE * 2 - GAP
+            graphics.text(font, label, arrowsLeft - GAP - font.width(label), height - PAD - SMALL_SIZE + (SMALL_SIZE - 8) / 2, OwTheme.TEXT_DIM, true)
+            val dotsRight = arrowsLeft - GAP - font.width(label) - 12
+            for (d in 0 until TitleScene.count) {
+                val dx = dotsRight - (TitleScene.count - 1 - d) * 9
+                val on = d == TitleScene.currentIndex
+                graphics.fill(dx - 3, height - PAD - SMALL_SIZE / 2 - 2, dx + 3, height - PAD - SMALL_SIZE / 2 + 2, if (on) OwTheme.ACCENT else OwTheme.TEXT_FAINT)
+            }
         } else {
             OwTheme.drawPage(graphics, state.panelX, state.panelY, state.panelW, state.panelH)
             graphics.fill(state.panelX, state.panelY + OwTheme.TITLE_BAR_H - 1, state.panelX + state.panelW, state.panelY + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)

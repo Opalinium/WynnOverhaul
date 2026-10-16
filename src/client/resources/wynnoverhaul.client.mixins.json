@@ -7,6 +7,7 @@
     "ClientLevelParticleMixin",
     "TitleLogoMixin",
     "TitleSplashMixin",
+    "TitleNotificationsMixin",
     "ScrollWheelHandlerMixin",
     "ChatHistoryMixin",
     "SlotLockMixin",

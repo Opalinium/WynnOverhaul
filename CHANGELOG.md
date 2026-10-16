@@ -24,6 +24,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Weapon strokes, stances and walk poses play on other players within 48 blocks.
 - A character viewport in the weapon animation settings plays any moveset or spell, with a speed slider and drag to rotate.
 - The title screen and pause menu use the WynnOverhaul layout, with a Play Wynncraft button.
+- The main menu has five scenes you can switch between: Campfire, Snowed In, Aurora, Downpour and Dusk Dunes.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
