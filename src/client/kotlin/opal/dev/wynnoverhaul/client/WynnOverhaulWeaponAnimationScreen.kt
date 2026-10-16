@@ -10,8 +10,7 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 
 class WynnOverhaulWeaponAnimationScreen(parent: Screen? = null) : OwScreen(Component.literal("Weapon Animations"), parent) {
-    override val panelWidth: Int get() = (width * 0.36).toInt().coerceIn(320, 460).coerceAtMost((width - 20).coerceAtLeast(200))
-    override val panelLeft: Int get() = (width - panelWidth - 12).coerceAtLeast(0)
+    override val panelWidth: Int get() = (width * 0.5).toInt().coerceIn(320, 460).coerceAtMost((width - 20).coerceAtLeast(200))
     override val panelHeight: Int get() = (height * 0.85).toInt().coerceIn(280, 520)
 
     override fun init() {

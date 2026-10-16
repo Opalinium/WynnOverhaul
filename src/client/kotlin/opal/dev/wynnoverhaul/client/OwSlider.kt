@@ -31,6 +31,11 @@ class OwSlider(
         message = Component.literal("$label: $text")
     }
 
+    fun setNormalized(v: Double) {
+        value = v.coerceIn(0.0, 1.0)
+        updateMessage()
+    }
+
     override fun applyValue() {
         onChange(current())
     }

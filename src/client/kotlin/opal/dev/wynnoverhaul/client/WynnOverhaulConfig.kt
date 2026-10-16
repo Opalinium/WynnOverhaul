@@ -36,8 +36,6 @@ data class WynnOverhaulConfig(
     var weaponAnimationSfxVolume: Double = 0.45,
     var weaponAnimationTrail: Boolean = true,
     var weaponAnimationTrailIntensity: Double = 0.2,
-    var weaponAnimationPreview: Boolean = false,
-    var weaponAnimationPreviewT: Double = 0.5,
     var weaponAnimationEntries: MutableList<WeaponAnimationEntry>? = null,
     var locomotionEnabled: Boolean = false,
     var locomotionStyle: String = "HEROIC",
@@ -284,7 +282,6 @@ data class WynnOverhaulConfig(
         trackerPingPitch = trackerPingPitch.coerceIn(0.5, 2.0)
         trackerWaypointScale = trackerWaypointScale.coerceIn(0.5, 2.5)
         trackerRules.forEach { it.minChestTier = it.minChestTier.coerceIn(0, 4) }
-        weaponAnimationPreviewT = weaponAnimationPreviewT.coerceIn(0.0, 1.0)
         weaponAnimationSfxVolume = weaponAnimationSfxVolume.coerceIn(0.0, 1.0)
         weaponTrueIdleDelaySeconds = weaponTrueIdleDelaySeconds.coerceIn(0.5, 15.0)
         weaponAnimationTrailIntensity = weaponAnimationTrailIntensity.coerceIn(0.2, 1.5)

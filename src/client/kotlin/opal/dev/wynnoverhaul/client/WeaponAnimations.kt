@@ -458,8 +458,6 @@ object WeaponAnimations {
         var right = true
         var suppress = false
         private var previewing = false
-        private var previewStack: ItemStack? = null
-        private var previewCached: List<Pose> = emptyList()
         private var previewLocal = 0f
         private var startNanos = 0L
         private var pauseStart = 0L
@@ -615,7 +613,11 @@ object WeaponAnimations {
                 return
             }
             val stack = player.mainHandItem
-            if (stack !== idleStack) {
+            val previewStyle = if (owner == null) previewRequest?.style else null
+            if (previewStyle != null) {
+                idleStackKey = previewStyle
+                idleStack = null
+            } else if (stack !== idleStack) {
                 idleStack = stack
                 idleStackKey = keyFor(stack)
             }
@@ -630,8 +632,6 @@ object WeaponAnimations {
             mirrorCache.clear()
             pose = null
             carry = null
-            previewStack = null
-            previewCached = emptyList()
             idleStack = null
             idleStackKey = null
             comboKey = null
@@ -652,24 +652,28 @@ object WeaponAnimations {
             watchHurt(player)
             watchGather(client, player)
             val config = WynnOverhaulConfig.current
-            if (config.weaponAnimationPreview && enabled()) {
-                val stack = player.mainHandItem
-                val chain = if (stack.isEmpty) emptyList() else previewChain(stack)
+            val request = previewRequest
+            if (request != null && enabled()) {
+                val chain = request.poses
                 if (chain.isEmpty()) {
                     pose = null
                     previewLocal = 0f
                 } else {
-                    val scaled = config.weaponAnimationPreviewT.toFloat().coerceIn(0f, 1f) * chain.size
-                    val index = minOf(scaled.toInt(), chain.size - 1)
+                    var at = request.progress.coerceIn(0f, 1f) * request.total
+                    var index = 0
+                    while (index < chain.size - 1 && at >= chain[index].seconds) {
+                        at -= chain[index].seconds
+                        index++
+                    }
                     pose = chain[index]
-                    previewLocal = (scaled - index).coerceIn(0f, 0.999f)
+                    previewLocal = (at / chain[index].seconds).coerceIn(0f, 0.999f)
+                    request.index = index
                 }
                 right = player.mainArm == HumanoidArm.RIGHT
                 carry = null
                 amp = 1f
                 readyUntil = System.nanoTime() + READY_NANOS
                 previewing = true
-                if (debugLine.isNotEmpty()) player.sendOverlayMessage(Component.literal(debugLine))
                 return
             }
             if (previewing) {
@@ -930,16 +934,6 @@ object WeaponAnimations {
 
         fun runShare(): Float = runAmt
 
-        private fun previewChain(stack: ItemStack): List<Pose> {
-            if (stack !== previewStack) {
-                previewStack = stack
-                val key = WeaponAnimationRegistry.styleFor(stack) ?: autoStyleKey(stack) ?: toolKey(stack)
-                val steps = key?.let { COMBOS[it] }
-                previewCached = if (steps != null) steps.mapNotNull { stepPose(it) } else listOfNotNull(key?.let { basePose(it) })
-            }
-            return previewCached
-        }
-
         fun progress(): Float {
             val t = computeProgress()
             if (t >= 0f && !previewing) fireCues(t)
@@ -1112,19 +1106,78 @@ object WeaponAnimations {
 
     @JvmStatic
     fun onSwing(player: LocalPlayer) {
-        if (WynnOverhaulConfig.current.weaponAnimationPreview) return
+        if (previewRequest != null) return
         clock.begin(player)
     }
 
     @JvmStatic
     fun onSpellCast(name: String) {
         val config = WynnOverhaulConfig.current
-        if (!config.weaponAnimationSpells || config.weaponAnimationPreview) return
+        if (!config.weaponAnimationSpells || previewRequest != null) return
         val player = Minecraft.getInstance().player ?: return
         val styleKey = resolveKey(player.mainHandItem)
         val chosen = SpellCasts.choose(styleKey, name.lowercase().filter { it.isLetter() }) ?: return
         clock.beginSpell(player, chosen)
     }
+
+    internal class PreviewRequest(val style: String, val poses: List<Pose>, val labels: List<String>) {
+        val total: Float = poses.sumOf { it.seconds.toDouble() }.toFloat().coerceAtLeast(0.1f)
+        var progress = 0f
+        var index = 0
+    }
+
+    private var previewRequest: PreviewRequest? = null
+
+    class PreviewInfo(val labels: List<String>, val seconds: Float)
+
+    fun beginPreview(style: String, spell: String?): PreviewInfo? {
+        val poses = ArrayList<Pose>()
+        val labels = ArrayList<String>()
+        if (spell != null) {
+            SpellCasts.choose(style, spell)?.let {
+                poses += it
+                labels += it.key
+            }
+        } else {
+            val chain = COMBOS[style]
+            if (chain != null) {
+                OPENERS[style]?.let { step -> stepPose(step)?.let { poses += it; labels += "${step.key} (opener)" } }
+                for (step in chain) stepPose(step)?.let { poses += it; labels += step.key + if (step.mirror) " (mirrored)" else "" }
+                CHARGES[style]?.let { step -> stepPose(step)?.let { poses += it; labels += "${step.key} (sprint)" } }
+            } else {
+                basePose(style)?.let { poses += it; labels += it.key }
+            }
+        }
+        if (poses.isEmpty()) {
+            previewRequest = null
+            return null
+        }
+        val request = PreviewRequest(style, poses, labels)
+        previewRequest = request
+        return PreviewInfo(labels, request.total)
+    }
+
+    fun setPreviewProgress(progress: Float) {
+        previewRequest?.progress = progress
+    }
+
+    fun previewStroke(): Int = previewRequest?.index ?: 0
+
+    fun endPreview() {
+        previewRequest = null
+    }
+
+    fun hasOwnSpell(style: String, spell: String): Boolean =
+        AnimationLibrary.tables().movesetSpells[style]?.containsKey(spell) == true
+
+    fun spellNames(): List<String> {
+        val seen = HashSet<String>()
+        return AnimationLibrary.tables().spellKeys.entries.filter { seen.add(it.value) }.map { it.key }
+    }
+
+    fun previewStyles(): List<String> = styleKeys().drop(1)
+
+    fun heldStyleKey(): String? = Minecraft.getInstance().player?.let { resolveKey(it.mainHandItem) }
 
     fun styleKeys(): List<String> {
         val combos = COMBOS
@@ -1208,12 +1261,6 @@ object WeaponAnimations {
     private var headEntity = -1
     private var headBow = false
     private var headFrame = -1L
-    private var debugLine = ""
-    private var debugKey = ""
-    private var debugT = 0f
-    private var debugRestA = 0f
-    private var debugRestY = 0f
-    private val debugDir = Vector3f()
 
     @JvmStatic
     fun combatElbow(right: Boolean): Float {
@@ -1402,12 +1449,6 @@ object WeaponAnimations {
         headBow = shiftKey != "BOW:FIREARM" && (clock.owner ?: Minecraft.getInstance().player)?.let { ActiveWeapon.isRanged(it) } == true
         handShift = (HAND_SHIFT[shiftKey] ?: 0f) + (HAND_SPRINT_EXTRA[shiftKey] ?: 0f) * clock.sprintAmount()
         headFrame = System.nanoTime()
-        if (WynnOverhaulConfig.current.weaponAnimationPreview) {
-            debugKey = pose?.key ?: "IDLE"
-            debugT = t
-            debugRestA = base[HEAD_A]
-            debugRestY = base[HEAD_Y]
-        }
         return true
     }
 
@@ -1615,16 +1656,6 @@ object WeaponAnimations {
             stack.translate(shiftVec.x, shiftVec.y, shiftVec.z)
         }
         stack.mulPose(itemQuat)
-        if (WynnOverhaulConfig.current.weaponAnimationPreview) {
-            armQuat.rotationZYX(part.zRot, part.yRot, part.xRot)
-            debugDir.set(HEAD_REST).rotate(wristQuat).rotate(armQuat).rotateY(-headYaw)
-            val gotA = asin(debugDir.y.coerceIn(-1f, 1f))
-            val gotY = atan2(headSide * debugDir.x, -debugDir.z)
-            debugLine = String.format(
-                "%s t=%.2f | want a=%.2f y=%.2f tw=%.2f | got a=%.2f y=%.2f | rest a=%.2f y=%.2f | arm p=%.2f",
-                debugKey, debugT, headA, headY, headTwist, gotA, gotY, debugRestA, debugRestY, part.xRot,
-            )
-        }
     }
 
     @JvmStatic

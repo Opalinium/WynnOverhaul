@@ -51,7 +51,6 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
     private var activeNotificationTab: NotificationTab = NotificationTab.TOASTS
     private var activeToastKind: WynnOverhaulToastQueue.Kind = WynnOverhaulToastQueue.Kind.QUEST
 
-    val animationsActive: Boolean get() = activeGroup == Group.ANIMATIONS
 
     private var trackerStatusLabel: OwLabel? = null
     private var trackerRulesStatusLabel: OwLabel? = null
@@ -856,13 +855,9 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             cycleButton({ "Weapon animation models..." }, "Register weapon models and choose which animation each one uses.") {
                 Minecraft.getInstance().setScreenAndShow(WynnOverhaulWeaponAnimationScreen(host.screen))
             }
-            checkbox(
-                "Freeze animation (preview)",
-                "Debug: holds your held weapon's animation at the progress below. The slider runs through the whole moveset, every stroke in order including mirrored ones, and the start and end of each stroke are the standby pose.",
-                config.weaponAnimationPreview,
-            ) { config.weaponAnimationPreview = it }
-            val previewSlider = OwSlider(left, 0, w, OwTheme.ROW_H - 2, 0.0, 1.0, 2, config.weaponAnimationPreviewT, "Preview progress (whole moveset)") { config.weaponAnimationPreviewT = it }
-            rows += previewSlider to OwTheme.ROW_H
+            cycleButton({ "Animation previews..." }, "Opens a viewport of your character where you can play any moveset or spell animation, scrub through it and pick the weapon style it plays as.") {
+                Minecraft.getInstance().setScreenAndShow(WynnOverhaulAnimationPreviewScreen(host.screen))
+            }
         }
     }
 
