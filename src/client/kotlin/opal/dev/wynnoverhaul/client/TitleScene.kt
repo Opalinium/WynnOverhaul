@@ -1,16 +1,21 @@
 package opal.dev.wynnoverhaul.client
 
+import com.mojang.authlib.GameProfile
+import com.mojang.authlib.yggdrasil.ProfileResult
 import com.mojang.blaze3d.platform.NativeImage
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.entity.state.AvatarRenderState
 import net.minecraft.client.renderer.texture.DynamicTexture
+import net.minecraft.client.resources.DefaultPlayerSkin
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.player.PlayerSkin
 import org.joml.Quaternionf
 import org.joml.Vector3f
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 import kotlin.math.PI
 import kotlin.math.max
@@ -33,7 +38,16 @@ object TitleScene {
     private var index = -1
     private var previous = -1
     private var fade = 1f
+    private const val SKIN_RETRY_NANOS = 8_000_000_000L
+    private const val SKIN_ATTEMPTS = 6
+
     private var skinLookup: Supplier<PlayerSkin>? = null
+    private var skinAccount: UUID? = null
+    private var skinProfile: GameProfile? = null
+    private var skinCreatedAt = 0L
+    private var skinAttempts = 0
+    private var skinSettled = false
+    private var profileFetch: CompletableFuture<ProfileResult?>? = null
     private var figureFailed = false
     private var lastNanos = 0L
 
@@ -187,13 +201,52 @@ object TitleScene {
         graphics.blit(RenderPipelines.GUI_TEXTURED, item.id, x, y, u, 0f, w, h, ART_W, ART_H, ART_W, ART_H, tint)
     }
 
+    private fun figureSkin(client: Minecraft): PlayerSkin {
+        val now = System.nanoTime()
+        val account = client.user.profileId
+        if (account != skinAccount) {
+            skinAccount = account
+            skinLookup = null
+            skinProfile = null
+            skinSettled = false
+            skinAttempts = 0
+            profileFetch = null
+        }
+        val fetch = profileFetch
+        if (fetch != null && fetch.isDone) {
+            profileFetch = null
+            val fetched = runCatching { fetch.getNow(null) }.getOrNull()?.profile()
+            if (fetched != null) {
+                skinProfile = fetched
+                skinLookup = null
+            }
+        }
+        val retry = !skinSettled && skinAttempts < SKIN_ATTEMPTS && now - skinCreatedAt > SKIN_RETRY_NANOS
+        if (skinLookup == null || retry) {
+            if (skinLookup != null) skinAttempts++
+            skinCreatedAt = now
+            skinLookup = client.skinManager.createLookup(skinProfile ?: client.gameProfile, false)
+            if (skinProfile == null && profileFetch == null && client.profileResult == null) {
+                profileFetch = CompletableFuture.supplyAsync { client.services().sessionService().fetchProfile(account, true) }
+            }
+        }
+        val skin = skinLookup!!.get()
+        if (skin != DefaultPlayerSkin.get(account)) {
+            skinSettled = true
+        } else if (skinSettled) {
+            skinSettled = false
+            skinAttempts = 0
+            skinLookup = null
+        }
+        return skin
+    }
+
     private fun drawFigure(graphics: GuiGraphicsExtractor, view: View, figure: ArtFigure, t: Double) {
         if (figureFailed) return
         val client = Minecraft.getInstance()
         try {
-            val lookup = skinLookup ?: client.skinManager.createLookup(client.gameProfile, false).also { skinLookup = it }
             val state = AvatarRenderState()
-            state.skin = lookup.get()
+            state.skin = figureSkin(client)
             state.showHat = true
             state.showJacket = true
             state.showLeftPants = true
@@ -210,6 +263,7 @@ object TitleScene {
                 ArtPose.SIT -> 9f + 2f * sin(t * 0.9).toFloat()
                 ArtPose.STAND -> 4f + 2f * sin(t * 0.6).toFloat()
             }
+            TitleLoadout.applyToFigure(state)
             state.scale = 1f
             state.ageScale = 1f
             state.ageInTicks = (t * 20.0).toFloat()

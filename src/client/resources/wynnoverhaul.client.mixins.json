@@ -13,6 +13,7 @@
     "SkinCheckboxMixin",
     "SkinListMixin",
     "SkinMenuBackgroundMixin",
+    "PackRepositorySourcesMixin",
     "ScrollWheelHandlerMixin",
     "ChatHistoryMixin",
     "SlotLockMixin",

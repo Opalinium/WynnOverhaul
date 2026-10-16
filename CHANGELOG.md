@@ -28,6 +28,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Vanilla buttons, sliders, checkboxes, lists and backgrounds are restyled in every vanilla screen.
 - A tabbed options screen replaces the vanilla one, with Video, Controls, Key Binds, Audio, Chat, Accessibility, Skin and More tabs. The Sodium video settings open inside the Video tab.
 - A multiplayer server list with search, ping status, icons, add, edit, delete, reorder and direct connect, plus an Authme accounts button.
+- Your last level, class and equipment appear on the main menu figure, with armor and weapon models taken from the Wynncraft resource pack.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
@@ -43,6 +44,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The augmented Item Identifier opens in the workbench layout.
 - Bank deposits only jump to bank pages that exist and are unlocked.
 - Dialogue choices follow scrolling correctly, long options keep their full text, and no stray 0 shows when a dialogue ends.
+- The main menu figure keeps your skin instead of falling back to the default.
 
 ## 1.5.0 - 2026-10-09
 

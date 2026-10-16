@@ -269,6 +269,7 @@ object MenuSkin {
         val font = Minecraft.getInstance().font
         if (state.kind == Kind.TITLE) {
             TitleScene.draw(graphics, width, height, state.panelW)
+            TitleLoadout.drawCard(graphics, width, height)
             graphics.fill(0, 0, state.panelW, height, OwTheme.PAGE_WASH)
             graphics.fill(state.panelW - 1, 0, state.panelW, height, OwTheme.HAIRLINE)
             graphics.fill(state.panelW, 0, state.panelW + 1, height, 0x40D4AF37)

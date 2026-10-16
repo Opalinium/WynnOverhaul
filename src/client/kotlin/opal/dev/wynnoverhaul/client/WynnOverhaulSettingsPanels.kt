@@ -905,6 +905,9 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Custom title and pause menus", "Restyles the main menu and the game menu in the WynnOverhaul layout. Takes effect the next time the menu opens.", config.customMenusEnabled) {
                 config.customMenusEnabled = it
             }
+            checkbox("Show my character on the title screen", "Remembers your last level, class and equipment and shows them on the main menu, with the armor and weapon models taken from the Wynncraft resource pack.", config.titleLoadoutEnabled) {
+                config.titleLoadoutEnabled = it
+            }
 
             header("Mounts")
             checkbox("Custom mount menu", "Opens the mount settings menu in the WynnOverhaul layout.", config.customMountMenuEnabled) {

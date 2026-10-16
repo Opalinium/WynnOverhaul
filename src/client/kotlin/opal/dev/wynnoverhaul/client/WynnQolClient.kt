@@ -222,6 +222,7 @@ class WynnQolClient : ClientModInitializer {
 
     private fun onTick(client: Minecraft) {
         WynnOverhaulGate.refresh(client)
+        TitleLoadout.tick(client)
         if (!WynnOverhaulGate.inGame) {
             DisplayScan.clear()
             return

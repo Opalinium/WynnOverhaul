@@ -204,6 +204,7 @@ data class WynnOverhaulConfig(
     var customMerchantEnabled: Boolean = true,
     var customMountMenuEnabled: Boolean = true,
     var customMenusEnabled: Boolean = true,
+    var titleLoadoutEnabled: Boolean = true,
     var titleSceneIndex: Int = 0,
 
     var customHudEnabled: Boolean = false,
