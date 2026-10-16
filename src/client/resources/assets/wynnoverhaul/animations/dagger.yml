@@ -40,7 +40,6 @@ movesets:
       - {pose: "DAGGER:L2"}
       - {pose: "DAGGER:L3"}
       - {pose: "DAGGER:L4", finisher: true}
-    sprint: {pose: "DAGGER:SPRINT"}
   "DAGGER:STAB":
     label: "Dagger: Stiletto"
     cast:
@@ -57,7 +56,6 @@ movesets:
       - {pose: "DAGGER:STAB:L2"}
       - {pose: "DAGGER:STAB:L3"}
       - {pose: "DAGGER:STAB:L4", finisher: true}
-    sprint: {pose: "DAGGER:STAB:SPRINT"}
   "DAGGER:WHIRL":
     label: "Dagger: Dancer"
     cast:

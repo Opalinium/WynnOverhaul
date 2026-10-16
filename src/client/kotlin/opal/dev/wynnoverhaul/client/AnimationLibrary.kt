@@ -191,7 +191,6 @@ internal object AnimationLibrary {
         val combos = LinkedHashMap<String, List<ComboStep>>()
         val movesetStances = HashMap<String, String>()
         val openers = HashMap<String, ComboStep>()
-        val charges = HashMap<String, ComboStep>()
         val sfx = HashMap<String, List<Cue>>()
         val impact = HashMap<String, List<Cue>>()
         val handShift = HashMap<String, Float>()
@@ -225,9 +224,7 @@ internal object AnimationLibrary {
                     combos[key] = moveset(m)
                     movesetStances.remove(key)
                     openers.remove(key)
-                    charges.remove(key)
                     map(m["opener"])?.let { o -> openers[key] = ComboStep(o["pose"]?.toString() ?: bad("opener is missing pose"), o["mirror"] == true, false) }
-                    map(m["sprint"])?.let { o -> charges[key] = ComboStep(o["pose"]?.toString() ?: bad("sprint is missing pose"), o["mirror"] == true, true) }
                     m["stance"]?.toString()?.let { movesetStances[key] = it }
                     (m["label"] as? String)?.let { labels[key] = it }
                     castStyles.remove(key)
@@ -299,8 +296,6 @@ internal object AnimationLibrary {
             (combos.keys - validCombos.keys).forEach { warnings.add("moveset $it references an unknown pose and was skipped") }
             val validOpeners = openers.filter { it.key in validCombos && it.value.key in poses }
             (openers.keys - validOpeners.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown opener pose and plays its first stroke instead") }
-            val validCharges = charges.filter { it.key in validCombos && it.value.key in poses }
-            (charges.keys - validCharges.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown sprint pose and plays its chain stroke instead") }
             val validStances = movesetStances.filter { it.key in validCombos && it.value in stances }
             (movesetStances.keys - validStances.keys).filter { it in validCombos }.forEach { warnings.add("moveset $it names an unknown stance and uses its family stance") }
             val validCasts = castStyles.filter { it.key in validCombos }
@@ -313,7 +308,7 @@ internal object AnimationLibrary {
             }
             val locomotion = buildLocomotion() ?: return null
             return AnimationTables(
-                poses, stances, validCombos, validStances, validOpeners, validCharges, sfx, impact, finisher!!, thump!!, tail!!, slam!!,
+                poses, stances, validCombos, validStances, validOpeners, sfx, impact, finisher!!, thump!!, tail!!, slam!!,
                 lungeFamilies!!, handShift, handSprintExtra, trailSpans, labels, spellKeys, validCasts, validSpells, locomotion,
                 FirstPersonTables(firstPersonHidden ?: emptySet(), firstPersonShift),
             )

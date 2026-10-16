@@ -11,7 +11,6 @@ internal class AnimationTables(
     val combos: Map<String, List<ComboStep>>,
     val movesetStances: Map<String, String>,
     val openers: Map<String, ComboStep>,
-    val charges: Map<String, ComboStep>,
     val sfx: Map<String, List<Cue>>,
     val impact: Map<String, List<Cue>>,
     val finisher: Cue,

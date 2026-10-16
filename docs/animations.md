@@ -73,7 +73,6 @@ movesets:
 | `stance` | Stance to hold the weapon in. Defaults to the stance with the moveset's own key, then the family stance |
 | `opener` | A `pose` (and optional `mirror`) played instead of the first stroke when a chain starts from idle, so the first swing can draw the weapon out of its carried pose. When the weapon is already in its ready stance the first stroke plays as normal |
 | `light` | The strokes, each with a `pose`, optional `mirror` and optional `finisher` |
-| `sprint` | A `pose` (and optional `mirror`) played instead of the next chain stroke when a swing starts while sprinting forward. It plays as a finisher and leaves the chain where it was. Strafing, walking and backing up play the normal strokes |
 | `cast` | How spell casts look with this moveset, below |
 | `spells` | Maps a spell name (lowercase letters only) to a pose, to give this moveset its own animation for that spell |
 

@@ -556,7 +556,7 @@ def weapon_clip(out, offset, weapon_len, solved=None):
     ground = hit_body = hit_head = False
     for f in np.linspace(-weapon_len[0], weapon_len[1], 14):
         pt = grip + shaft * f
-        if pt[1] > GROUND_Y:
+        if pt[1] > GROUND_Y + GROUND_TOLERANCE:
             ground = True
         if f < 3:
             continue
@@ -571,6 +571,7 @@ def weapon_clip(out, offset, weapon_len, solved=None):
 
 
 GROUND_Y = 25.0
+GROUND_TOLERANCE = 6.0
 
 
 def box_depth(q, bounds):
@@ -608,8 +609,8 @@ def penetration(out, offset, weapon_len):
     shaft = rot_y(yaw) @ np.array([math.sin(out[HEAD_Y]) * cos_a, math.sin(out[HEAD_A]), -math.cos(out[HEAD_Y]) * cos_a])
     for f in np.linspace(-weapon_len[0], weapon_len[1], 14):
         pt = grip + shaft * f
-        if pt[1] > GROUND_Y - 0.5:
-            total += (pt[1] - GROUND_Y + 0.5) * 0.5
+        if pt[1] > GROUND_Y + GROUND_TOLERANCE - 0.5:
+            total += (pt[1] - GROUND_Y - GROUND_TOLERANCE + 0.5) * 0.5
         if f < 3:
             continue
         for part, bounds in ((body, (-5, 5, -0.5, 12.5, -3, 3)), (front, LEG_BOUNDS), (back, LEG_BOUNDS)):

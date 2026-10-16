@@ -216,7 +216,6 @@ object WeaponAnimations {
     private val STANCES: Map<String, Stance> get() = AnimationLibrary.tables().stances
     private val COMBOS: Map<String, List<ComboStep>> get() = AnimationLibrary.tables().combos
     private val OPENERS: Map<String, ComboStep> get() = AnimationLibrary.tables().openers
-    private val CHARGES: Map<String, ComboStep> get() = AnimationLibrary.tables().charges
     private val SFX: Map<String, List<Cue>> get() = AnimationLibrary.tables().sfx
     private val IMPACT: Map<String, List<Cue>> get() = AnimationLibrary.tables().impact
     private val FINISHER_CUE: Cue get() = AnimationLibrary.tables().finisher
@@ -373,9 +372,6 @@ object WeaponAnimations {
     }
 
     private const val MOVE_LEAN_CUT = 0.6f
-    private const val CHARGE_SUFFIX = ":SPRINT"
-    private const val CHARGE_KEEP = 0.6f
-    private const val FORWARD_DOT = 0.6f
     private const val MOVE_TURN_CUT_WALK = 0.25f
     private const val MOVE_TURN_CUT_RUN = 0.45f
     private const val DRIVE_LEAN_WALK = 0.07f
@@ -450,7 +446,7 @@ object WeaponAnimations {
         fun tickRemote(player: Player) {
             owner = player
             applyReload()
-            if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
+            if (!player.swinging && !(spellRunning())) suppress = false
             refreshIdle(player)
         }
 
@@ -459,6 +455,7 @@ object WeaponAnimations {
         var suppress = false
         private var previewing = false
         private var previewLocal = 0f
+        private var previewElapsed = 0f
         private var startNanos = 0L
         private var pauseStart = 0L
         private var pauseEnd = 0L
@@ -491,7 +488,6 @@ object WeaponAnimations {
         private var walkAmt = 0f
         private var walkingNow = false
         private var movingNow = false
-        private var forwardNow = false
         private var moveAmt = 0f
         private var runAmt = 0f
         private var strikeWeight = 0f
@@ -553,8 +549,6 @@ object WeaponAnimations {
 
         fun moveAmount(): Float = moveAmt
 
-        fun charging(): Float = if (pose?.key?.endsWith(CHARGE_SUFFIX) == true) 1f else 0f
-
         fun rawAt(p: Pose, t: Float, base: FloatArray, out: FloatArray) = sampleRaw(p, t, base, out)
 
         fun breath(): Float {
@@ -602,7 +596,6 @@ object WeaponAnimations {
             val dz = if (owner == null) player.deltaMovement.z else player.z - player.zOld
             val speedSq = (dx * dx + dz * dz).toFloat()
             val bodyYaw = player.yBodyRot * (Math.PI.toFloat() / 180f)
-            forwardNow = speedSq > WALK_SPEED_SQ && (-dx * sin(bodyYaw) + dz * cos(bodyYaw)).toFloat() > FORWARD_DOT * sqrt(speedSq)
             val still = speedSq < STILL_SPEED_SQ && player.onGround() && !player.isSwimming && !player.isUsingItem && !player.swinging
             stillTicks = if (still) stillTicks + 1 else 0
             sprintingNow = player.isSprinting && speedSq > SPRINT_SPEED_SQ
@@ -637,6 +630,9 @@ object WeaponAnimations {
             comboKey = null
         }
 
+        private fun spellRunning(): Boolean =
+            pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f && (previewing || elapsedSeconds() < totalSeconds)
+
         fun tick(client: Minecraft) {
             applyReload()
             val player = client.player
@@ -647,7 +643,7 @@ object WeaponAnimations {
                 idleTable = null
                 return
             }
-            if (!player.swinging && !(pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) suppress = false
+            if (!player.swinging && !(spellRunning())) suppress = false
             refreshIdle(player)
             watchHurt(player)
             watchGather(client, player)
@@ -665,12 +661,29 @@ object WeaponAnimations {
                         at -= chain[index].seconds
                         index++
                     }
-                    pose = chain[index]
-                    previewLocal = (at / chain[index].seconds).coerceIn(0f, 0.999f)
+                    val chosen = chain[index]
+                    right = player.mainArm == HumanoidArm.RIGHT
+                    amp = 1f
+                    carry = null
+                    pose = chosen
                     request.index = index
+                    val local = (at / chosen.seconds).coerceIn(0f, 0.999f)
+                    if (index > 0) {
+                        val previous = chain[index - 1]
+                        val from = FloatArray(CHANNELS)
+                        previewElapsed = previous.seconds
+                        sample(previous, 0.999f, REST_BASE, 1f, from)
+                        val skip = chosen.hit * CHAIN_SKIP
+                        carry = from
+                        blendSeconds = chosen.hit * chosen.seconds
+                        previewElapsed = at
+                        previewLocal = skip + local * (1f - skip)
+                    } else {
+                        previewElapsed = at
+                        previewLocal = local
+                    }
                 }
                 right = player.mainArm == HumanoidArm.RIGHT
-                carry = null
                 amp = 1f
                 readyUntil = System.nanoTime() + READY_NANOS
                 previewing = true
@@ -691,7 +704,7 @@ object WeaponAnimations {
             }
             val hand = player.swingingArm ?: InteractionHand.MAIN_HAND
             val holdingTool = toolKey(player.getItemInHand(hand)) != null
-            if ((owner == null && SpellComboGuard.isSuspended() && !holdingTool) || (pose?.key?.startsWith("SPELL:") == true && computeProgress() >= 0f)) {
+            if ((owner == null && SpellComboGuard.isSuspended() && !holdingTool) || (spellRunning())) {
                 suppress = true
                 return
             }
@@ -724,10 +737,9 @@ object WeaponAnimations {
                 return
             }
             val config = WynnOverhaulConfig.current
-            val charge = if (!gathering && config.weaponAnimationCombo && sprintingNow && forwardNow) CHARGES[styleKey] else null
-            val combo = if (charge != null) charge else advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
+            val combo = advanceCombo(styleKey, if (config.weaponAnimationCombo) COMBOS[styleKey] else null, gap)
             val opener = if (!wasReady && comboIndex == 0 && config.weaponAnimationCombo) OPENERS[styleKey] else null
-            val standard = (if (charge != null) stepPose(charge) else null) ?: (if (opener != null) stepPose(opener) else null) ?: stepPose(combo) ?: styleBase
+            val standard = (if (opener != null) stepPose(opener) else null) ?: stepPose(combo) ?: styleBase
             val chosen = standard
             cues = buildList {
                 addAll(SFX[standard.key] ?: emptyList())
@@ -854,6 +866,7 @@ object WeaponAnimations {
         }
 
         private fun elapsedSeconds(): Float {
+            if (previewing) return previewElapsed
             val now = System.nanoTime()
             settlePause(now)
             val reference = if (pauseEnd != 0L) pauseStart else now
@@ -1143,7 +1156,6 @@ object WeaponAnimations {
             if (chain != null) {
                 OPENERS[style]?.let { step -> stepPose(step)?.let { poses += it; labels += "${step.key} (opener)" } }
                 for (step in chain) stepPose(step)?.let { poses += it; labels += step.key + if (step.mirror) " (mirrored)" else "" }
-                CHARGES[style]?.let { step -> stepPose(step)?.let { poses += it; labels += "${step.key} (sprint)" } }
             } else {
                 basePose(style)?.let { poses += it; labels += it.key }
             }
@@ -1182,7 +1194,6 @@ object WeaponAnimations {
     fun styleKeys(): List<String> {
         val combos = COMBOS
         val steps = combos.values.flatMapTo(HashSet()) { chain -> chain.map { it.key } }
-        CHARGES.values.forEach { steps.add(it.key) }
         val movesets = combos.keys.filter { !it.startsWith("SPELL:") }
         val loose = POSES.keys.filter { !it.startsWith("SPELL:") && it !in combos && it !in steps }
         return listOf(WeaponAnimationRegistry.AUTO) + movesets + loose
@@ -1351,11 +1362,10 @@ object WeaponAnimations {
         val moving = clock.moveAmount()
         val drive = clock.moveStrike()
         val run = clock.runShare()
-        val charge = clock.charging() * CHARGE_KEEP
-        val cut = moving * (1f - charge)
+        val cut = moving
         out[BODY_Y] *= 1f - cut * MOVE_BODY_CUT
         out[BODY_R] *= 1f - cut * MOVE_BODY_CUT
-        out[LEAN] = out[LEAN] * (1f - cut * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive * (1f - charge)
+        out[LEAN] = out[LEAN] * (1f - cut * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
         out[TURN] *= 1f - cut * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
         springTip(out)
 
