@@ -26,6 +26,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The title screen and pause menu use the WynnOverhaul layout, with a Play Wynncraft button.
 - The main menu has five scenes you can switch between: Campfire, Snowed In, Aurora, Downpour and Dusk Dunes.
 - Vanilla buttons, sliders, checkboxes, lists and backgrounds are restyled in every vanilla screen.
+- A tabbed options screen replaces the vanilla one, with Video, Controls, Key Binds, Audio, Chat, Accessibility, Skin and More tabs. The Sodium video settings open inside the Video tab.
+- A multiplayer server list with search, ping status, icons, add, edit, delete, reorder and direct connect, plus an Authme accounts button.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

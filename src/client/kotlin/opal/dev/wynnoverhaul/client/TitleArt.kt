@@ -126,13 +126,25 @@ object CampfireArt : TitleArt("Campfire") {
         }
         ground.glow(FIRE_X, FIRE_Y + 2f, 150f, 34f, 0xFFFF9A3A.toInt(), 0.55f)
         ground.glow(FIRE_X, FIRE_Y, 70f, 16f, 0xFFFFC060.toInt(), 0.7f)
-        for (s in 0 until 9) {
-            val a = s / 9f * 2f * PI.toFloat()
-            ground.disc(FIRE_X + cos(a) * 30f, FIRE_Y + sin(a) * 6f + 2f, 3.4f, if (s % 2 == 0) 0xFF4A4C54.toInt() else 0xFF3B3D44.toInt())
-            ground.disc(FIRE_X + cos(a) * 30f, FIRE_Y + sin(a) * 6f + 1f, 2f, 0xFF63666F.toInt())
+        val stoneCount = 12
+        for (pass in 0..1) {
+            if (pass == 1) {
+                ground.poly(floatArrayOf(FIRE_X - 26f, FIRE_X + 22f, FIRE_X + 26f, FIRE_X - 22f), floatArrayOf(FIRE_Y - 2f, FIRE_Y - 8f, FIRE_Y - 3f, FIRE_Y + 3f), 0xFF3A2414.toInt())
+                ground.poly(floatArrayOf(FIRE_X - 22f, FIRE_X + 26f, FIRE_X + 22f, FIRE_X - 26f), floatArrayOf(FIRE_Y - 8f, FIRE_Y - 2f, FIRE_Y + 3f, FIRE_Y - 3f), 0xFF2E1B0F.toInt())
+            }
+            for (st in 0 until stoneCount) {
+                val ang = st / stoneCount.toFloat() * 2f * PI.toFloat() + 0.1f + (n.rand(st + 900) - 0.5f) * 0.06f
+                val front = sin(ang) >= 0f
+                if (front != (pass == 1)) continue
+                val r = if (front) 5.2f else 4.4f
+                val sx = FIRE_X + cos(ang) * 38f
+                val sy = FIRE_Y + 1f + sin(ang) * 8.5f
+                val base = if (st % 2 == 0) 0xFF595C66.toInt() else 0xFF4A4D57.toInt()
+                ground.disc(sx, sy + 1f, r, shade(base, 0.55f))
+                ground.disc(sx, sy, r, base)
+                ground.disc(sx - r * 0.25f, sy - r * 0.3f, r * 0.62f, shade(base, 1.22f))
+            }
         }
-        ground.poly(floatArrayOf(FIRE_X - 26f, FIRE_X + 22f, FIRE_X + 26f, FIRE_X - 22f), floatArrayOf(FIRE_Y - 2f, FIRE_Y - 8f, FIRE_Y - 3f, FIRE_Y + 3f), 0xFF3A2414.toInt())
-        ground.poly(floatArrayOf(FIRE_X - 22f, FIRE_X + 26f, FIRE_X + 22f, FIRE_X - 26f), floatArrayOf(FIRE_Y - 8f, FIRE_Y - 2f, FIRE_Y + 3f, FIRE_Y - 3f), 0xFF2E1B0F.toInt())
         ground.rect(300, 206, 392, 214, 0xFF2B1A0E.toInt())
         ground.rect(300, 206, 392, 207, 0xFF4A3220.toInt())
         val fg = Raster(ART_W, ART_H)
@@ -393,19 +405,35 @@ object RainArt : TitleArt("Downpour") {
             val cy = 222f + n.rand(k + 34) * 36f
             ground.glow(cx, cy, 26f + n.rand(k + 2) * 20f, 4f + n.rand(k) * 3f, 0xFF7E8CAA.toInt(), 0.7f, false)
         }
-        val ax = 470
+        val ax = 470f
         val brick = 0xFF4E5262.toInt()
-        for (col in intArrayOf(ax - 46, ax + 30)) {
-            ground.rect(col, 140, col + 16, 214, brick)
-            for (r in 0 until 14) ground.rect(col, 140 + r * 5, col + 16, 141 + r * 5, 0xFF383C48.toInt())
-            ground.rect(col, 140, col + 5, 214, shade(brick, 1.18f))
+        for (col in floatArrayOf(ax - 46f, ax + 30f)) {
+            val cx = col.toInt()
+            ground.rect(cx, 146, cx + 16, 214, brick)
+            for (r in 0 until 14) {
+                val yy = 146 + r * 5
+                ground.rect(cx, yy, cx + 16, yy + 1, 0xFF383C48.toInt())
+                val joint = cx + 4 + (r % 2) * 8
+                ground.rect(joint, yy, joint + 1, yy + 5, 0xFF383C48.toInt())
+            }
+            ground.rect(cx, 146, cx + 4, 214, shade(brick, 1.18f))
         }
-        for (k in 0 until 14) {
-            val a = PI.toFloat() * (1f - k / 13f)
-            val cx = ax - 8f + cos(a) * 38f
-            val cy = 146f - sin(a) * 34f
-            if (k in 4..9 && n.rand(k + 200) > 0.78f) continue
-            ground.rect(cx.toInt() - 4, cy.toInt() - 3, cx.toInt() + 5, cy.toInt() + 4, if (k % 2 == 0) brick else shade(brick, 0.85f))
+        val blocks = 13
+        for (k in 0 until blocks) {
+            if (k == 8 || (k == 7 && n.rand(77) > 0.4f)) continue
+            val a0 = PI.toFloat() * (1f - k / blocks.toFloat()) - 0.012f
+            val a1 = PI.toFloat() * (1f - (k + 1) / blocks.toFloat()) + 0.012f
+            val r1 = 30f
+            val r2 = 46f
+            val xs = floatArrayOf(ax + cos(a0) * r1, ax + cos(a0) * r2, ax + cos(a1) * r2, ax + cos(a1) * r1)
+            val ys = floatArrayOf(146f - sin(a0) * r1, 146f - sin(a0) * r2, 146f - sin(a1) * r2, 146f - sin(a1) * r1)
+            val tone = if (k % 2 == 0) brick else shade(brick, 0.86f)
+            ground.poly(xs, ys, tone)
+            ground.poly(floatArrayOf(xs[1], xs[2], (xs[1] + xs[2]) / 2f), floatArrayOf(ys[1], ys[2], (ys[1] + ys[2]) / 2f + 1f), shade(tone, 1.2f))
+        }
+        for (k in 0 until 7) {
+            val rx = ax + 36f + n.rand(k + 300) * 40f
+            ground.rect(rx.toInt(), 209 + (n.rand(k + 310) * 5).toInt(), rx.toInt() + 3 + (n.rand(k + 320) * 4).toInt(), 214, if (k % 2 == 0) brick else shade(brick, 0.8f))
         }
         for (k in 0 until 26) ground.disc(ax - 44f + n.rand(k + 500) * 16f, 150f + n.rand(k + 510) * 60f, 1.6f, 0xFF3C6A3A.toInt())
         val fg = Raster(ART_W, ART_H)

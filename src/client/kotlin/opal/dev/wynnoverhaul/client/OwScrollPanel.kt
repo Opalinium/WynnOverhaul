@@ -21,7 +21,8 @@ class OwScrollPanel(
 
     override fun mouseClicked(event: MouseButtonEvent, doubled: Boolean): Boolean {
         if (!isOverScrollbar(event.x(), event.y())) return false
-        return super.mouseClicked(event, doubled)
+        updateScrolling(event)
+        return true
     }
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {

@@ -15,9 +15,9 @@ object ScreenSkin {
     fun active(): Boolean {
         if (!WynnOverhaulConfig.current.customMenusEnabled) return false
         val screen: Screen = Minecraft.getInstance().gui.screen() ?: return false
-        if (screen is AbstractContainerScreen<*> || screen is OwScreen) return false
+        if (screen is AbstractContainerScreen<*>) return false
         val name = screen.javaClass.name
-        return name.startsWith("net.minecraft.") || name.startsWith("com.mojang.realmsclient.")
+        return screen is OwScreen || name.startsWith("net.minecraft.") || name.startsWith("com.mojang.realmsclient.")
     }
 
     private fun outline(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, color: Int) {

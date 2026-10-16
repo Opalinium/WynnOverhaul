@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.screen.v1.Screens
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
+import net.minecraft.client.gui.components.PlainTextButton
 import net.minecraft.client.gui.components.StringWidget
 import net.minecraft.client.gui.screens.ConnectScreen
 import net.minecraft.client.gui.screens.PauseScreen
@@ -174,7 +175,8 @@ object MenuSkin {
             }
             y += TILE_H + gap
         }
-        var sx = innerLeft
+        val smallTotal = small.size * SMALL_SIZE + (small.size - 1).coerceAtLeast(0) * GAP
+        var sx = if (kind == Kind.TITLE) innerLeft else panelX + (panelW - smallTotal) / 2
         val sy = if (kind == Kind.TITLE) height - PAD - SMALL_SIZE else panelY + panelH - PAD - SMALL_SIZE
         for (s in small) {
             s.x = sx; s.y = sy; s.w = SMALL_SIZE; s.h = SMALL_SIZE
@@ -205,7 +207,10 @@ object MenuSkin {
         val links = ArrayList<Slot>()
         for (w in widgets) {
             val text = w.message.string
-            if (text.contains("Copyright", true)) continue
+            if (text.contains("Copyright", true) || w is PlainTextButton) {
+                if (w is PlainTextButton) w.visible = false
+                continue
+            }
             if (text.contains("Realms", true)) {
                 w.visible = false
                 w.active = false
@@ -243,6 +248,7 @@ object MenuSkin {
     private fun joinWynncraft(parent: Screen) {
         val client = Minecraft.getInstance()
         val data = ServerData("Wynncraft", WYNNCRAFT_ADDRESS, ServerData.Type.OTHER)
+        data.setResourcePackStatus(ServerData.ServerPackStatus.ENABLED)
         ConnectScreen.startConnecting(parent, client, ServerAddress.parseString(WYNNCRAFT_ADDRESS), data, false, null)
     }
 
@@ -297,9 +303,16 @@ object MenuSkin {
     private fun drawSlots(graphics: GuiGraphicsExtractor, state: State, mouseX: Int, mouseY: Int) {
         val font = Minecraft.getInstance().font
         for (s in state.slots) {
+            s.widget?.let {
+                if (it.x != s.x || it.y != s.y || it.width != s.w || it.height != s.h) {
+                    it.x = s.x
+                    it.y = s.y
+                    it.setSize(s.w, s.h)
+                }
+            }
             val active = s.widget?.isActive ?: true
             val hovered = active && s.contains(mouseX.toDouble(), mouseY.toDouble())
-            val text = s.label.string
+            val text = TextClean.clean(s.label.string)
             if (s.subtle) {
                 val color = if (!active) OwTheme.TEXT_FAINT else if (hovered) OwTheme.ACCENT else OwTheme.TEXT_DIM
                 graphics.fill(s.x, s.y, s.x + s.w, s.y + s.h, OwTheme.PAGE_WASH)
