@@ -203,6 +203,7 @@ data class WynnOverhaulConfig(
     var customStationEnabled: Boolean = true,
     var customMerchantEnabled: Boolean = true,
     var customMountMenuEnabled: Boolean = true,
+    var customMenusEnabled: Boolean = true,
 
     var customHudEnabled: Boolean = false,
 

@@ -901,6 +901,11 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
                 config.customMerchantEnabled = it
             }
 
+            header("Menus")
+            checkbox("Custom title and pause menus", "Restyles the main menu and the game menu in the WynnOverhaul layout. Takes effect the next time the menu opens.", config.customMenusEnabled) {
+                config.customMenusEnabled = it
+            }
+
             header("Mounts")
             checkbox("Custom mount menu", "Opens the mount settings menu in the WynnOverhaul layout.", config.customMountMenuEnabled) {
                 config.customMountMenuEnabled = it

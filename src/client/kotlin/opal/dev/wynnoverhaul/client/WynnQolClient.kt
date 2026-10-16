@@ -38,6 +38,7 @@ class WynnQolClient : ClientModInitializer {
         WynnOverhaulInventory.register()
         CharacterInfo.register()
         MountSettingsInterceptor.register()
+        MenuSkin.register()
         CustomContainerInterceptor.register()
         WynnQuestCompletionTracker.register()
         WynnLevelUpToastOverride.register()
