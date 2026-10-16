@@ -8,7 +8,57 @@ import net.minecraft.network.chat.Component
 object WynnQuestCompletionTracker {
     fun register() {
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay -> if (overlay) true else onMessage(message) }
-        ClientTickEvents.END_CLIENT_TICK.register { flushDungeon(false) }
+        ClientTickEvents.END_CLIENT_TICK.register {
+            flushDungeon(false)
+            flushRaid(false)
+        }
+    }
+
+    private class RaidRun(val suppress: Boolean, val startedAt: Long) {
+        var time = ""
+        var pulls = ""
+        var aspectPulls = ""
+        var lastAt = startedAt
+
+        fun expired(now: Long): Boolean = now - lastAt >= RAID_WINDOW_MILLIS || now - startedAt >= RAID_MAX_MILLIS
+    }
+
+    private var raid: RaidRun? = null
+
+    private fun flushRaid(force: Boolean) {
+        val run = raid ?: return
+        if (!force && !run.expired(System.currentTimeMillis())) return
+        raid = null
+        if (!run.suppress) return
+        val detail = listOfNotNull(
+            run.pulls.takeIf { it.isNotEmpty() }?.let { "$it pulls" },
+            run.aspectPulls.takeIf { it.isNotEmpty() }?.let { "$it aspect pulls" },
+        ).joinToString(", ")
+        val subtitle = if (run.time.isEmpty()) "Raid" else "Time ${run.time}"
+        WynnOverhaulToastQueue.show(WynnOverhaulToastQueue.make(WynnOverhaulToastQueue.Kind.QUEST, "Raid Completed", subtitle, TOAST_COLOR, detail))
+    }
+
+    private fun onRaidLines(lines: List<String>): Boolean? {
+        val now = System.currentTimeMillis()
+        var open = raid
+        if (open != null && open.expired(now)) {
+            flushRaid(true)
+            open = null
+        }
+        if (open == null) {
+            if (lines.none { RAID_DONE.matches(it) }) return null
+            open = RaidRun(WynnOverhaulConfig.current.questCompletionToastEnabled, now)
+            raid = open
+        } else if (lines.isNotEmpty() && lines.none { RAID_NOISE.containsMatchIn(it) }) {
+            return null
+        }
+        open.lastAt = now
+        for (line in lines) {
+            RAID_TIME.find(line)?.let { open.time = it.groupValues[1] }
+            RAID_PULLS.find(line)?.let { open.pulls = it.groupValues[1] }
+            RAID_ASPECT.find(line)?.let { open.aspectPulls = it.groupValues[1] }
+        }
+        return !open.suppress
     }
 
     private class DungeonRun(val name: String, val suppress: Boolean, val startedAt: Long) {
@@ -44,6 +94,7 @@ object WynnQuestCompletionTracker {
     private fun onMessage(message: Component): Boolean {
         if (!WynnOverhaulGate.inGame) return true
         val lines = TextClean.clean(message.string).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        onRaidLines(lines)?.let { return it }
         if (lines.isEmpty()) return true
 
         val open = dungeon
@@ -156,6 +207,15 @@ object WynnQuestCompletionTracker {
     private val DUNGEON_XP = Regex("""^(\d[\d,]*) XP$""", RegexOption.IGNORE_CASE)
     private const val DUNGEON_WINDOW_MILLIS = 900L
     private const val DUNGEON_MAX_MILLIS = 4000L
+    private const val RAID_WINDOW_MILLIS = 900L
+    private const val RAID_MAX_MILLIS = 4000L
+    private val RAID_DONE = Regex("""^Raid Completed!$""")
+    private val RAID_TIME = Regex("""Time Elapsed:\s*(\d+:\d+(?::\d+)?)""")
+    private val RAID_PULLS = Regex("""(\d[\d,.]*[kKmM]?) Reward Pulls""")
+    private val RAID_ASPECT = Regex("""(\d[\d,.]*[kKmM]?) Aspect Pulls""")
+    private val RAID_NOISE = Regex(
+        """Time Elapsed|Statistics|Rewards|\d%\)|Hover for more|Pulls|Experience|promotion|Division|Company|✮|^[A-Z][A-Za-z ]+ [IVX]+$|^\[\+.*]$""",
+    )
     private const val MAX_DETAIL = 60
     private const val OBJECTIVE_FINISHED = "Objective Finished"
     private val MEMBER_FINISHED = Regex("""^(\w{3,16}) has finished their weekly objective\.?$""")
