@@ -44,8 +44,14 @@ object QuickCast {
             pending.clear()
             return
         }
+        val armed = WynnGearKind.isWeapon(player.mainHandItem)
+        if (!armed) {
+            queue.clear()
+            pending.clear()
+        }
         keys.forEachIndexed { i, key ->
             while (key.consumeClick()) {
+                if (!armed) continue
                 val inFlight = pending.size + if (queue.isNotEmpty()) 1 else 0
                 if (inFlight < MAX_QUEUED) pending.addLast(i)
             }

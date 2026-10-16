@@ -46,6 +46,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Bank deposits only jump to bank pages that exist and are unlocked.
 - Dialogue choices follow scrolling correctly, long options keep their full text, and no stray 0 shows when a dialogue ends.
 - The main menu figure keeps your skin instead of falling back to the default.
+- Auto attack and quick spells no longer fire without a weapon in hand.
 
 ## 1.5.0 - 2026-10-09
 
