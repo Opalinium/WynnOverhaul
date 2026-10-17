@@ -23,8 +23,10 @@ class WynnQuestLogHudElement : HudElement {
     private fun render(graphics: GuiGraphicsExtractor) {
         if (!WynnOverhaulGate.inGame || !WynnOverhaulConfig.current.questLogHudEnabled) return
         val title = WynnScoreboardTracker.sidebarTitle
-        val party = WynnScoreboardTracker.party?.takeUnless { WynnOverhaulConfig.current.partyHudEnabled }
-        val lines = if (party == null) WynnScoreboardTracker.sidebarLines else WynnScoreboardTracker.sidebarLines + party.rawLines
+        val panels = WynnOverhaulConfig.current.partyHudEnabled
+        val lines = WynnScoreboardTracker.sidebarLines +
+            (WynnScoreboardTracker.party?.takeUnless { panels }?.rawLines.orEmpty()) +
+            (WynnScoreboardTracker.war?.takeUnless { panels }?.rawLines.orEmpty())
         if (title.isEmpty() && lines.isEmpty()) return
 
         val font = Minecraft.getInstance().font

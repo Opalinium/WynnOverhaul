@@ -1390,7 +1390,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             ) { config.questLogHudEnabled = it }
             checkbox(
                 "Show party panel",
-                "Lists your party members in their own panel instead of inside the quest log, with their health, level and whether they are dead or offline.",
+                "Lists your party members, and the players in a guild war you are fighting, in their own panels instead of inside the quest log, with their health, level and whether they are dead or offline.",
                 config.partyHudEnabled,
             ) { config.partyHudEnabled = it }
             dropdown(

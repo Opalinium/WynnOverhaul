@@ -14,6 +14,7 @@ object WynnScoreboardTracker {
     data class PartyMember(
         val name: String,
         val level: Int?,
+        val tag: String?,
         val health: Int?,
         val healthColor: Int?,
         val dead: Boolean,
@@ -21,12 +22,15 @@ object WynnScoreboardTracker {
         val fraction: Float? = null,
     )
 
-    data class Party(val level: Int?, val members: List<PartyMember>, val rawLines: List<String>)
+    data class Party(val level: Int?, val members: List<PartyMember>, val rawLines: List<String>, val title: String = "Party")
 
     var current: Tracked? = null
         private set
 
     var party: Party? = null
+        private set
+
+    var war: Party? = null
         private set
 
     var rawLines: List<Component> = emptyList()
@@ -52,6 +56,7 @@ object WynnScoreboardTracker {
             lastTitle = null
             current = null
             party = null
+            war = null
             rawLines = emptyList()
             sidebarText = ""
             sidebarTitle = ""
@@ -72,7 +77,8 @@ object WynnScoreboardTracker {
         rawLines = lines
         val allTexts = lines.map { clean(it.string) }
         val partyEnd = extractParty(lines, allTexts)
-        val texts = if (party == null) allTexts else allTexts.mapIndexed { index, text -> if (index in partyEnd) "" else text }
+        val warEnd = extractWar(lines, allTexts)
+        val texts = if (party == null && war == null) allTexts else allTexts.mapIndexed { index, text -> if (index in partyEnd || index in warEnd) "" else text }
         sidebarText = joinWrapped(texts)
 
         val rawTitle = clean(objective.displayName.string)
@@ -107,26 +113,36 @@ object WynnScoreboardTracker {
     }
 
     private fun extractParty(lines: List<Component>, texts: List<String>): IntRange {
-        val headerIndex = texts.indexOfFirst { PARTY_HEADER.matches(it) }
-        if (headerIndex < 0) {
-            party = null
-            return IntRange.EMPTY
-        }
-        val level = PARTY_HEADER.find(texts[headerIndex])!!.groupValues[1].toIntOrNull()
+        val section = extractSection(lines, texts, PARTY_HEADER, "Party")
+        party = section?.first
+        return section?.second ?: IntRange.EMPTY
+    }
+
+    private fun extractWar(lines: List<Component>, texts: List<String>): IntRange {
+        val section = extractSection(lines, texts, WAR_HEADER, "War")
+        war = section?.first
+        return section?.second ?: IntRange.EMPTY
+    }
+
+    private fun extractSection(lines: List<Component>, texts: List<String>, header: Regex, title: String): Pair<Party, IntRange>? {
+        val headerIndex = texts.indexOfFirst { header.matches(it) }
+        if (headerIndex < 0) return null
+        val level = header.find(texts[headerIndex])!!.groupValues.getOrNull(1)?.toIntOrNull()
         var end = headerIndex + 1
         val members = ArrayList<PartyMember>()
         while (end < texts.size && texts[end].startsWith("-")) {
             members.add(parseMember(lines[end], texts[end]))
             end++
         }
-        party = Party(level, members, texts.subList(headerIndex, end).toList())
-        return headerIndex until end
+        return Party(level, members, texts.subList(headerIndex, end).toList(), title) to (headerIndex until end)
     }
 
     private fun parseMember(line: Component, text: String): PartyMember {
         val match = MEMBER.matchEntire(text)
         val name = match?.groupValues?.get(2)?.trim() ?: text.removePrefix("-").trim()
-        val level = match?.groupValues?.get(3)?.toIntOrNull()
+        val badge = match?.groupValues?.get(3)
+        val level = badge?.toIntOrNull()
+        val tag = badge?.takeIf { level == null }
         val health = match?.let { DIGITS.find(it.groupValues[1])?.value?.toIntOrNull() }
         var color: Int? = null
         var struck = false
@@ -150,7 +166,7 @@ object WynnScoreboardTracker {
             java.util.Optional.empty()
         }, Style.EMPTY)
         val fraction = if (match != null && filled + empty > 0) filled.toFloat() / (filled + empty) else null
-        return PartyMember(name, level, health, color, struck || health == 0, match != null, if (struck || health == 0) 0f else fraction)
+        return PartyMember(name, level, tag, health, color, struck || health == 0, match != null, if (struck || health == 0) 0f else fraction)
     }
 
     private fun clean(text: String): String {
@@ -175,7 +191,8 @@ object WynnScoreboardTracker {
     private const val SIDEBAR_SPACER = 'À'
     private val HEADER_PATTERN = Regex("^Tracked (.+):$")
     private val PARTY_HEADER = Regex("""^Party:?(?:\s*\[Lv\.?\s*(\d+)])?$""")
-    private val MEMBER = Regex("""^-\s*\[([^\]]*)]\s*(.+?)\s*\[(\d+)]$""")
+    private val WAR_HEADER = Regex("""^War:?$""")
+    private val MEMBER = Regex("""^-\s*\[([^\]]*)]\s*(.+?)\s*\[([^\]]+)]$""")
     private val DIGITS = Regex("""\d+""")
     private val SPACER_PATTERN = Regex("""[^a-zA-Z\[\d-].*""")
     private val SERVER_BRAND_PATTERN = Regex("""(?i)^([a-z0-9-]+\.)*wynncraft\.(com|net)$""")

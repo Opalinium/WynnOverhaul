@@ -11,7 +11,7 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sin
 
-class WynnPartyHudElement : HudElement {
+class WynnPartyHudElement(private val id: String = "party", private val section: () -> WynnScoreboardTracker.Party? = { WynnScoreboardTracker.party }) : HudElement {
     private var loggedError = false
     private val palette = LinkedHashMap<String, Int>()
     private val shown = HashMap<String, Float>()
@@ -31,7 +31,7 @@ class WynnPartyHudElement : HudElement {
     private fun render(graphics: GuiGraphicsExtractor) {
         val config = WynnOverhaulConfig.current
         if (!WynnOverhaulGate.inGame || !config.partyHudEnabled) return
-        val party = WynnScoreboardTracker.party
+        val party = section()
         if (party == null || party.members.isEmpty()) {
             palette.clear()
             shown.clear()
@@ -53,7 +53,7 @@ class WynnPartyHudElement : HudElement {
         val rows = party.members.map { member ->
             Row(member, nameColor(member, config.partyNameColors, me), distanceText(client, member, me, config.partyShowDistance))
         }
-        var contentW = font.width("PARTY") + font.width(sub) + 32
+        var contentW = font.width(party.title.uppercase()) + font.width(sub) + 32
         for (row in rows) {
             contentW = maxOf(
                 contentW,
@@ -61,10 +61,10 @@ class WynnPartyHudElement : HudElement {
             )
         }
         val contentH = PAD * 2 + font.lineHeight + 3 + HEADER_GAP + rows.size * rowH
-        val (boxW, boxH) = HudLayoutManager.stableSize(ID, maxOf(contentW, MIN_W) + PAD * 2, contentH)
+        val (boxW, boxH) = HudLayoutManager.stableSize(id, maxOf(contentW, MIN_W) + PAD * 2, contentH)
 
-        val scale = HudLayoutManager.scale(ID)
-        val (baseX, baseY) = HudLayoutManager.resolve(ID, graphics.guiWidth(), graphics.guiHeight())
+        val scale = HudLayoutManager.scale(id)
+        val (baseX, baseY) = HudLayoutManager.resolve(id, graphics.guiWidth(), graphics.guiHeight())
 
         val scaled = scale != 1f
         if (scaled) {
@@ -76,7 +76,7 @@ class WynnPartyHudElement : HudElement {
         val oy = if (scaled) 0 else baseY
 
         OwTheme.hudPanel(graphics, ox, oy, boxW, boxH)
-        HudStyle.header(graphics, font, ox + PAD, oy + PAD, boxW - PAD * 2, "Party", sub)
+        HudStyle.header(graphics, font, ox + PAD, oy + PAD, boxW - PAD * 2, party.title, sub)
         var y = oy + PAD + font.lineHeight + 3 + HEADER_GAP
         val left = ox + PAD + 2
         val right = ox + boxW - PAD
@@ -158,10 +158,9 @@ class WynnPartyHudElement : HudElement {
     private fun healthText(member: WynnScoreboardTracker.PartyMember): String =
         member.health?.takeIf { member.online && !member.dead }?.toString() ?: ""
 
-    private fun levelText(member: WynnScoreboardTracker.PartyMember): String = member.level?.let { "[$it]" } ?: ""
+    private fun levelText(member: WynnScoreboardTracker.PartyMember): String = (member.level?.toString() ?: member.tag)?.let { "[$it]" } ?: ""
 
     private companion object {
-        const val ID = "party"
         const val PAD = 4
         const val HEADER_GAP = 2
         const val MIN_W = 130

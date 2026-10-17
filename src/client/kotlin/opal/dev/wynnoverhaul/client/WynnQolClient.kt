@@ -124,6 +124,10 @@ class WynnQolClient : ClientModInitializer {
             HudVisibility.hideable(WynnPartyHudElement()),
         )
         HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "war"),
+            HudVisibility.hideable(WynnPartyHudElement("war") { WynnScoreboardTracker.war }),
+        )
+        HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "pins"),
             HudVisibility.hideable(PinListHudElement()),
         )
@@ -199,6 +203,7 @@ class WynnQolClient : ClientModInitializer {
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("guild", "Guild", "TOP_LEFT", defaultOffsetY = 44, fallbackW = 160, fallbackH = 26))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("quest_log", "Quest Log", "TOP_RIGHT", fallbackW = 260, fallbackH = 80))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("party", "Party", "TOP_RIGHT", defaultOffsetY = 400, fallbackW = 150, fallbackH = 70))
+        HudLayoutManager.register(HudLayoutManager.HudElementSpec("war", "War", "TOP_RIGHT", defaultOffsetY = 500, fallbackW = 150, fallbackH = 70))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("pins", "Waypoints", "TOP_LEFT", defaultOffsetY = 190, fallbackW = 170, fallbackH = 60))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("compass", "Compass", "TOP_LEFT", defaultOffsetX = 4, defaultOffsetY = 100, fallbackW = 300, fallbackH = 58))
         HudLayoutManager.register(HudLayoutManager.HudElementSpec("chat", "Chat", "BOTTOM_LEFT", defaultOffsetX = 0, defaultOffsetY = 40, fallbackW = 320, fallbackH = 180, barStretch = true))

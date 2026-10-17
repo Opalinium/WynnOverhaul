@@ -31,6 +31,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Your last level, class and equipment appear on the main menu figure, with armor and weapon models taken from the Wynncraft resource pack.
 - A toast appears when you complete a raid.
 - The compass has a footer with your coordinates and the Wynncraft world.
+- Players in a guild war show in their own panel, read from the War scoreboard section.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
