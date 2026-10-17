@@ -37,8 +37,13 @@ class PotionEffectHudElement : HudElement {
                 if (instance.showIcon()) rows.add(formatEffectRow(instance))
             }
         }
+        val listed = HashSet<String>()
+        for (effect in WynnStatusEffectTracker.effects) {
+            listed.add(effect.name.lowercase())
+            rows.add(formatListedRow(effect))
+        }
         for (buff in WynnBuffTracker.active) {
-            rows.add(formatBuffRow(buff))
+            if (buff.name.lowercase() !in listed) rows.add(formatBuffRow(buff))
         }
         if (rows.isEmpty()) {
             order.clear()
@@ -113,6 +118,15 @@ class PotionEffectHudElement : HudElement {
         return Row("buff:${buff.name}", "$sign${buff.amount} ${buff.name}", formatDuration(buff.remainingSeconds), color, null, buff.amount < 0, buff.remainingSeconds)
     }
 
+    private fun formatListedRow(effect: WynnStatusEffectTracker.Effect): Row {
+        val harmful = effect.modifier.startsWith("-") || effect.name.lowercase() in DEBUFF_NAMES
+        val color = if (harmful) COLOR_HARMFUL else COLOR_BENEFICIAL
+        val label = if (effect.modifier.isEmpty()) effect.name else "${effect.modifier} ${effect.name}"
+        val seconds = if (effect.indefinite) -1 else effect.displaySeconds()
+        val timer = if (effect.indefinite) INFINITE_SYMBOL else formatDuration(seconds)
+        return Row("listed:${effect.name}", label, timer, color, null, harmful, seconds)
+    }
+
     private fun romanNumeral(amplifier: Int): String = ROMAN.getOrElse(amplifier) { (amplifier + 1).toString() }
 
     private fun formatDuration(totalSeconds: Int): String {
@@ -133,6 +147,7 @@ class PotionEffectHudElement : HudElement {
         val COLOR_BENEFICIAL = OwTheme.GOOD
         val COLOR_HARMFUL = OwTheme.BAD
         val COLOR_NEUTRAL = OwTheme.TEXT_DIM
+        val DEBUFF_NAMES = setOf("poison", "wither", "weakness", "weakened", "slowness", "blindness", "nausea", "hunger", "bleed", "bleeding", "burning", "frozen", "cursed", "curse", "stunned", "silenced", "vulnerable", "exposed", "marked", "rooted", "confused", "fatigue", "mining fatigue", "darkness", "levitation", "slow", "snared", "shocked")
         val ROMAN = listOf("", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X")
     }
 }

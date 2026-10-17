@@ -51,6 +51,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Dialogue choices follow scrolling correctly, long options keep their full text, and no stray 0 shows when a dialogue ends.
 - The main menu figure keeps your skin instead of falling back to the default.
 - Auto attack and quick spells no longer fire without a weapon in hand.
+- Buffs and debuffs are read from the tab Status Effects list, so debuffs show.
 
 ## 1.5.0 - 2026-10-09
 
