@@ -5,6 +5,7 @@ internal object LocoSignals {
         "k", "wAir", "wRise", "wFall", "wLand", "wMove", "wSprint", "wClimb", "climbMove", "wSwim", "wTread", "wCrawl",
         "wRide", "wFly", "wUse", "wBlock", "wHurt", "wDead", "wCrouch", "pace", "sp", "boost", "vanillaSp", "phase",
         "gait", "gaitOpp", "age", "grounded", "turnRate", "launchAge", "leadRight", "launch", "moveFwd", "moveSide",
+        "claimed", "stroke",
     )
     const val K = 0
     const val W_AIR = 1
@@ -40,13 +41,15 @@ internal object LocoSignals {
     const val LAUNCH = 31
     const val MOVE_FWD = 32
     const val MOVE_SIDE = 33
+    const val CLAIMED = 34
+    const val STROKE = 35
     val COUNT = NAMES.size
 }
 
 internal object LocoTargets {
     val PARTS = listOf("head", "rightArm", "leftArm", "rightLeg", "leftLeg", "torso", "rig")
     val PART_AXES = listOf("x", "y", "z", "posY")
-    val TORSO_AXES = listOf("pitch", "roll", "yaw", "shift")
+    val TORSO_AXES = listOf("pitch", "roll", "yaw", "shift", "hipYaw", "hipPitch", "hipRoll", "curl")
     val RIG_AXES = listOf("drop", "lift", "rootF", "footLF", "footLS", "footLU", "footRF", "footRS", "footRU")
     const val AXIS_STRIDE = 16
     const val TORSO = 5

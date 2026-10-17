@@ -18,6 +18,7 @@ import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 
 object LocomotionAnimations {
@@ -33,8 +34,9 @@ object LocomotionAnimations {
     private const val STRIDE_K_MIN = 2f
     private const val STRIDE_K_MAX = 14f
     private const val STRIDE_SMOOTH = 0.15f
-    private const val GAIT_DUTY_MIN = 0.5f
+    private const val GAIT_DUTY_MIN = 0.3f
     private const val GAIT_TRAVEL_MAX = 20f
+    private const val SWING_ARC_SKEW = 0.8f
     private const val LAND_MIN_FALL = 0.12f
     private const val LAND_FALL_SPAN = 0.55f
     private const val LAND_TAU = 0.2f
@@ -72,18 +74,18 @@ object LocomotionAnimations {
     private const val ELBOW_REST = 0.1f
     private const val ELBOW_FORWARD = 0.35f
     private const val ELBOW_LIMIT = 0.5f
+    private const val ELBOW_RUN = 0.7f
+    private const val ELBOW_RUN_EXTRA = 0.8f
     private const val PIVOT_LIMIT = 3f
     private const val JOINT_SLACK = 0.6f
     private const val ARM_SLACK = 0.9f
-    private const val PITCH_LIMIT = 0.5f
-    private const val ROLL_LIMIT = 0.16f
-    private const val YAW_LIMIT = 0.2f
+    private const val PITCH_LIMIT = 0.9f
+    private const val ROLL_LIMIT = 0.3f
+    private const val YAW_LIMIT = 0.45f
+    private const val HIP_YAW_LIMIT = 0.4f
+    private const val HIP_TILT_LIMIT = 0.3f
     private const val LIFT_LIMIT = 1.4f
     private const val DIP_LIMIT = 2.6f
-    private const val HEAD_COUNTER = 0.7f
-    private const val HEAD_ROLL_COUNTER = 0.6f
-    private const val ARM_PITCH_SHARE = 0.5f
-    private const val SHOULDER_HALF = 5f
     private const val HEAD_PITCH_LIMIT = 0.4f
     private const val HEAD_YAW_LIMIT = 0.3f
     private const val HEAD_ROLL_LIMIT = 0.2f
@@ -143,6 +145,8 @@ object LocomotionAnimations {
         var wHurt = 0f
         var wDead = 0f
         var wCrouch = 0f
+        var wClaim = 0f
+        var wStroke = 0f
         var lastBodyRot = 0f
         var rotSeen = false
         var turnRate = 0f
@@ -179,7 +183,7 @@ object LocomotionAnimations {
 
     private fun clamp01(x: Float): Float = x.coerceIn(0f, 1f)
 
-    private fun step(body: Body, state: AvatarRenderState, config: WynnOverhaulConfig) {
+    private fun step(body: Body, state: AvatarRenderState, config: WynnOverhaulConfig, claimed: Boolean, stroking: Boolean) {
         val now = System.nanoTime()
         val dt = if (body.lastNanos == 0L) 0f else ((now - body.lastNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
         body.lastNanos = now
@@ -244,6 +248,8 @@ object LocomotionAnimations {
         body.wRide = approach(body.wRide, if (state.isPassenger) 1f else 0f, a)
         body.wFly = approach(body.wFly, if (state.isFallFlying) 1f else 0f, a)
         body.wCrouch = approach(body.wCrouch, if (state.isCrouching) 1f else 0f, a)
+        body.wClaim = approach(body.wClaim, if (claimed) 1f else 0f, a)
+        body.wStroke = approach(body.wStroke, if (stroking) 1f else 0f, a)
         body.wUse = approach(body.wUse, if (body.useKind == USE_CONSUME) 1f else 0f, slow)
         body.wBlock = approach(body.wBlock, if (body.useKind == USE_BLOCK) 1f else 0f, a)
         body.wHurt = approach(body.wHurt, if (config.locomotionHurt) body.hurt else 0f, a * 2f)
@@ -255,12 +261,20 @@ object LocomotionAnimations {
         var roll = 0f
         var yaw = 0f
         var shift = 0f
+        var hipYaw = 0f
+        var hipPitch = 0f
+        var hipRoll = 0f
+        var curl = 0f
 
         fun reset() {
             pitch = 0f
             roll = 0f
             yaw = 0f
             shift = 0f
+            hipYaw = 0f
+            hipPitch = 0f
+            hipRoll = 0f
+            curl = 0f
         }
     }
 
@@ -351,50 +365,32 @@ object LocomotionAnimations {
         val pitch = t.pitch.coerceIn(-PITCH_LIMIT, PITCH_LIMIT)
         val roll = t.roll.coerceIn(-ROLL_LIMIT, ROLL_LIMIT)
         val yaw = t.yaw.coerceIn(-YAW_LIMIT, YAW_LIMIT)
+        val hipYaw = t.hipYaw.coerceIn(-HIP_YAW_LIMIT, HIP_YAW_LIMIT)
+        val hipPitch = t.hipPitch.coerceIn(-HIP_TILT_LIMIT, HIP_TILT_LIMIT)
+        val hipRoll = t.hipRoll.coerceIn(-HIP_TILT_LIMIT, HIP_TILT_LIMIT)
         val shift = t.shift.coerceIn(-LIFT_LIMIT, DIP_LIMIT)
-        val cp = cos(pitch)
-        val sp = sin(pitch)
-        val cr = cos(roll)
-        val sr = sin(roll)
-        val trunk = 12f
-        val shoulder = 10f
-        val trunkDx = trunk * sr
-        val trunkDy = trunk * (1f - cp * cr) + shift
-        val trunkDz = -trunk * sp
-        val armDx = shoulder * sr
-        val armDy = shoulder * (1f - cp * cr) + shift
-        val armDz = -shoulder * sp
-
-        model.body.xRot += pitch
-        model.body.yRot += yaw
-        model.body.zRot += roll
-        model.body.x += trunkDx
-        model.body.y += trunkDy
-        model.body.z += trunkDz
-        model.head.xRot -= pitch * HEAD_COUNTER
-        model.head.yRot -= yaw * HEAD_COUNTER
-        model.head.zRot -= roll * HEAD_ROLL_COUNTER
-        model.head.x += trunkDx
-        model.head.y += trunkDy
-        model.head.z += trunkDz
-
-        val swing = 1f - cos(yaw)
-        val depth = sin(yaw) * SHOULDER_HALF
-        model.rightArm.x += armDx + swing * SHOULDER_HALF
-        model.rightArm.y += armDy
-        model.rightArm.z += armDz + depth
-        model.leftArm.x += armDx - swing * SHOULDER_HALF
-        model.leftArm.y += armDy
-        model.leftArm.z += armDz - depth
-        if (armsFree) {
-            model.rightArm.xRot += pitch * ARM_PITCH_SHARE
-            model.leftArm.xRot += pitch * ARM_PITCH_SHARE
-            model.rightArm.yRot += yaw
-            model.leftArm.yRot += yaw
+        val share = Trunk.PELVIS_SHARE
+        Trunk.apply(
+            model, hipYaw, hipPitch + pitch * share, hipRoll + roll * share,
+            yaw - hipYaw, pitch * (1f - share) + t.curl, roll * (1f - share), !armsFree,
+        )
+        if (shift != 0f) {
+            model.body.y += shift
+            model.head.y += shift
+            model.rightArm.y += shift
+            model.leftArm.y += shift
         }
+        model.body.yScale = if (shift < 0f) 1f - shift / 12f else 1f
+    }
 
-        val lift = -shift
-        model.body.yScale = if (lift > 0f) 1f + lift / trunk else 1f
+    @JvmStatic
+    fun legAuthority(state: AvatarRenderState): Float {
+        val body = bodies.get(state.id)
+        if (body == null || System.nanoTime() - body.seenNanos > STALE_NANOS) {
+            return if (state.isPassenger || state.isFallFlying || state.isVisuallySwimming || state.isInWater) 0f else 1f
+        }
+        val away = max(max(body.wAir, body.wRide), max(max(body.wSwim, body.wClimb), max(body.wFly, max(body.wTread, body.wCrouch))))
+        return clamp01(1f - away)
     }
 
     @JvmStatic
@@ -405,6 +401,7 @@ object LocomotionAnimations {
     fun apply(model: HumanoidModel<*>, humanoid: HumanoidRenderState) {
         val state = humanoid as? AvatarRenderState ?: return
         applyLayers(model, state)
+        Trunk.flush(model)
         RigLegs.flush(model, state.id, 1f, 0f, 0f)
     }
 
@@ -445,7 +442,7 @@ object LocomotionAnimations {
             clearBends(model)
             return
         }
-        step(body, state, config)
+        step(body, state, config, armsClaimed, WeaponAnimations.swinging(state))
         prune()
 
         val k = MASTER
@@ -472,8 +469,8 @@ object LocomotionAnimations {
         submitPose(state, body, submitGait(state, body, style, grounded, phase))
 
         clampParts(model, armsFree, body.wClimb > 0.3f)
-        applyTorso(model, armsFree)
         guardJoints(model, armsFree)
+        applyTorso(model, armsFree)
         setBends(model, state.id, body, armsFree, owned)
     }
 
@@ -493,9 +490,11 @@ object LocomotionAnimations {
             out[1] = 0f
         } else {
             val r = (if (q > 0.5f) q - 0.5f - half else q + 0.5f - half) / (1f - duty)
-            val s = r * r * (3f - 2f * r)
-            out[0] = travel * (s - 0.5f)
-            out[1] = lift * sin(PI.toFloat() * r)
+            val slope = -travel * (1f - duty) / duty
+            val r2 = r * r
+            val r3 = r2 * r
+            out[0] = travel * 0.5f * (-(2f * r3 - 3f * r2 + 1f) + (-2f * r3 + 3f * r2)) + slope * ((r3 - 2f * r2 + r) + (r3 - r2))
+            out[1] = lift * sin(PI.toFloat() * r.pow(SWING_ARC_SKEW))
         }
     }
 
@@ -529,7 +528,7 @@ object LocomotionAnimations {
         val rightLift = footStep[1]
         swingOffset(phase + PI.toFloat(), duty, travel, lift, footStep)
         RigLegs.submitGait(
-            state.id, weight, rigDrop,
+            state.id, weight, torso.hipYaw.coerceIn(-HIP_YAW_LIMIT, HIP_YAW_LIMIT), rigDrop,
             footStep[0] * df, footStep[0] * ds, footStep[1],
             rightOffset * df, rightOffset * ds, rightLift,
         )
@@ -570,7 +569,11 @@ object LocomotionAnimations {
                 0 -> torso.pitch
                 1 -> torso.roll
                 2 -> torso.yaw
-                else -> torso.shift
+                3 -> torso.shift
+                4 -> torso.hipYaw
+                5 -> torso.hipPitch
+                6 -> torso.hipRoll
+                else -> torso.curl
             }
         }
         val p = partOf(model, part)
@@ -594,7 +597,11 @@ object LocomotionAnimations {
                 0 -> torso.pitch = value
                 1 -> torso.roll = value
                 2 -> torso.yaw = value
-                else -> torso.shift = value
+                3 -> torso.shift = value
+                4 -> torso.hipYaw = value
+                5 -> torso.hipPitch = value
+                6 -> torso.hipRoll = value
+                else -> torso.curl = value
             }
             return
         }
@@ -649,6 +656,8 @@ object LocomotionAnimations {
         e[LocoSignals.LAUNCH] = clamp01(1f - body.launchAge / LAUNCH_SECONDS)
         e[LocoSignals.MOVE_FWD] = body.moveFwd
         e[LocoSignals.MOVE_SIDE] = body.moveSide
+        e[LocoSignals.CLAIMED] = body.wClaim
+        e[LocoSignals.STROKE] = body.wStroke
         System.arraycopy(style.values, 0, e, LocoSignals.COUNT, style.values.size)
         for (s in loco.states) {
             if (!toggleOn(config, s.toggle)) continue
@@ -711,10 +720,12 @@ object LocomotionAnimations {
         return bend
     }
 
-    private fun elbow(arm: ModelPart, armsFree: Boolean): Float {
+    private fun elbow(arm: ModelPart, armsFree: Boolean, body: Body): Float {
         if (!armsFree) return 0f
         val forward = max(0f, -arm.xRot)
-        return -(ELBOW_REST + ELBOW_FORWARD * forward).coerceIn(0f, ELBOW_LIMIT)
+        val run = body.wSprint * body.wMove
+        val flex = ELBOW_REST + ELBOW_FORWARD * forward + ELBOW_RUN * run
+        return -flex.coerceIn(0f, ELBOW_LIMIT + ELBOW_RUN_EXTRA * run)
     }
 
     private fun setBends(model: HumanoidModel<*>, id: Int, body: Body, armsFree: Boolean, owned: Boolean) {
@@ -726,8 +737,8 @@ object LocomotionAnimations {
             rKnee = approach(rKnee, RigLegs.kneeRight(id), rig)
             lKnee = approach(lKnee, RigLegs.kneeLeft(id), rig)
         }
-        val rElbow = if (owned) combatElbow(model.rightArm, true) else elbow(model.rightArm, armsFree)
-        val lElbow = if (owned) combatElbow(model.leftArm, false) else elbow(model.leftArm, armsFree)
+        val rElbow = if (owned) combatElbow(model.rightArm, true) else elbow(model.rightArm, armsFree, body)
+        val lElbow = if (owned) combatElbow(model.leftArm, false) else elbow(model.leftArm, armsFree, body)
         setBend(model.rightLeg, rKnee, stamp)
         setBend(model.leftLeg, lKnee, stamp)
         setBend(model.rightArm, rElbow, stamp)

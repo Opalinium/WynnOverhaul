@@ -34,23 +34,25 @@ Each channel is a list of `[time, value]` points. Time runs from 0 to 1 and must
 | --- | --- |
 | `pitch`, `across`, `abduct` | Main arm angles |
 | `offPitch`, `offAcross`, `offAbduct` | Off arm angles |
-| `turn` | Torso yaw |
+| `turn` | Chest yaw, the line of the shoulders |
 | `reach` | Hand push forward and back |
 | `headA`, `headY` | Weapon tip pitch and yaw |
 | `twist` | Weapon roll |
 | `grip` | 0 one handed, 1 two handed |
-| `lean` | Torso lean about the hips |
-| `bodyY`, `bodyR` | Torso twist and roll on top of `turn` |
-| `hipY` | Pelvis yaw. The hips and the feet point along it, so the legs follow a twist instead of staying square to the camera |
+| `lean` | Forward lean of the chest. The pelvis tilts a third of it and the spine curls the rest |
+| `bodyY`, `bodyR` | Extra chest twist and side bend on top of `turn` and `lean` |
+| `hipY` | Pelvis yaw. The hips, the feet and the lower torso point along it, and the spine twists between it and `turn`, so the hips and the shoulders can move on their own timing |
 | `rootF`, `rootS`, `rootH` | Move the whole body forward, to the left and down, in pixels |
 | `footLF`, `footLS`, `footLU` | Left foot target: forward, to the left and up off the ground, in pixels from the standing stance |
 | `footRF`, `footRS`, `footRU` | The same for the right foot |
+
+The torso is a pelvis with a spine on top. The torso mesh bends and twists between the hips and the shoulders the way the limbs bend, and the shoulders, arms and head ride on top of it. The engine plays the feet, hips and root channels slightly ahead of the chest channels, and the chest channels ahead of the arms, so a stroke starts in the legs and ends in the blade.
 
 The legs are solved, not posed. Each foot target is a point relative to the standing stance, and a two-bone solver bends the thigh and shin so the foot reaches it. The hips are lowered as far as the stance needs, so a wide stance crouches and a foot with no lift is always on the ground. A foot lift raises it; the body does not float. While you move, the walk takes the legs back from the pose.
 
 ## stances
 
-How the weapon is held when not swinging, keyed by family or pose key. Each of `carry`, `ready`, `idle`, `sprint` and the optional `walk` is a map of channel values. Missing channels use the rest value. `gait` sets walk and sprint arm swing amounts, and `gripOffset` the off hand position.
+How the weapon is held when not swinging, keyed by family or pose key. Each of `carry`, `ready`, `idle`, `sprint` and the optional `walk` is a map of channel values. Missing channels use the rest value. The leg and hip channels of `ready` set the fighting stance the legs hold while the weapon is held and you stand still. `gait` sets walk and sprint arm swing amounts, and `gripOffset` the off hand position.
 
 ## movesets
 
@@ -80,7 +82,7 @@ movesets:
 
 `movesetSpells` is a top-level section that does the same as `spells` for several movesets at once: `movesetSpells: {"SPEAR:HAMMER": {bash: "SPELL:BASH@SPEAR:HAMMER"}}`. The bundled `spell_moves.yml` uses it to give each moveset its own cast for most spells.
 
-Light strokes, openers, tool strokes and weapon stances are authored by hand in `strokes.yml` and the weapon files. `tools/strokes_spec.yml` holds the strokes written as waypoints: for each moment of the swing, the direction the weapon points, the torso turn, the lean, the reach and an optional lunge. `python tools/stroke_author.py tools/strokes_spec.yml <animations>/strokes.yml merge` solves the arms, the off hand on the shaft for two-handed weapons, the hips and the blade roll that keeps the edge leading, and writes the curves. The off hand is part of the curves because the game does not solve a grip at runtime; `tools/bake_offhand.py` does the same for stances and spell casts. Spell casts in `spell_moves.yml` are composed from each moveset's own strokes.
+Light strokes, openers, tool strokes and weapon stances are authored by hand in `strokes.yml` and the weapon files. `tools/strokes_spec.yml` holds the strokes written as waypoints: for each moment of the swing, the direction the weapon points, the torso turn, the lean, the reach and an optional lunge. `python tools/stroke_author.py tools/strokes_spec.yml <animations>/strokes.yml merge` solves the arms, the off hand on the shaft for two-handed weapons, the hips and the blade roll that keeps the edge leading, and writes the curves. The off hand is part of the curves because the game does not solve a grip at runtime; `tools/bake_offhand.py` does the same for stances and spell casts. Spell casts in `spell_moves.yml` are composed from each moveset's own strokes. `python tools/body_pass.py` gives every stroke and spell cast its legwork and hips once: chest turn grown while the weapon path stays put, the pelvis turning ahead of the chest, and a sink, a wider stance, a weight shift and a lifted forward step planted at the hit with the back foot dragged. It marks the poses it has handled with `bodyPass: true`, so run it only on poses that lack the mark. `python tools/loco_render.py <STYLE> <STANCE> walk|sprint <png>` draws a walk or sprint cycle from locomotion.yml, gait.yml and a stance.
 
 A spell without an entry in `spell_moves.yml` falls back to the shared pose reshaped by `cast`.
 
@@ -112,7 +114,7 @@ Values are limited to 0.4 to 2. A heavy style makes the same moveset drive the w
 
 ## gait
 
-`gait` gives the walking and sprinting foot cycle its `duty` (the share of each step a foot is on the ground, never below 0.5) and `lift` (how high a foot rises in pixels). The feet are planted: each one slides back at exactly the speed the body moves, in whatever direction it moves, so walking sideways and backwards turn the same cycle toward that direction. The style's `walkLeg` and `sprintLeg` set how long the stride is. The body dips as far as the stride needs, and the `rig.drop` and `rig.lift` targets below add the style's bob.
+`gait` gives the walking and sprinting foot cycle its `duty` (the share of each step a foot is on the ground, never below 0.3, and below 0.5 the feet leave the ground together) and `lift` (how high a foot rises in pixels). The feet are planted: each one slides back at exactly the speed the body moves, in whatever direction it moves, so walking sideways and backwards turn the same cycle toward that direction. The style's `walkLeg` and `sprintLeg` set how long the stride is. The body dips as far as the stride needs, and the `rig.drop` and `rig.lift` targets below add the style's bob.
 
 ## Body states (locomotion.yml)
 
@@ -144,7 +146,7 @@ An effect names a `to` target and one operation:
 
 `add` adds the value, `sub` subtracts it, and `approach` moves the current value toward a goal by `rate` (0 to 1). `freeArms: true` applies the effect only when no weapon animation owns the arms.
 
-Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), `torso` with `pitch`, `roll`, `yaw` or `shift`, and `rig` with `drop` (how far the body dips while the feet are planted), `lift` (a shift that only applies when no foot cycle or rig pose is driving the legs), `rootF` (the body shifted forward in pixels) or the foot targets `footLF`, `footLS`, `footLU`, `footRF`, `footRS` and `footRU` (left and right foot forward, to the left and up, in pixels from the standing stance). Foot and `rootF` targets add on top of the foot cycle, and the legs are solved from them with the knees bent and the hips lowered to keep the feet reachable. The jump, launch, land, crouch and climb states pose the legs this way.
+Targets are `head`, `rightArm`, `leftArm`, `rightLeg` or `leftLeg` with the axis `x`, `y`, `z` (rotations in radians) or `posY` (offset in model units), `torso` with `pitch`, `roll`, `yaw` (the chest), `hipYaw`, `hipPitch`, `hipRoll` (the pelvis), `curl` (extra forward spine curl) or `shift`, and `rig` with `drop` (how far the body dips while the feet are planted), `lift` (a shift that only applies when no foot cycle or rig pose is driving the legs), `rootF` (the body shifted forward in pixels) or the foot targets `footLF`, `footLS`, `footLU`, `footRF`, `footRS` and `footRU` (left and right foot forward, to the left and up, in pixels from the standing stance). Foot and `rootF` targets add on top of the foot cycle, and the legs are solved from them with the knees bent and the hips lowered to keep the feet reachable. The jump, launch, land, crouch and climb states pose the legs this way.
 
 ### Expressions
 
@@ -166,6 +168,8 @@ Numbers, `+ - * /`, parentheses, `pi`, signals, vars, `style.<name>` and the fun
 | `grounded` | 1 on the ground, lower when airborne, swimming, climbing, gliding or riding |
 | `turnRate` | Turning speed |
 | `moveFwd`, `moveSide` | Direction of travel relative to the body, from -1 to 1, with forward and left positive |
+| `claimed` | 1 while a weapon stance or stroke owns the arms, eased in and out |
+| `stroke` | 1 while a weapon stroke is playing, eased in and out; use it to fade body effects that would fight the stroke |
 | `launchAge`, `leadRight`, `launch` | Time since jumping, which leg leads, jump push-off strength |
 
 ## First person body

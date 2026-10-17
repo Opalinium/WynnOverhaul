@@ -12,6 +12,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rig
+import trunk
 
 SRC = Path(__file__).resolve().parent.parent / "src/client/resources/assets/wynnoverhaul/animations"
 
@@ -169,36 +170,41 @@ def solve(out, grip_offset=7.0, guard=True):
     s = 1.0
     yaw = -s * out[TURN]
     lean = out[LEAN]
-    right = Part(-math.cos(yaw) * 5, 2, math.sin(yaw) * 5)
-    left = Part(math.cos(yaw) * 5, 2, -math.sin(yaw) * 5)
+    hip_yaw = -s * out[HIPS_Y]
+    right = Part(-5.0, 2.0, 0.0)
+    left = Part(5.0, 2.0, 0.0)
     right.xr, right.yr, right.zr = out[PITCH], -out[ACROSS] + yaw, out[ABDUCT]
     left.xr, left.yr, left.zr = out[OFF_PITCH], out[OFF_ACROSS] + yaw, -out[OFF_ABDUCT]
     right.z += out[REACH]
     head = Part(0, 0, 0)
     body = Part(0, 0, 0)
-    body.yr = yaw
-    if abs(lean) > 0.001:
-        for part in (body, head, right, left):
-            part.x, part.y, part.z = lean_point((part.x, part.y, part.z), yaw, lean)
-        body.xr += lean
-        head.xr += lean * 0.3
-        right.xr += lean
-        left.xr += lean
+    pelvis_pitch = lean * trunk.PELVIS_SHARE
+    pelvis_roll = out[BODY_R] * trunk.PELVIS_SHARE
+    curl = lean * (1 - trunk.PELVIS_SHARE)
+    bend = out[BODY_R] * (1 - trunk.PELVIS_SHARE)
+    twist = yaw + out[BODY_Y] - hip_yaw
+    pelvis = trunk.rotation(pelvis_roll, hip_yaw, pelvis_pitch)
+    for part in (head, right, left):
+        part.x, part.y, part.z = trunk.place(np.array([part.x, part.y, part.z]), twist, curl, bend, pelvis)
+    body.x, body.y, body.z = trunk.pelvis_move((0.0, 0.0, 0.0), pelvis)
+    body.xr, body.yr, body.zr = pelvis_pitch, hip_yaw, pelvis_roll
+    body.spine = (twist, curl, bend)
+    right.xr += pelvis_pitch + curl
+    left.xr += pelvis_pitch + curl
+    follow = pelvis_pitch + curl
+    head.xr += follow * 0.15
     clipped = False
     if guard:
         clipped |= keep_out_of_body(right, -5.0, yaw)
     if guard:
         clipped |= keep_out_of_body(left, 5.0, yaw)
-    twist = -out[HIPS_Y]
-    drop, hips, legs = rig.place(out[ROOT_H], out[ROOT_F], out[ROOT_S], (out[FOOT_LF], out[FOOT_LS], out[FOOT_LU]), (out[FOOT_RF], out[FOOT_RS], out[FOOT_RU]), twist)
+    drop, hips, legs = rig.place(out[ROOT_H], out[ROOT_F], out[ROOT_S], (out[FOOT_LF], out[FOOT_LS], out[FOOT_LU]), (out[FOOT_RF], out[FOOT_RS], out[FOOT_RU]), -hip_yaw)
     back = Part(*hips[0])
     front = Part(*hips[1])
-    for part, (angles, bend, foot) in ((back, legs[0]), (front, legs[1])):
+    for part, (angles, bend_angle, foot) in ((back, legs[0]), (front, legs[1])):
         part.xr, part.yr, part.zr = angles
-        part.bend = bend
+        part.bend = bend_angle
         part.foot = foot
-    body.yr += out[BODY_Y]
-    body.zr += out[BODY_R]
     for part in (right, left, head, body):
         part.x += out[ROOT_S]
         part.y += drop
@@ -213,8 +219,19 @@ def box(x0, x1, y0, y1, z0, z1):
 EDGES = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)]
 
 
+FILL = True
+
+
 def draw_box(ax, pts, view, color, lw=1.0):
     proj = [project(p, view) for p in pts]
+    if FILL:
+        from scipy.spatial import ConvexHull
+        arr = np.array(proj)
+        try:
+            hull = ConvexHull(arr)
+            ax.fill(arr[hull.vertices, 0], arr[hull.vertices, 1], color=color, alpha=0.16, lw=0)
+        except Exception:
+            pass
     for a, b in EDGES:
         ax.plot([proj[a][0], proj[b][0]], [proj[a][1], proj[b][1]], color=color, lw=lw)
 
@@ -310,11 +327,40 @@ def part_points(part, pts):
     return (pts @ part.matrix().T) + np.array([part.x, part.y, part.z])
 
 
+def draw_leg(ax, leg, view, color="#666666"):
+    upper = box(-2, 2, 0, 6, -2, 2)
+    lower = box(-2, 2, 6, 12, -2, 2)
+    knee = np.array([0.0, 6.0, 0.0])
+    lower = np.array([knee + rot_x(getattr(leg, "bend", 0.0)) @ (q - knee) for q in lower])
+    draw_box(ax, part_points(leg, upper), view, color)
+    draw_box(ax, part_points(leg, lower), view, color)
+
+
+def draw_spine(ax, body, view):
+    twist, curl, bend = getattr(body, "spine", (0.0, 0.0, 0.0))
+    p, rs = trunk.chain(twist, curl, bend)
+    rings = []
+    for j in range(trunk.SEGMENTS + 1):
+        ring = []
+        for ox, oz in ((-4, -2), (4, -2), (4, 2), (-4, 2)):
+            local = p[j] + rs[j] @ np.array([ox, 0.0, oz])
+            ring.append((body.matrix() @ local) + np.array([body.x, body.y, body.z]))
+        rings.append(ring)
+    for j in range(trunk.SEGMENTS + 1):
+        pts = [project(q, view) for q in rings[j]]
+        for a in range(4):
+            b = (a + 1) % 4
+            ax.plot([pts[a][0], pts[b][0]], [pts[a][1], pts[b][1]], color="#888888", lw=1.0 if 0 < j < trunk.SEGMENTS else 1.6)
+    for a in range(4):
+        xs = [project(rings[j][a], view) for j in range(trunk.SEGMENTS + 1)]
+        ax.plot([q[0] for q in xs], [q[1] for q in xs], color="#888888", lw=1.2)
+
+
 def scene(ax, out, view, grip_offset, weapon_len, title, blade=None):
     yaw, right, left, clipped, head, body, front, back, lean = solve(out, grip_offset)
-    draw_box(ax, part_points(front, box(-2, 2, 0, 12, -2, 2)), view, "#666666")
-    draw_box(ax, part_points(back, box(-2, 2, 0, 12, -2, 2)), view, "#666666")
-    draw_box(ax, part_points(body, box(-4, 4, 0, 12, -2, 2)), view, "#888888", 1.5)
+    for leg in (front, back):
+        draw_leg(ax, leg, view)
+    draw_spine(ax, body, view)
     draw_box(ax, part_points(head, box(-4, 4, -8, 0, -4, 4)), view, "#aaaaaa")
     for part, arm_box, color in ((right, box(-3, 1, -2, 10, -2, 2), "#d33"), (left, box(-1, 3, -2, 10, -2, 2), "#36d")):
         draw_box(ax, part_points(part, arm_box), view, color, 1.6)
@@ -436,13 +482,14 @@ def sample_pose(curves, t, base, key=None):
     return out
 
 
-MIRROR_NEGATE = {"across", "offAcross", "turn", "headY", "twist", "bodyY", "bodyR"}
+MIRROR_NEGATE = {"across", "offAcross", "turn", "headY", "twist", "bodyY", "bodyR", "hipY", "rootS", "footLS", "footRS"}
+MIRROR_SWAP = {"footLF": "footRF", "footRF": "footLF", "footLS": "footRS", "footRS": "footLS", "footLU": "footRU", "footRU": "footLU", "legL": "legR", "legR": "legL"}
 
 
 def mirror_curves(curves):
     out = {}
     for name, c in curves.items():
-        target = {"legL": "legR", "legR": "legL"}.get(name, name)
+        target = MIRROR_SWAP.get(name, name)
         if name in MIRROR_NEGATE:
             out[target] = Curve([(t, v if math.isnan(v) else -v) for t, v in zip(c.t, c.v)])
         else:

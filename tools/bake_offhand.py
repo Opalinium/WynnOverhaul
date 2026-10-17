@@ -16,19 +16,11 @@ FREE_HAND = ("SPEAR:GREATSWORD",)
 
 def grip_left(out, offset, weight):
     out = np.pad(np.array(out, dtype=float), (0, max(0, pr.N_CHANNELS - len(out))))
-    yaw = -out[pr.TURN]
-    lean = out[pr.LEAN]
-    right = pr.Part(-math.cos(yaw) * 5, 2, math.sin(yaw) * 5)
-    left = pr.Part(math.cos(yaw) * 5, 2, -math.sin(yaw) * 5)
-    right.xr, right.yr, right.zr = out[pr.PITCH], -out[pr.ACROSS] + yaw, out[pr.ABDUCT]
-    left.xr, left.yr, left.zr = out[pr.OFF_PITCH], out[pr.OFF_ACROSS] + yaw, -out[pr.OFF_ABDUCT]
-    right.z += out[pr.REACH]
-    if abs(lean) > 0.001:
-        for part in (right, left):
-            part.x, part.y, part.z = pr.lean_point((part.x, part.y, part.z), yaw, lean)
-        right.xr += lean
-        left.xr += lean
+    yaw, right, left, clipped, head, body, front, back, lean = pr.solve(out, offset, guard=False)
     pr.keep_out_of_body(right, -5.0, yaw)
+    left.xr = out[pr.OFF_PITCH] + lean
+    left.yr = out[pr.OFF_ACROSS] + yaw
+    left.zr = -out[pr.OFF_ABDUCT]
     grip_point = right.matrix() @ np.array([0, pr.GRIP_Y, pr.GRIP_Z]) + np.array([right.x, right.y, right.z])
     cos_a = math.cos(out[pr.HEAD_A])
     shaft = np.array([math.sin(out[pr.HEAD_Y]) * cos_a, math.sin(out[pr.HEAD_A]), -math.cos(out[pr.HEAD_Y]) * cos_a])
@@ -64,7 +56,7 @@ def smooth(values):
     return np.convolve(padded, kernel, mode="valid")
 
 
-def bake_pose(key, pose, stances, stance_key):
+def bake_pose(key, pose, stances, stance_key, force=False):
     carry, ready, offset = stances[stance_key]
     offset = float(pose.get("gripOffset", offset))
     curves = pr.load_poses({"poses": {key: pose}})[key]
@@ -73,7 +65,7 @@ def bake_pose(key, pose, stances, stance_key):
     active = False
     for t in times:
         out = pr.sample_pose(curves, float(t), ready, key)
-        weight = float(np.clip(out[pr.GRIP], 0.0, 1.0))
+        weight = 1.0 if force else float(np.clip(out[pr.GRIP], 0.0, 1.0))
         active |= weight > 0.5
         if weight > 0.001:
             rows.append(grip_left(out, offset, weight))

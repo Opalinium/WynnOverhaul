@@ -41,6 +41,60 @@ object LimbBend {
     }
 
     private const val HAND_JOINT = 4f
+    private const val SPINE_EPS = 0.0005f
+
+    private var spineOn = false
+    private val spineP = FloatArray((Trunk.SEGMENTS + 1) * 3)
+    private val spineR = FloatArray((Trunk.SEGMENTS + 1) * 9)
+
+    @JvmStatic
+    fun selectSpine(twist: Float, curl: Float, bend: Float, stamp: Long) {
+        if (!configured() || System.nanoTime() - stamp >= STALE_NANOS ||
+            (abs(twist) < SPINE_EPS && abs(curl) < SPINE_EPS && abs(bend) < SPINE_EPS)
+        ) {
+            spineOn = false
+            return
+        }
+        Trunk.fillChain(twist, curl, bend, spineP, spineR)
+        spineOn = true
+    }
+
+    private fun compileSpine(polygons: Array<ModelPart.Polygon>, cube: ModelPart.Cube, pose: PoseStack.Pose, buffer: VertexConsumer, light: Int, overlay: Int, color: Int): Boolean {
+        val top = cube.minY
+        val bottom = cube.maxY
+        val height = bottom - top
+        if (abs(height - Trunk.LENGTH) > 0.01f) return false
+        val cx = (cube.minX + cube.maxX) * 0.5f
+        val cz = (cube.minZ + cube.maxZ) * 0.5f
+        val seg = height / Trunk.SEGMENTS
+        val matrix = pose.pose()
+        for (polygon in polygons) {
+            val n = polygon.normal()
+            for (vertex in polygon.vertices()) {
+                val u = ((bottom - vertex.y()) / height).coerceIn(0f, 1f)
+                val j = (u * Trunk.SEGMENTS + 0.5f).toInt().coerceIn(0, Trunk.SEGMENTS)
+                val ox = vertex.x() - cx
+                val oy = vertex.y() - (bottom - j * seg)
+                val oz = vertex.z() - cz
+                val r = j * 9
+                val px = cx + spineP[j * 3] + spineR[r] * ox + spineR[r + 1] * oy + spineR[r + 2] * oz
+                val py = spineP[j * 3 + 1] - Trunk.HIP + bottom + spineR[r + 3] * ox + spineR[r + 4] * oy + spineR[r + 5] * oz
+                val pz = cz + spineP[j * 3 + 2] + spineR[r + 6] * ox + spineR[r + 7] * oy + spineR[r + 8] * oz
+                matrix.transformPosition(px / UNIT, py / UNIT, pz / UNIT, position)
+                normalIn.set(
+                    spineR[r] * n.x() + spineR[r + 1] * n.y() + spineR[r + 2] * n.z(),
+                    spineR[r + 3] * n.x() + spineR[r + 4] * n.y() + spineR[r + 5] * n.z(),
+                    spineR[r + 6] * n.x() + spineR[r + 7] * n.y() + spineR[r + 8] * n.z(),
+                )
+                pose.transformNormal(normalIn, normalOut)
+                buffer.addVertex(
+                    position.x, position.y, position.z, color, vertex.u(), vertex.v(),
+                    overlay, light, normalOut.x, normalOut.y, normalOut.z,
+                )
+            }
+        }
+        return true
+    }
 
     @JvmStatic
     fun freshBend(part: ModelPart): Float {
@@ -107,6 +161,7 @@ object LimbBend {
 
     @JvmStatic
     fun compile(polygons: Array<ModelPart.Polygon>, cube: ModelPart.Cube, pose: PoseStack.Pose, buffer: VertexConsumer, light: Int, overlay: Int, color: Int): Boolean {
+        if (spineOn && compileSpine(polygons, cube, pose, buffer, light, overlay, color)) return true
         val bend = angle
         if (bend == 0f) return false
         val jointY = (cube.minY + cube.maxY) * 0.5f

@@ -3,7 +3,7 @@ stances:
   "BOW":
     gripOffset: 7
     carry: {pitch: -0.8, across: 0.15, abduct: 0, offPitch: -0.6, offAcross: 0.3, offAbduct: 0, turn: 0.15, headA: -0.1}
-    ready: {pitch: -1.45, across: 0.25, abduct: 0, offPitch: -1.5, offAcross: 0.7, offAbduct: 0, turn: 0.35, reach: -0.6, headA: -0.1}
+    ready: {pitch: -1.45, across: 0.25, abduct: 0, offPitch: -1.5, offAcross: 0.7, offAbduct: 0, turn: 0.35, reach: -0.6, headA: -0.1, rootH: 0.45, footLS: 1.3, footRS: -1.3, footRF: 1.2, footLF: -1, hipY: 0.175}
     idle: {across: 0.1, abduct: 0, offPitch: -0.1, offAcross: 0.05, offAbduct: 0, turn: 0.05, headA: 0.5}
     walk: {pitch: -0.6, across: 0.12, offPitch: -0.5, offAcross: 0.2, turn: 0.08, headA: 0.2, lean: 0.05}
     sprint: {pitch: -0.5, across: 0.12, abduct: 0, offPitch: -0.3, offAcross: 0.2, offAbduct: 0, turn: 0.1, headA: 0.15, lean: 0.22}
@@ -11,7 +11,7 @@ stances:
   "BOW:FIREARM":
     gripOffset: 9
     carry: {pitch: -0.9, across: 0.35, abduct: 0, offPitch: -0.66, offAcross: 0.12, offAbduct: -0.63, turn: 0.1, headA: -0.5}
-    ready: {pitch: -1.2, across: 0.45, abduct: 0, offPitch: -1.03, offAcross: 0.51, offAbduct: -0.41, turn: 0.15, reach: -0.8, headA: -0.05}
+    ready: {pitch: -1.2, across: 0.45, abduct: 0, offPitch: -1.03, offAcross: 0.51, offAbduct: -0.41, turn: 0.15, reach: -0.8, headA: -0.05, rootH: 0.45, footLS: 1.3, footRS: -1.3, footRF: 1.2, footLF: -1, hipY: 0.075}
     idle: {pitch: -0.6, across: 0.3, abduct: 0, offPitch: -0.66, offAcross: 0.26, offAbduct: -0.86, turn: 0.05, headA: 0.6}
     walk: {pitch: -0.95, across: 0.35, offPitch: -0.66, offAcross: 0.21, turn: 0.1, headA: -0.25, lean: 0.06, offAbduct: -0.7}
     sprint: {pitch: -0.8, across: 0.35, abduct: 0, offPitch: -0.85, offAcross: 0.17, offAbduct: -0.77, turn: 0.1, headA: 0.15, lean: 0.2}

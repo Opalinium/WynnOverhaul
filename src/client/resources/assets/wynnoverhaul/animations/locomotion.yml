@@ -58,20 +58,20 @@ styles:
   "HEROIC":
     label: "Heroic"
     walkArm: 0.313
-    walkLeg: 0.681
-    walkBob: 2.185
-    walkSway: 0.12
-    roll: 0.074
+    walkLeg: 0.72
+    walkBob: 0.5
+    walkSway: 0.1
+    roll: 0.06
     swagger: 0.07
     headBob: 0.01
     headRoll: 0.02
     armFlare: 0.12
     sprintArm: 0.303
-    sprintLeg: 0.488
-    sprintBob: 3
-    sprintLean: 0.24
-    sprintSway: 0.11
-    posture: -0.06
+    sprintLeg: 0.85
+    sprintBob: 2.6
+    sprintLean: 0.45
+    sprintSway: 0.2
+    posture: 0.02
     idleBreath: 0.08
     idleRate: 0.016
     idleSway: 0.014
@@ -104,23 +104,24 @@ styles:
     swingBody: 1.15
     swingArc: 1.08
     swingBlend: 1
-    walkDrop: 2.601
+    walkDrop: 0.2
+    walkLean: 0.03
   "STEALTH":
     label: "Stealth"
     walkArm: 0.202
-    walkLeg: 0.44
-    walkBob: 1.921
-    walkLean: 0.2
-    walkSway: 0.12
-    walkDrop: 0
-    roll: 0.1
+    walkLeg: 0.5
+    walkBob: 0.3
+    walkLean: 0.15
+    walkSway: 0.06
+    walkDrop: 0.5
+    roll: 0.04
     swagger: -0.05
     armFlare: -0.05
     sprintArm: 0.271
-    sprintBob: 0.67
-    sprintLean: 0.42
-    sprintSway: 0.075
-    posture: 0.12
+    sprintBob: 1.0
+    sprintLean: 0.5
+    sprintSway: 0.15
+    posture: 0.1
     idleBreath: 0.123
     idleRate: 0.012
     idleArmOpen: 0.151
@@ -152,15 +153,15 @@ styles:
     swingBody: 0.85
     swingArc: 0.92
     swingBlend: 0.85
-    sprintLeg: 0.437
+    sprintLeg: 0.7
     idleSway: 0.021
   "LIGHT":
     label: "Lightfoot"
     walkArm: 0.252
-    walkLeg: 0.549
-    walkBob: 2.5
-    walkLean: 0.05
-    walkSway: 0.12
+    walkLeg: 0.75
+    walkBob: 0.4
+    walkLean: 0.04
+    walkSway: 0.1
     headBob: 0.03
     headRoll: 0.02
     armFlare: 0.03
@@ -170,11 +171,11 @@ styles:
     launchArms: 1.3
     launchKnee: 0.6
     sprintArm: 0.415
-    sprintLeg: 0.669
-    sprintBob: 3
-    sprintLean: 0.2
-    sprintSway: 0.15
-    posture: -0.02
+    sprintLeg: 0.95
+    sprintBob: 3.0
+    sprintLean: 0.45
+    sprintSway: 0.22
+    posture: 0.0
     idleBreath: 0.08
     idleRate: 0.012
     idleSway: 0.01
@@ -206,17 +207,17 @@ styles:
     swingBody: 0.8
     swingArc: 0.95
     swingBlend: 0.8
-    roll: 0.1
-    walkDrop: 1.663
+    roll: 0.08
+    walkDrop: 0.1
   "HEAVY":
     label: "Heavy"
     walkArm: 0.294
-    walkLeg: 0.639
-    walkBob: 1.651
+    walkLeg: 0.66
+    walkBob: 0.7
     walkLean: 0.1
-    walkSway: 0.054
-    walkDrop: 0
-    roll: 0.067
+    walkSway: 0.06
+    walkDrop: 0.2
+    roll: 0.07
     swagger: 0.02
     headBob: 0.04
     headRoll: 0.03
@@ -227,11 +228,11 @@ styles:
     launchArms: 0.25
     launchKnee: 0.9
     sprintArm: 0.332
-    sprintLeg: 0.535
-    sprintBob: 2.117
-    sprintLean: 0.3
-    sprintSway: 0.049
-    posture: 0.11
+    sprintLeg: 0.8
+    sprintBob: 1.2
+    sprintLean: 0.5
+    sprintSway: 0.12
+    posture: 0.06
     idleBreath: 0.251
     idleRate: 0.018
     idleSway: 0.01
@@ -267,22 +268,22 @@ styles:
   "WEARY":
     label: "Weary"
     walkArm: 0.15
-    walkLeg: 0.313
-    walkBob: 1.152
+    walkLeg: 0.5
+    walkBob: 0.5
     walkLean: 0.16
-    walkSway: 0.12
-    walkDrop: 0.083
-    roll: 0.1
+    walkSway: 0.08
+    walkDrop: 0.5
+    roll: 0.08
     swagger: 0.03
     headBob: 0.06
     headRoll: 0.05
     armFlare: 0.08
     sprintArm: 0.239
-    sprintLeg: 0.4
-    sprintBob: 2.435
-    sprintLean: 0.34
-    sprintSway: 0.122
-    posture: 0.14
+    sprintLeg: 0.65
+    sprintBob: 1.0
+    sprintLean: 0.45
+    sprintSway: 0.14
+    posture: 0.12
     idleBreath: 0.08
     idleRate: 0.012
     idleSway: 0.002
@@ -315,7 +316,6 @@ styles:
     swingBody: 0.7
     swingArc: 0.82
     swingBlend: 1.3
-
 states:
   - name: walk
     toggle: locomotionWalk
@@ -333,31 +333,38 @@ states:
       stride: "pow(1 - abs(gait), style.bobSharp)"
       footfall: "abs(gait) * abs(gait) * abs(gait)"
       breath: "sin(age * style.idleRate * 6.2832)"
+      own: "1 - 0.4 * claimed"
+      free: "1 - 0.85 * stroke"
+      amp: "sp * (wWalk + wSprintG)"
+      swayAmp: "amp * (style.walkSway * wWalk + style.sprintSway * wSprintG) * k * free"
+      rollAmp: "amp * style.roll * gr * k * free"
     effects:
       - {to: rightLeg.x, add: "gait * 1.4 * (sp * legMul + boost) * k"}
       - {to: leftLeg.x, add: "gaitOpp * 1.4 * (sp * legMul + boost) * k"}
       - {to: rightLeg.z, add: "style.swagger * sp * gr * k"}
       - {to: leftLeg.z, sub: "style.swagger * sp * gr * k"}
-      - {to: torso.roll, sub: "bank * 0.1 * k"}
-      - {to: torso.yaw, add: "bank * 0.08 * k"}
+      - {to: torso.roll, sub: "bank * 0.1 * k * free"}
+      - {to: torso.yaw, add: "bank * 0.08 * k * free"}
       - {to: rightArm.x, add: "gaitOpp * (sp * armMul + boost) * k", freeArms: true}
       - {to: leftArm.x, add: "gait * (sp * armMul + boost) * k", freeArms: true}
       - {to: rightArm.z, add: "style.armFlare * sp * gr * k", freeArms: true}
       - {to: leftArm.z, sub: "style.armFlare * sp * gr * k", freeArms: true}
-      - {to: rig.drop, add: "(1 - stride) * sp * bob * k + style.walkDrop * wWalk * k + footfall * sp * style.stomp * (wWalk + 1.5 * wSprintG) * k", freeArms: true}
-      - {to: rig.lift, sub: "sp * bob * k", freeArms: true}
-      - {to: torso.pitch, add: "footfall * sp * style.stomp * 0.03 * (wWalk + wSprintG) * k", freeArms: true}
-      - {to: torso.yaw, add: "sin(phase) * sp * sway * k", freeArms: true}
-      - {to: torso.roll, add: "gait * sp * style.roll * gr * k", freeArms: true}
-      - {to: torso.pitch, add: "leanAmt * k * clamp(sp * 2, 0, 1)", freeArms: true}
-      - {to: head.z, sub: "gait * sp * style.headRoll * gr * k", freeArms: true}
-      - {to: head.y, sub: "bank * 0.12 * k", freeArms: true}
-      - {to: head.x, add: "sin(phase * 2) * sp * style.headBob * gr * k", freeArms: true}
-      - {to: torso.pitch, add: "style.posture * gr * k", freeArms: true}
-      - {to: head.x, add: "style.idleHeadDrop * idle * k", freeArms: true}
-      - {to: torso.shift, add: "sin(age * style.idleRate * 6.2832) * style.idleBreath * idle * k", freeArms: true}
-      - {to: torso.yaw, add: "sin(age * style.idleRate * 2.3) * style.idleSway * idle * k", freeArms: true}
-      - {to: torso.roll, add: "sin(age * style.idleRate * 1.7) * style.idleSway * 0.6 * idle * k", freeArms: true}
+      - {to: rig.drop, add: "(style.walkBob * wWalk * (1 - stride) + style.sprintBob * wSprintG * (stride - 0.5) + style.walkDrop * wWalk + footfall * sp * style.stomp * (wWalk + 1.5 * wSprintG)) * k * free"}
+      - {to: torso.pitch, add: "footfall * sp * style.stomp * 0.03 * (wWalk + wSprintG) * k * free"}
+      - {to: torso.yaw, sub: "gait * swayAmp"}
+      - {to: torso.hipYaw, add: "gait * swayAmp * 0.7"}
+      - {to: torso.roll, add: "sin(phase) * rollAmp"}
+      - {to: torso.hipRoll, sub: "sin(phase) * rollAmp * 0.6"}
+      - {to: torso.pitch, add: "leanAmt * k * clamp(sp * 2, 0, 1) * own * free"}
+      - {to: torso.curl, add: "sin(phase * 2) * amp * style.headBob * 2 * k * free"}
+      - {to: head.z, sub: "sin(phase) * rollAmp * 0.5"}
+      - {to: head.y, sub: "bank * 0.12 * k"}
+      - {to: head.x, add: "sin(phase * 2) * amp * style.headBob * gr * k * free"}
+      - {to: torso.pitch, add: "style.posture * gr * k * own"}
+      - {to: head.x, add: "style.idleHeadDrop * idle * k"}
+      - {to: torso.shift, add: "sin(age * style.idleRate * 6.2832) * style.idleBreath * idle * k * free"}
+      - {to: torso.yaw, add: "sin(age * style.idleRate * 2.3) * style.idleSway * idle * k * free"}
+      - {to: torso.roll, add: "sin(age * style.idleRate * 1.7) * style.idleSway * 0.6 * idle * k * free"}
       - {to: rightArm.z, add: "style.idleArmOpen * idle * k", freeArms: true}
       - {to: leftArm.z, sub: "style.idleArmOpen * idle * k", freeArms: true}
       - {to: rightArm.x, add: "breath * style.idleBreath * 0.4 * idle * k", freeArms: true}

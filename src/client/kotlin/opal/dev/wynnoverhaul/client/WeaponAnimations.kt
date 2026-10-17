@@ -118,7 +118,6 @@ object WeaponAnimations {
     private const val FOOT_RU = 24
     internal const val CHANNELS = 25
     private const val TURN_BOOST = 1.4f
-    private const val LEAN_HEAD_SHARE = 0.3f
     private const val HIP_Y = 12f
     private const val GRIP_Y = 10f
     private const val GRIP_Z = -2f
@@ -136,6 +135,22 @@ object WeaponAnimations {
     private const val SPRING_RESET_GAP = 0.25f
     private const val SPRING_MAX_DT = 0.05f
     private const val SPRING_STEPS = 2
+    private const val CHEST_LEAD_SECONDS = 0.05f
+    private const val PELVIS_LEAD_SECONDS = 0.11f
+    private const val BODY_LEAD_MAX = 0.4f
+    private const val ELBOW_OMEGA = 26f
+    private const val ELBOW_DAMPING = 0.5f
+    private const val ELBOW_STEPS = 2
+    private const val ELBOW_BASE = 0.42f
+    private const val ELBOW_EXTEND = 0.2f
+    private const val ELBOW_BEHIND = 0.65f
+    private const val ELBOW_RAISED = 0.55f
+    private const val ELBOW_SPRINT = 0.35f
+    private const val ELBOW_WIND = 0.5f
+    private const val ELBOW_FOLLOW = 0.3f
+    private const val ELBOW_OFF_SHARE = 0.7f
+    private const val ELBOW_MAIN_MAX = 1.25f
+    private const val ELBOW_OFF_MAX = 0.75f
     private const val TWO_PI = 6.2831855f
     private const val PI_F = 3.1415927f
 
@@ -232,6 +247,11 @@ object WeaponAnimations {
     private fun basePose(key: String): Pose? = POSES[key] ?: COMBOS[key]?.firstOrNull()?.let { POSES[it.key] }
 
     private fun swingStyle(): SwingStyle = AnimationLibrary.tables().locomotion.swingFor(WynnOverhaulConfig.current.locomotionStyle)
+
+    private val BODY_LEADS = FloatArray(CHANNELS).also { leads ->
+        for (i in intArrayOf(TURN, LEAN, BODY_Y, BODY_R)) leads[i] = CHEST_LEAD_SECONDS
+        for (i in intArrayOf(ROOT_F, FOOT_LF, FOOT_RF, HIPS_Y, FOOT_LS, FOOT_RS, ROOT_S, ROOT_H, FOOT_LU, FOOT_RU)) leads[i] = PELVIS_LEAD_SECONDS
+    }
 
     private val CHANNEL_KIND = intArrayOf(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
@@ -997,9 +1017,50 @@ object WeaponAnimations {
             return 1f - RECOVER_MOVE_CUT * moveAmt * smooth(r)
         }
 
+        private fun leadRate(p: Pose, t: Float): Float {
+            val rate = when {
+                previewing -> 1f / p.seconds
+                t < p.hit -> (p.hit - startP) / maxOf(hitSeconds, 0.02f)
+                else -> (1f - p.hit) / maxOf(totalSeconds - hitSeconds, 0.02f)
+            }
+            return rate
+        }
+
         private fun sampleRaw(p: Pose, t: Float, base: FloatArray, out: FloatArray) {
+            val rate = leadRate(p, t)
             for (i in 0 until CHANNELS) {
-                out[i] = if ((i == HEAD_Y || i == TWIST) && p.spin) base[i] + p.curves[i].at(t, 0f) else p.curves[i].at(t, base[i])
+                val at = (t + (rate * BODY_LEADS[i]).coerceAtMost(BODY_LEAD_MAX)).coerceAtMost(1f)
+                out[i] = if ((i == HEAD_Y || i == TWIST) && p.spin) base[i] + p.curves[i].at(at, 0f) else p.curves[i].at(at, base[i])
+            }
+        }
+
+        var elbowMain = 0f
+        var elbowOff = 0f
+        private var elbowMainV = 0f
+        private var elbowOffV = 0f
+        private var elbowNanos = 0L
+        private var elbowReady = false
+
+        fun stepElbows(goalMain: Float, goalOff: Float) {
+            val now = System.nanoTime()
+            val gap = (now - elbowNanos) / 1_000_000_000f
+            elbowNanos = now
+            if (!elbowReady || gap > SPRING_RESET_GAP) {
+                elbowMain = goalMain
+                elbowOff = goalOff
+                elbowMainV = 0f
+                elbowOffV = 0f
+                elbowReady = true
+                return
+            }
+            val h = gap.coerceIn(0f, SPRING_MAX_DT) / ELBOW_STEPS
+            val k = ELBOW_OMEGA * ELBOW_OMEGA
+            val c = 2f * ELBOW_DAMPING * ELBOW_OMEGA
+            repeat(ELBOW_STEPS) {
+                elbowMainV += (k * (goalMain - elbowMain) - c * elbowMainV) * h
+                elbowMain += elbowMainV * h
+                elbowOffV += (k * (goalOff - elbowOff) - c * elbowOffV) * h
+                elbowOff += elbowOffV * h
             }
         }
 
@@ -1028,6 +1089,16 @@ object WeaponAnimations {
             val weight = strike(p, t)
             strikeWeight = weight * scale
             strikeStamp = System.nanoTime()
+            elbowPhase = elbowPhaseOf(p, t) * scale
+        }
+
+        var elbowPhase = 0f
+
+        private fun elbowPhaseOf(p: Pose, t: Float): Float {
+            val hit = p.hit.coerceIn(0.05f, 0.95f)
+            if (t < hit) return ELBOW_WIND * (1f - smooth(t / hit))
+            val u = smooth((t - hit) / (1f - hit))
+            return ELBOW_FOLLOW * 4f * u * (1f - u)
         }
     }
 
@@ -1253,7 +1324,6 @@ object WeaponAnimations {
     private var headSide = 1f
     private var handShift = 0f
     private val shiftVec = Vector3f()
-    private var lastReach = 0f
     private var headActive = false
     private var headEntity = -1
     private var headBow = false
@@ -1262,21 +1332,44 @@ object WeaponAnimations {
     @JvmStatic
     fun combatElbow(right: Boolean): Float {
         val main = (right == (headSide > 0f))
-        val reach = if (main) lastReach else lastReach * OFFHAND_REACH_SHARE
-        return (ELBOW_REST_FLEX + ELBOW_REACH_FLEX * reach).coerceIn(ELBOW_MIN_FLEX, ELBOW_MAX_FLEX)
+        return (if (main) clock.elbowMain else clock.elbowOff).coerceIn(ELBOW_MIN_FLEX, ELBOW_MAX_FLEX)
     }
 
-    private const val OFFHAND_REACH_SHARE = 0.7f
-    private const val ELBOW_REST_FLEX = 0.32f
+    private fun ramp(from: Float, to: Float, x: Float): Float {
+        val c = ((x - from) / (to - from)).coerceIn(0f, 1f)
+        return c * c * (3f - 2f * c)
+    }
+
+    private fun elbowGoal(part: ModelPart, yaw: Float, reach: Float, sprint: Float, stroke: Float): Float {
+        armQuat.rotationZYX(part.zRot, part.yRot, part.xRot)
+        gripPoint.set(0f, GRIP_Y, GRIP_Z).rotate(armQuat).rotateY(-yaw)
+        val length = gripPoint.length().coerceAtLeast(1e-3f)
+        val forward = -gripPoint.z / length
+        val up = -gripPoint.y / length
+        return ELBOW_BASE -
+            ELBOW_EXTEND * ramp(0.7f, 1f, forward) +
+            ELBOW_BEHIND * ramp(0f, -0.7f, forward) +
+            ELBOW_RAISED * ramp(0.3f, 0.9f, up) * (1f - ramp(0.3f, 0.8f, forward)) +
+            ELBOW_REACH_FLEX * reach +
+            ELBOW_SPRINT * sprint +
+            stroke
+    }
+
     private const val ELBOW_REACH_FLEX = 0.13f
-    private const val ELBOW_MIN_FLEX = 0.08f
-    private const val ELBOW_MAX_FLEX = 0.85f
+    private const val ELBOW_MIN_FLEX = 0.05f
+    private const val ELBOW_MAX_FLEX = 1.25f
 
     @JvmStatic
     fun claimsArms(state: HumanoidRenderState): Boolean {
         val target = clockFor(state) ?: return false
         if (LocomotionAnimations.unseen(state as AvatarRenderState)) return false
         return (target.progress() >= 0f && target.pose != null) || target.idleActive()
+    }
+
+    @JvmStatic
+    fun swinging(state: HumanoidRenderState): Boolean {
+        val target = clockFor(state) ?: return false
+        return target.pose != null && target.progress() >= 0f
     }
 
     @JvmStatic
@@ -1351,25 +1444,27 @@ object WeaponAnimations {
         val cut = moving
         out[BODY_Y] *= 1f - cut * MOVE_BODY_CUT
         out[BODY_R] *= 1f - cut * MOVE_BODY_CUT
-        out[LEAN] = out[LEAN] * (1f - cut * MOVE_LEAN_CUT) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
+        out[LEAN] = out[LEAN] * (1f - (if (swinging) cut * MOVE_LEAN_CUT else 0f)) + (DRIVE_LEAN_WALK + (DRIVE_LEAN_RUN - DRIVE_LEAN_WALK) * run) * drive
         out[TURN] *= 1f - cut * (MOVE_TURN_CUT_WALK + (MOVE_TURN_CUT_RUN - MOVE_TURN_CUT_WALK) * run)
         springTip(out)
 
         val yaw = if (swinging) -s * out[TURN] else 0f
-        if (swinging) {
-            model.body.yRot = yaw
-            model.rightArm.z = sin(yaw) * 5f
-            model.rightArm.x = -cos(yaw) * 5f
-            model.leftArm.z = -sin(yaw) * 5f
-            model.leftArm.x = cos(yaw) * 5f
-        }
+        val legWeight = (if (swinging) 1f else clock.heldAmount()) * (1f - moving) * LocomotionAnimations.legAuthority(state)
+        val hipYaw = -s * out[HIPS_Y] * legWeight
+        model.rightArm.x = -SHOULDER_X
+        model.rightArm.z = 0f
+        model.leftArm.x = SHOULDER_X
+        model.leftArm.z = 0f
 
         applyArm(main, -s, s, yaw, out[PITCH], out[ACROSS], out[ABDUCT])
         applyArm(off, s, -s, yaw, out[OFF_PITCH], out[OFF_ACROSS], out[OFF_ABDUCT])
         main.z += out[REACH]
-        applyBody(model, yaw, out[LEAN])
+        val lean = out[LEAN]
+        Trunk.apply(
+            model, hipYaw, lean * Trunk.PELVIS_SHARE, out[BODY_R] * Trunk.PELVIS_SHARE,
+            yaw + out[BODY_Y] - hipYaw, lean * (1f - Trunk.PELVIS_SHARE), out[BODY_R] * (1f - Trunk.PELVIS_SHARE), true,
+        )
         plantLegs(model, drive)
-        applyTorsoTwist(model, out)
         val mainShoulder = if (right) -SHOULDER_X else SHOULDER_X
         keepOutOfBody(main, mainShoulder, yaw)
         val guardKey = if (swinging) pose.key else clock.idleKey()
@@ -1381,8 +1476,15 @@ object WeaponAnimations {
         val offShoulder = -mainShoulder
         keepOutOfBody(off, offShoulder, yaw)
         RigLegs.submitClip(
-            state.id, if (swinging) 1f - moving else 0f, -s * out[HIPS_Y], out[ROOT_F], out[ROOT_S], out[ROOT_H],
+            state.id, legWeight, hipYaw, out[ROOT_F], out[ROOT_S], out[ROOT_H],
             out[FOOT_LF], out[FOOT_LS], out[FOOT_LU], out[FOOT_RF], out[FOOT_RS], out[FOOT_RU],
+        )
+
+        val sprintShare = clock.sprintAmount()
+        val strokeFlex = if (swinging) clock.elbowPhase else 0f
+        clock.stepElbows(
+            elbowGoal(main, yaw, out[REACH], sprintShare, strokeFlex).coerceIn(ELBOW_MIN_FLEX, ELBOW_MAIN_MAX),
+            elbowGoal(off, yaw, 0f, sprintShare, strokeFlex * ELBOW_OFF_SHARE).coerceIn(ELBOW_MIN_FLEX, ELBOW_OFF_MAX),
         )
 
         headA = out[HEAD_A]
@@ -1390,7 +1492,6 @@ object WeaponAnimations {
         headTwist = out[TWIST]
         headYaw = yaw
         headSide = s
-        lastReach = out[REACH]
         headActive = true
         val shiftKey = if (swinging) pose.key else clock.idleKey()
         headEntity = state.id
@@ -1499,36 +1600,11 @@ object WeaponAnimations {
     private const val SHAFT_BLADE_MARGIN = 4f
     private const val SHAFT_BLADE_LENGTH = 20f
 
-    private fun leanPart(part: ModelPart, yaw: Float, lean: Float) {
-        clipPoint.set(part.x, part.y - HIP_Y, part.z).rotateY(-yaw).rotateX(lean).rotateY(yaw)
-        part.x = clipPoint.x
-        part.y = clipPoint.y + HIP_Y
-        part.z = clipPoint.z
-    }
-
     private fun plantLegs(model: HumanoidModel<*>, drive: Float) {
         if (drive <= 0.001f) return
         val keep = 1f - PLANT_CUT * drive
         model.rightLeg.xRot *= keep
         model.leftLeg.xRot *= keep
-    }
-
-    private fun applyTorsoTwist(model: HumanoidModel<*>, out: FloatArray) {
-        model.body.yRot += out[BODY_Y]
-        model.body.zRot += out[BODY_R]
-    }
-
-    private fun applyBody(model: HumanoidModel<*>, yaw: Float, lean: Float) {
-        if (abs(lean) > 0.001f) {
-            leanPart(model.body, yaw, lean)
-            model.body.xRot += lean
-            leanPart(model.head, yaw, lean)
-            model.head.xRot += lean * LEAN_HEAD_SHARE
-            leanPart(model.rightArm, yaw, lean)
-            model.rightArm.xRot += lean
-            leanPart(model.leftArm, yaw, lean)
-            model.leftArm.xRot += lean
-        }
     }
 
     private fun armInsideBody(part: ModelPart, shoulderX: Float, yaw: Float): Boolean {

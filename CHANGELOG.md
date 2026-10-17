@@ -42,6 +42,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Each stroke holds its last frame so chains flow from it, every spell strikes on input, and the uppercut is one hand-authored stroke. Sprint attacks were removed.
 - Each chat channel shows only its own messages, and All shows everything. SYS is a popout panel.
 - The greatsword rests on the shoulder at idle, and strokes are authored from waypoints in place of mirrored copies.
+- The spine and pelvis bend, the walk and sprint were reworked, and every stroke has legwork.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.

@@ -6,4 +6,14 @@ public interface BendHolder {
     float getLimbBend();
 
     long getLimbBendStamp();
+
+    void setSpine(float twist, float curl, float bend, long stamp);
+
+    float getSpineTwist();
+
+    float getSpineCurl();
+
+    float getSpineBend();
+
+    long getSpineStamp();
 }

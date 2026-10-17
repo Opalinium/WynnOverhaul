@@ -30,7 +30,7 @@ public abstract class CubeBendMixin {
         float growX, float growY, float growZ, boolean mirror, float texWidth, float texHeight,
         Set<Direction> visibleFaces, CallbackInfo ci
     ) {
-        if (h == 12.0F && d == 4.0F && (w == 4.0F || w == 3.0F)) {
+        if (h == 12.0F && d == 4.0F && (w == 4.0F || w == 3.0F || w == 8.0F)) {
             this.wynnoverhaul$strips = LimbBend.subdivide(this.polygons);
         }
     }

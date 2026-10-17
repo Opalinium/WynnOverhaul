@@ -118,10 +118,10 @@ internal object RigLegs {
     }
 
     fun submitGait(
-        id: Int, w: Float, rootH: Float,
+        id: Int, w: Float, hipY: Float, rootH: Float,
         leftF: Float, leftS: Float, leftU: Float, rightF: Float, rightS: Float, rightU: Float,
     ) {
-        store(gait, id, w, 0f, 0f, 0f, rootH, leftF, leftS, leftU, rightF, rightS, rightU)
+        store(gait, id, w, hipY, 0f, 0f, rootH, leftF, leftS, leftU, rightF, rightS, rightU)
     }
 
     fun submitPose(

@@ -1,4 +1,4 @@
-FIELDS = ("label", "seconds", "hit", "recover", "blend", "gripOffset", "handShift", "handSprintExtra", "holdEnd", "spin")
+FIELDS = ("label", "seconds", "hit", "recover", "blend", "gripOffset", "handShift", "handSprintExtra", "holdEnd", "spin", "bodyPass")
 ORDER = ["pitch", "across", "abduct", "offPitch", "offAcross", "offAbduct", "turn", "hipY", "reach", "headA", "headY", "twist", "grip", "lean", "bodyY", "bodyR", "rootF", "rootS", "rootH", "footLF", "footLS", "footLU", "footRF", "footRS", "footRU"]
 
 

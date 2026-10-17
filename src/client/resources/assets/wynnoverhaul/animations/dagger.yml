@@ -3,7 +3,7 @@ stances:
   "DAGGER":
     gripOffset: 7
     carry: {pitch: -0.6, across: 0.15, abduct: 0.1, offPitch: -0.3, offAcross: 0.1, offAbduct: 0.2, turn: 0.15, headA: -0.15, headY: 0.15}
-    ready: {pitch: -0.9, across: 0.3, abduct: 0.15, offPitch: -0.4, offAcross: 0.15, offAbduct: 0.35, turn: 0.3, headY: 0.35}
+    ready: {pitch: -0.9, across: 0.3, abduct: 0.15, offPitch: -0.4, offAcross: 0.15, offAbduct: 0.35, turn: 0.3, headY: 0.35, rootH: 0.45, footLS: 0.8, footRS: -0.8, footRF: 1.6, footLF: -1.3, hipY: 0.15}
     idle: {pitch: -0.25, across: 0.1, abduct: 0.12, offPitch: -0.1, offAcross: 0.05, offAbduct: 0.15, turn: 0.1, headA: 0.35, headY: 0.1}
     walk: {pitch: -0.45, across: 0.12, abduct: 0.1, offPitch: -0.25, offAcross: 0.1, offAbduct: 0.2, turn: 0.12, headY: 0.12, lean: 0.08}
     sprint: {pitch: -0.5, across: 0.1, abduct: 0.1, offPitch: -0.3, offAcross: 0.1, offAbduct: 0.2, turn: 0.1, headY: 0.1, lean: 0.24}
@@ -11,7 +11,7 @@ stances:
   "DAGGER:STAB":
     gripOffset: 7
     carry: {pitch: -0.4, across: 0.25, abduct: 0.1, offPitch: -0.5, offAcross: 0.3, offAbduct: 0.2, turn: 0.3, headA: 0.1, headY: 0.2}
-    ready: {pitch: -0.8, across: 0.35, abduct: 0.12, offPitch: -0.7, offAcross: 0.35, offAbduct: 0.3, turn: 0.45, headA: 0.15, headY: 0.3}
+    ready: {pitch: -0.8, across: 0.35, abduct: 0.12, offPitch: -0.7, offAcross: 0.35, offAbduct: 0.3, turn: 0.45, headA: 0.15, headY: 0.3, rootH: 0.45, footLS: 0.8, footRS: -0.8, footRF: 1.6, footLF: -1.3, hipY: 0.225}
     idle: {pitch: -0.2, across: 0.15, abduct: 0.1, offPitch: -0.3, offAcross: 0.2, offAbduct: 0.2, turn: 0.2, headA: 0.4, headY: 0.1}
     walk: {pitch: -0.35, across: 0.2, abduct: 0.1, offPitch: -0.45, offAcross: 0.25, offAbduct: 0.2, turn: 0.25, headA: 0.25, headY: 0.15, lean: 0.14}
     sprint: {pitch: -0.45, across: 0.15, abduct: 0.1, offPitch: -0.4, offAcross: 0.2, offAbduct: 0.2, turn: 0.15, headY: 0.1, lean: 0.26}
@@ -19,7 +19,7 @@ stances:
   "DAGGER:WHIRL":
     gripOffset: 7
     carry: {pitch: -0.5, across: 0.2, abduct: 0.25, offPitch: -0.2, offAcross: 0.2, offAbduct: 0.5, turn: 0.05, headA: -0.2, headY: 0.2}
-    ready: {pitch: -0.8, across: 0.2, abduct: 0.3, offPitch: -0.3, offAcross: 0.1, offAbduct: 0.55, turn: 0.15, headY: 0.3}
+    ready: {pitch: -0.8, across: 0.2, abduct: 0.3, offPitch: -0.3, offAcross: 0.1, offAbduct: 0.55, turn: 0.15, headY: 0.3, rootH: 0.45, footLS: 0.8, footRS: -0.8, footRF: 1.6, footLF: -1.3, hipY: 0.075}
     idle: {pitch: -0.2, across: 0.08, abduct: 0.15, offPitch: -0.15, offAcross: 0.05, offAbduct: 0.3, headA: 0.3, headY: 0.1}
     walk: {pitch: -0.4, across: 0.1, abduct: 0.25, offPitch: -0.2, offAcross: 0.1, offAbduct: 0.5, turn: 0.05, headA: -0.1, headY: 0.1, lean: 0.05}
     sprint: {pitch: -0.45, across: 0.1, abduct: 0.2, offPitch: -0.3, offAcross: 0.1, offAbduct: 0.45, turn: 0.05, headY: 0.1, lean: 0.22}
