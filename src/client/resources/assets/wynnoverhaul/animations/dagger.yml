@@ -36,10 +36,10 @@ movesets:
       addSounds:
         - {at: 0.3, sound: "minecraft:entity.player.attack.weak", pitch: 1.6, volume: 0.35}
     light:
-      - {pose: "DAGGER:L1"}
-      - {pose: "DAGGER:L2"}
-      - {pose: "DAGGER:L3"}
-      - {pose: "DAGGER:L4", finisher: true}
+      - {pose: "DAGGER"}
+      - {pose: "DAGGER:BACK"}
+      - {pose: "DAGGER:UPPER"}
+      - {pose: "DAGGER:CROSS", finisher: true}
   "DAGGER:STAB":
     label: "Dagger: Stiletto"
     cast:
@@ -52,10 +52,10 @@ movesets:
       addSounds:
         - {at: 0.35, sound: "minecraft:entity.player.attack.weak", pitch: 1.9, volume: 0.35}
     light:
-      - {pose: "DAGGER:STAB:L1"}
-      - {pose: "DAGGER:STAB:L2"}
-      - {pose: "DAGGER:STAB:L3"}
-      - {pose: "DAGGER:STAB:L4", finisher: true}
+      - {pose: "DAGGER:STAB"}
+      - {pose: "DAGGER:STAB_HIGH"}
+      - {pose: "DAGGER:FLURRY"}
+      - {pose: "DAGGER:PLUNGE", finisher: true}
   "DAGGER:WHIRL":
     label: "Dagger: Dancer"
     cast:
@@ -67,9 +67,9 @@ movesets:
       addSounds:
         - {at: 0.4, sound: "minecraft:entity.phantom.flap", pitch: 1.6, volume: 0.4}
     light:
-      - {pose: "DAGGER:WHIRL:L1"}
-      - {pose: "DAGGER:WHIRL:L2"}
-      - {pose: "DAGGER:WHIRL:L3"}
-      - {pose: "DAGGER:WHIRL:L4", finisher: true}
+      - {pose: "DAGGER:WHIRL"}
+      - {pose: "DAGGER:LOW"}
+      - {pose: "DAGGER:WHIRL_BACK"}
+      - {pose: "DAGGER:TEMPEST", finisher: true}
 trails:
   "DAGGER": [0, 28]

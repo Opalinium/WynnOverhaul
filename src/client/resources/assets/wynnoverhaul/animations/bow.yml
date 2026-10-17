@@ -10,11 +10,11 @@ stances:
     gait: {mainWalk: 0.2, offWalk: 0.5, mainSprint: 0.55, offSprint: 1.05, across: 0.18, lean: 0.14, leanBounce: 0.05, tipWalk: 0.05, tipSprint: 0.14, yaw: 0.06, armBob: 0, twist: 0}
   "BOW:FIREARM":
     gripOffset: 9
-    carry: {pitch: -0.9, across: 0.35, abduct: 0, offPitch: -0.9, offAcross: 0.4, offAbduct: 0, turn: 0.1, headA: -0.5, grip: 1}
-    ready: {pitch: -1.2, across: 0.45, abduct: 0, offPitch: -1.3, offAcross: 0.6, offAbduct: 0, turn: 0.15, reach: -0.8, headA: -0.05, grip: 1}
-    idle: {pitch: -0.6, across: 0.3, abduct: 0, offPitch: -0.5, offAcross: 0.3, offAbduct: 0, turn: 0.05, headA: 0.6, grip: 1}
-    walk: {pitch: -0.95, across: 0.35, offPitch: -0.9, offAcross: 0.4, turn: 0.1, headA: -0.25, grip: 1, lean: 0.06}
-    sprint: {pitch: -0.8, across: 0.35, abduct: 0, offPitch: -0.85, offAcross: 0.4, offAbduct: 0, turn: 0.1, headA: 0.15, grip: 1, lean: 0.2}
+    carry: {pitch: -0.9, across: 0.35, abduct: 0, offPitch: -0.66, offAcross: 0.12, offAbduct: -0.63, turn: 0.1, headA: -0.5}
+    ready: {pitch: -1.2, across: 0.45, abduct: 0, offPitch: -1.03, offAcross: 0.51, offAbduct: -0.41, turn: 0.15, reach: -0.8, headA: -0.05}
+    idle: {pitch: -0.6, across: 0.3, abduct: 0, offPitch: -0.66, offAcross: 0.26, offAbduct: -0.86, turn: 0.05, headA: 0.6}
+    walk: {pitch: -0.95, across: 0.35, offPitch: -0.66, offAcross: 0.21, turn: 0.1, headA: -0.25, lean: 0.06, offAbduct: -0.7}
+    sprint: {pitch: -0.8, across: 0.35, abduct: 0, offPitch: -0.85, offAcross: 0.17, offAbduct: -0.77, turn: 0.1, headA: 0.15, lean: 0.2}
     gait: {mainWalk: 0.1, offWalk: 0.25, mainSprint: 0.3, offSprint: 0.6, across: 0.1, lean: 0.1, leanBounce: 0.04, tipWalk: 0.03, tipSprint: 0.08, yaw: 0.04, armBob: 0.05, twist: 0}
 movesets:
   "BOW":
@@ -25,10 +25,10 @@ movesets:
       addSounds:
         - {at: 0.4, sound: "minecraft:entity.arrow.shoot", pitch: 1.3, volume: 0.3}
     light:
-      - {pose: "BOW:L1"}
-      - {pose: "BOW:L2"}
-      - {pose: "BOW:L3"}
-      - {pose: "BOW:L4", finisher: true}
+      - {pose: "BOW"}
+      - {pose: "BOW:SNAP"}
+      - {pose: "BOW"}
+      - {pose: "BOW:VOLLEY", finisher: true}
   "BOW:FIREARM":
     label: "Bow: Firearm"
     cast:
@@ -40,7 +40,7 @@ movesets:
       addSounds:
         - {at: 0.4, sound: "minecraft:entity.firework_rocket.blast", pitch: 1.4, volume: 0.35}
     light:
-      - {pose: "BOW:FIREARM:L1"}
-      - {pose: "BOW:FIREARM:L2"}
-      - {pose: "BOW:FIREARM:L3"}
-      - {pose: "BOW:FIREARM:L4", finisher: true}
+      - {pose: "BOW:FIREARM"}
+      - {pose: "BOW:FIREARM_KICK"}
+      - {pose: "BOW:FIREARM"}
+      - {pose: "BOW:FIREARM_PUMP", finisher: true}

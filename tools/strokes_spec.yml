@@ -1,0 +1,301 @@
+strokes:
+  "SPEAR:GREATSWORD_BACK":
+    weapon: "SPEAR:GREATSWORD"
+    label: "Greatsword: rising backhand"
+    seconds: 0.5
+    hit: 0.42
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: 70, el: -14, turn: 0.75, lean: 0.05, reach: -1}
+      - {t: 0.42, az: -4, el: 22, turn: -0.1, lean: 0.1, reach: 1, lunge: 2}
+      - {t: 0.64, az: -78, el: 52, turn: -0.75, lean: 0.0}
+  "SPEAR:SWEEP_RISE":
+    weapon: "SPEAR:SWEEP"
+    label: "Quarterstaff: rising backhand"
+    seconds: 0.4
+    hit: 0.42
+    twoHanded: true
+    sfx: sweep
+    path:
+      - {t: 0.2, az: 58, el: -20, turn: 0.55, lean: 0.05}
+      - {t: 0.42, az: -8, el: 18, turn: -0.3, lean: 0.1, reach: 1.5}
+      - {t: 0.64, az: -62, el: 44, turn: -0.62, lean: 0.0}
+  "SPEAR:GLAIVE_LOW":
+    weapon: "SPEAR:GLAIVE"
+    label: "Naginata: low sweep"
+    seconds: 0.44
+    hit: 0.4
+    twoHanded: true
+    sfx: sweep
+    path:
+      - {t: 0.2, az: -68, el: -2, turn: -0.8, lean: 0.0}
+      - {t: 0.4, az: 28, el: -22, turn: 0.45, lean: 0.14, down: 1, lunge: 2}
+      - {t: 0.64, az: 76, el: -14, turn: 0.82, lean: 0.12, down: 1, lunge: 3}
+  "SPEAR:AXE_BACK":
+    weapon: "SPEAR:AXE"
+    label: "Axe: diagonal chop"
+    seconds: 0.4
+    hit: 0.42
+    sfx: chop
+    path:
+      - {t: 0.2, az: 58, el: 56, turn: 0.6, lean: -0.05}
+      - {t: 0.42, az: -14, el: -18, turn: -0.3, lean: 0.2, reach: 1.5, lunge: 2}
+      - {t: 0.64, az: -52, el: -34, turn: -0.55, lean: 0.22, lunge: 3}
+  "DAGGER:BACK":
+    weapon: "DAGGER"
+    label: "Dagger: backhand"
+    seconds: 0.26
+    hit: 0.3
+    sfx: quick
+    path:
+      - {t: 0.14, az: 46, el: 4, turn: 0.5, lean: 0.0}
+      - {t: 0.3, az: -14, el: 0, turn: -0.3, lean: 0.08, reach: 1, lunge: 2}
+      - {t: 0.58, az: -60, el: 4, turn: -0.62, lean: 0.06}
+  "DAGGER:STAB_HIGH":
+    weapon: "DAGGER:STAB"
+    label: "Rapier: high thrust"
+    seconds: 0.28
+    hit: 0.3
+    sfx: stab
+    path:
+      - {t: 0.14, az: -24, el: 10, turn: -0.4, lean: 0.0, reach: -2}
+      - {t: 0.3, az: 3, el: 12, turn: 0.3, lean: 0.12, reach: 3.5, lunge: 4}
+      - {t: 0.6, az: 4, el: 8, turn: 0.2, lean: 0.1, reach: 2.5, lunge: 4}
+  "DAGGER:WHIRL_BACK":
+    weapon: "DAGGER:WHIRL"
+    label: "Scimitar: reverse slash"
+    seconds: 0.32
+    hit: 0.36
+    sfx: quick
+    path:
+      - {t: 0.17, az: 60, el: 24, turn: 0.65, lean: 0.0}
+      - {t: 0.36, az: 0, el: -4, turn: -0.2, lean: 0.1, lunge: 2}
+      - {t: 0.62, az: -72, el: -14, turn: -0.7, lean: 0.1}
+  "WAND:SWIPE":
+    weapon: "WAND"
+    label: "Wand: cross swipe"
+    seconds: 0.3
+    hit: 0.34
+    edge: false
+    sfx: cast
+    path:
+      - {t: 0.15, az: 34, el: 30, turn: 0.3, lean: 0.0}
+      - {t: 0.34, az: -20, el: 14, turn: -0.3, lean: 0.05, reach: 1}
+      - {t: 0.62, az: -46, el: 20, turn: -0.42, lean: 0.04}
+  "WAND:STAFF_BACK":
+    weapon: "WAND:STAFF"
+    label: "Staff: backsweep"
+    seconds: 0.4
+    hit: 0.4
+    twoHanded: true
+    edge: false
+    sfx: sweep
+    path:
+      - {t: 0.2, az: 42, el: 68, turn: 0.4, lean: 0.0}
+      - {t: 0.4, az: -20, el: 36, turn: -0.35, lean: 0.08, reach: 1}
+      - {t: 0.64, az: -52, el: 54, turn: -0.5, lean: 0.04}
+  "WAND:ORBIT_BACK":
+    weapon: "WAND:ORBIT"
+    label: "Orbit wand: counter circle"
+    seconds: 0.38
+    hit: 0.4
+    edge: false
+    sfx: cast
+    path:
+      - {t: 0.16, az: -34, el: 40, turn: -0.3, lean: 0.0}
+      - {t: 0.4, az: 4, el: 68, turn: 0.1, lean: 0.04, reach: 1}
+      - {t: 0.64, az: 38, el: 36, turn: 0.35, lean: 0.04}
+  "RELIK:SLICE":
+    weapon: "RELIK"
+    label: "Relik: cross slice"
+    seconds: 0.34
+    hit: 0.34
+    edge: false
+    sfx: relik
+    path:
+      - {t: 0.16, az: 40, el: 26, turn: 0.35, lean: 0.0}
+      - {t: 0.34, az: -30, el: 4, turn: -0.3, lean: 0.06, reach: 1}
+      - {t: 0.62, az: -52, el: 14, turn: -0.42, lean: 0.05}
+  "RELIK:RITE_BACK":
+    weapon: "RELIK:RITE"
+    label: "Ritual: open palm"
+    seconds: 0.4
+    hit: 0.4
+    edge: false
+    sfx: relik
+    path:
+      - {t: 0.2, az: -20, el: 66, turn: -0.2, lean: 0.0}
+      - {t: 0.4, az: 20, el: 12, turn: 0.2, lean: 0.08, reach: 1}
+      - {t: 0.66, az: 30, el: 6, turn: 0.28, lean: 0.06}
+  "SPEAR:GREATSWORD_DRAW":
+    weapon: "SPEAR:GREATSWORD"
+    label: "Greatsword: draw slash"
+    seconds: 0.62
+    hit: 0.4
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: -138, el: 62, turn: -0.7, lean: -0.05, reach: -1}
+      - {t: 0.4, az: 8, el: -16, turn: 0.3, lean: 0.18, reach: 1.5, lunge: 2}
+      - {t: 0.64, az: 62, el: -26, turn: 0.7, lean: 0.22, lunge: 3}
+  "SPEAR:GREATSWORD":
+    weapon: "SPEAR:GREATSWORD"
+    label: "Greatsword: horizontal sweep"
+    seconds: 0.55
+    hit: 0.42
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: -75, el: 25, turn: -0.75, lean: 0.0}
+      - {t: 0.42, az: 10, el: 2, turn: 0.15, lean: 0.12, lunge: 2}
+      - {t: 0.62, az: 85, el: -8, turn: 0.8, lean: 0.14, lunge: 3}
+  "SPEAR:GREATSWORD_THRUST":
+    weapon: "SPEAR:GREATSWORD"
+    label: "Greatsword: lunging thrust"
+    seconds: 0.5
+    hit: 0.4
+    sfx: sweep
+    path:
+      - {t: 0.2, az: -45, el: 6, turn: -0.7, lean: 0.0, reach: -3, twist: 0}
+      - {t: 0.4, az: 2, el: 3, turn: 0.35, lean: 0.2, reach: 3.5, lunge: 4, twist: 86}
+      - {t: 0.64, az: 4, el: 0, turn: 0.3, lean: 0.18, reach: 2.5, lunge: 4, twist: 86}
+  "SPEAR:GREATSWORD_CLEAVE":
+    weapon: "SPEAR:GREATSWORD"
+    label: "Greatsword: overhead cleave"
+    seconds: 0.7
+    hit: 0.44
+    sfx: sweep_heavy
+    path:
+      - {t: 0.22, az: -15, el: 84, turn: -0.3, lean: -0.05, reach: -1}
+      - {t: 0.44, az: 6, el: -36, turn: 0.25, lean: 0.28, down: 2, reach: 2, lunge: 3}
+      - {t: 0.7, az: 9, el: -46, turn: 0.2, lean: 0.3, down: 2, lunge: 3}
+  "SPEAR:RISING":
+    weapon: "SPEAR"
+    label: "Spear: rising thrust"
+    seconds: 0.4
+    hit: 0.38
+    twoHanded: true
+    sfx: sweep
+    path:
+      - {t: 0.18, az: -12, el: -30, turn: -0.4, lean: 0.0, reach: -2}
+      - {t: 0.38, az: 6, el: 30, turn: 0.25, lean: 0.14, reach: 3, lunge: 3}
+      - {t: 0.62, az: 10, el: 50, turn: 0.35, lean: 0.12, reach: 2, lunge: 3}
+  "SPEAR:SMASH":
+    weapon: "SPEAR:SWEEP"
+    label: "Quarterstaff: overhead smash"
+    seconds: 0.5
+    hit: 0.42
+    twoHanded: true
+    sfx: chop
+    path:
+      - {t: 0.2, az: -28, el: 80, turn: -0.5, lean: -0.05}
+      - {t: 0.42, az: 8, el: -40, turn: 0.55, lean: 0.3, down: 2, reach: 2}
+      - {t: 0.66, az: 10, el: -48, turn: 0.45, lean: 0.32, down: 2}
+  "SPEAR:CHOP":
+    weapon: "SPEAR:SCYTHE"
+    label: "Halberd: heavy chop"
+    seconds: 0.56
+    hit: 0.42
+    twoHanded: true
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: -35, el: 72, turn: -0.6, lean: -0.05}
+      - {t: 0.42, az: 10, el: -32, turn: 0.4, lean: 0.28, down: 1.5, reach: 2}
+      - {t: 0.68, az: 16, el: -44, turn: 0.35, lean: 0.3, down: 1.5}
+  "SPEAR:GLAIVE_RISE":
+    weapon: "SPEAR:GLAIVE"
+    label: "Naginata: rising cut"
+    seconds: 0.46
+    hit: 0.4
+    twoHanded: true
+    sfx: sweep
+    path:
+      - {t: 0.2, az: -34, el: -26, turn: -0.85, lean: 0.05}
+      - {t: 0.4, az: 6, el: 24, turn: 0.3, lean: 0.1, reach: 1.5}
+      - {t: 0.64, az: 36, el: 55, turn: 0.8, lean: 0.05}
+  "WAND:STAFF_RAISE":
+    weapon: "WAND:STAFF"
+    label: "Staff: raise and slam"
+    seconds: 0.44
+    hit: 0.4
+    twoHanded: true
+    edge: false
+    sfx: sweep
+    path:
+      - {t: 0.2, az: -10, el: 82, turn: -0.15, lean: -0.05}
+      - {t: 0.4, az: 2, el: 26, turn: 0.15, lean: 0.12, reach: 2}
+      - {t: 0.64, az: 2, el: 44, turn: 0.08, lean: 0.06}
+  "WAND:CRESCENDO":
+    weapon: "WAND:ORBIT"
+    label: "Orbit wand: crescendo"
+    seconds: 0.55
+    hit: 0.46
+    edge: false
+    sfx: cast
+    path:
+      - {t: 0.24, az: 5, el: 80, turn: -0.6, lean: -0.05}
+      - {t: 0.46, az: 6, el: -4, turn: 0.8, lean: 0.2, reach: 1.5, lunge: 3}
+      - {t: 0.7, az: 6, el: -2, turn: 0.55, lean: 0.14, lunge: 3}
+  "TOOL:AXE":
+    weapon: "TOOL:AXE"
+    label: "Tool: axe chop"
+    seconds: 0.5
+    hit: 0.44
+    edge: false
+    sfx: chop
+    path:
+      - {t: 0.22, az: -8, el: 78, turn: -0.2, lean: -0.05}
+      - {t: 0.44, az: 4, el: -38, turn: 0.2, lean: 0.24, reach: 2}
+      - {t: 0.68, az: 5, el: -44, turn: 0.15, lean: 0.24}
+  "TOOL:SCYTHE":
+    weapon: "TOOL:SCYTHE"
+    label: "Tool: scythe reap"
+    seconds: 0.55
+    hit: 0.44
+    edge: false
+    sfx: sweep
+    path:
+      - {t: 0.22, az: -62, el: -4, turn: -0.7, lean: 0.0}
+      - {t: 0.44, az: 8, el: -20, turn: 0.2, lean: 0.14, down: 1, lunge: 2}
+      - {t: 0.68, az: 70, el: -14, turn: 0.75, lean: 0.12, down: 1, lunge: 3}
+  "SPEAR:SCYTHE_BACK":
+    weapon: "SPEAR:SCYTHE"
+    label: "Halberd: low backsweep"
+    seconds: 0.5
+    hit: 0.42
+    twoHanded: true
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: 60, el: -8, turn: 0.8, lean: 0.0}
+      - {t: 0.42, az: -10, el: 6, turn: -0.3, lean: 0.12, reach: 1.5, lunge: 2}
+      - {t: 0.66, az: -76, el: 12, turn: -0.8, lean: 0.1, lunge: 3}
+  "SPEAR:SCYTHE":
+    weapon: "SPEAR:SCYTHE"
+    label: "Halberd: diagonal sweep"
+    seconds: 0.5
+    hit: 0.42
+    twoHanded: true
+    sfx: sweep_heavy
+    path:
+      - {t: 0.2, az: -55, el: 55, turn: -0.8, lean: 0.0}
+      - {t: 0.42, az: 15, el: -5, turn: 0.45, lean: 0.12, reach: 1.5, lunge: 2}
+      - {t: 0.66, az: 75, el: -25, turn: 0.8, lean: 0.15, lunge: 3}
+  "SPEAR:SLAM":
+    weapon: "SPEAR:SCYTHE"
+    label: "Halberd: ground slam"
+    seconds: 0.6
+    hit: 0.44
+    twoHanded: true
+    sfx: chop
+    path:
+      - {t: 0.22, az: 15, el: 84, turn: -0.3, lean: -0.05}
+      - {t: 0.44, az: 4, el: -50, turn: 0.3, lean: 0.32, down: 2.5, reach: 2, lunge: 3}
+      - {t: 0.7, az: 6, el: -58, turn: 0.28, lean: 0.34, down: 2.5, lunge: 3}
+  "DAGGER:PLUNGE":
+    weapon: "DAGGER:STAB"
+    label: "Rapier: plunging strike"
+    seconds: 0.44
+    hit: 0.42
+    sfx: stab
+    path:
+      - {t: 0.2, az: 0, el: 80, turn: -0.3, lean: -0.05, reach: -1}
+      - {t: 0.42, az: 5, el: -50, turn: 0.4, lean: 0.3, down: 2, reach: 2.5, lunge: 3}
+      - {t: 0.68, az: 3, el: -55, turn: 0.35, lean: 0.32, down: 2, lunge: 3}

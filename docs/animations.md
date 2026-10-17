@@ -6,7 +6,7 @@ Edits apply without restarting: the folder is checked once a second and reloaded
 
 ## Files
 
-Any file may contain any section. The bundled files are split by weapon family (`spear`, `dagger`, `wand`, `relik`, `bow`, `tool`, `spell`) plus `shared`, `locomotion`, and the generated `attack_moves`, `spell_moves` and `gait`.
+Any file may contain any section. The bundled files are split by weapon family (`spear`, `dagger`, `wand`, `relik`, `bow`, `tool`, `spell`) plus `shared`, `locomotion`, `strokes`, `spell_moves` and the generated `gait`.
 
 ## poses
 
@@ -79,6 +79,8 @@ movesets:
 `cast` reshapes the shared spell pose for the spell being cast, so each moveset casts in its own manner without a pose per spell. All fields are optional: `seconds` multiplies the length, `arc` the arm and weapon tip channels, `body` the lean, step, turn, leg and hip channels, `reach` the hand push, `raise` lifts the arms (negative lowers them), `turn` adds a swing of the torso, `mirror` plays the cast in the opposite direction, `grip` forces one handed (0) or two handed (1), `hit` shifts when the strike lands, `blend` multiplies the ease in, `twirl` adds an oscillation to a channel (`{channel, amplitude, cycles}`), `sounds` replaces the spell's sounds and `addSounds` adds sounds on top. A pose named in `spells` is used as written and ignores `cast`.
 
 `movesetSpells` is a top-level section that does the same as `spells` for several movesets at once: `movesetSpells: {"SPEAR:HAMMER": {bash: "SPELL:BASH@SPEAR:HAMMER"}}`. The bundled `spell_moves.yml` uses it to give each moveset its own cast for most spells.
+
+Light strokes, openers, tool strokes and weapon stances are authored by hand in `strokes.yml` and the weapon files. `tools/strokes_spec.yml` holds the strokes written as waypoints: for each moment of the swing, the direction the weapon points, the torso turn, the lean, the reach and an optional lunge. `python tools/stroke_author.py tools/strokes_spec.yml <animations>/strokes.yml merge` solves the arms, the off hand on the shaft for two-handed weapons, the hips and the blade roll that keeps the edge leading, and writes the curves. The off hand is part of the curves because the game does not solve a grip at runtime; `tools/bake_offhand.py` does the same for stances and spell casts. Spell casts in `spell_moves.yml` are composed from each moveset's own strokes.
 
 A spell without an entry in `spell_moves.yml` falls back to the shared pose reshaped by `cast`.
 

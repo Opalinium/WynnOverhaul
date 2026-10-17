@@ -108,31 +108,6 @@ class Part:
         return rot_zyx(self.zr, self.yr, self.xr)
 
 
-def apply_grip(main, off, side, yaw, head_a, head_y, weight, offset, lean=0.0):
-    if weight <= 0.001:
-        return
-    grip_point = main.matrix() @ np.array([0, GRIP_Y, GRIP_Z]) + np.array([main.x, main.y, main.z])
-    cos_a = math.cos(head_a)
-    shaft = np.array([side * math.sin(head_y) * cos_a, math.sin(head_a), -math.cos(head_y) * cos_a])
-    shaft = rot_y(yaw) @ shaft
-    to = grip_point - np.array([off.x, off.y, off.z])
-    b = float(np.dot(to, shaft))
-    disc = b * b - (float(np.dot(to, to)) - (GRIP_Y ** 2 + GRIP_Z ** 2))
-    if disc >= 0:
-        r = math.sqrt(disc)
-        near, far = -b - r, -b + r
-        along = near if abs(near - offset) < abs(far - offset) else far
-    else:
-        along = -b
-    to = to + along * shaft
-    grip_dir = np.array([0, GRIP_Y, GRIP_Z])
-    q = rotation_to(grip_dir, to)
-    ex, ey, ez = euler_zyx(q)
-    off.xr += (ex - off.xr) * weight
-    off.yr += (ey - off.yr) * weight
-    off.zr += (ez - off.zr) * weight
-
-
 def arm_inside(part, shoulder_x, yaw):
     m = rot_zyx(part.zr, part.yr - yaw, part.xr)
     for f in GUARD_POINTS:
@@ -212,13 +187,6 @@ def solve(out, grip_offset=7.0, guard=True):
     clipped = False
     if guard:
         clipped |= keep_out_of_body(right, -5.0, yaw)
-    weight = max(0.0, min(1.0, out[GRIP]))
-    ox, oy, oz = left.xr, left.yr, left.zr
-    for relax in (1.0, 0.8, 0.6, 0.4, 0.2, 0.0):
-        left.xr, left.yr, left.zr = ox, oy, oz
-        apply_grip(right, left, s, yaw, out[HEAD_A], out[HEAD_Y], weight * relax, grip_offset)
-        if not guard or not arm_inside(left, 5.0, yaw):
-            break
     if guard:
         clipped |= keep_out_of_body(left, 5.0, yaw)
     twist = -out[HIPS_Y]

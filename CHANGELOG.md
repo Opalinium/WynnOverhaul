@@ -41,6 +41,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The war scream is hand authored, swings time to the weapon attack interval, and the legs pose for jumping, landing, crouching and climbing.
 - Each stroke holds its last frame so chains flow from it, every spell strikes on input, and the uppercut is one hand-authored stroke. Sprint attacks were removed.
 - Each chat channel shows only its own messages, and All shows everything. SYS is a popout panel.
+- The greatsword rests on the shoulder at idle, and strokes are authored from waypoints in place of mirrored copies.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.

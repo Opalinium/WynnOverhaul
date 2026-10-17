@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 internal object AnimationLibrary {
-    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "attack_moves", "spell", "spell_moves", "tool", "locomotion", "gait")
+    private val BUNDLED = listOf("shared", "spear", "dagger", "wand", "relik", "bow", "strokes", "spell", "spell_moves", "tool", "locomotion", "gait")
     private const val RESOURCE_ROOT = "/assets/wynnoverhaul/animations/"
     private const val README_NAME = "README.txt"
     private const val CHECK_TICKS = 20

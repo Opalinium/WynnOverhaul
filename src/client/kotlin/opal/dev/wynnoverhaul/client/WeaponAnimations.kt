@@ -129,11 +129,6 @@ object WeaponAnimations {
     private const val CLIP_STEP = 0.025f
     private const val CLIP_OUTWARD = 0.0125f
     private const val CLIP_STEPS = 36
-    private const val GRIP_BISECT = 6
-    private const val GRIP_RELAX_TAU = 0.06f
-    private const val GRIP_SLIDE_STEP = 1f
-    private const val GRIP_SLIDE_STEPS = 8
-    private const val GRIP_MIN_OFFSET = 3f
     private const val SPRING_OMEGA = 26f
     private const val SPRING_DAMPING = 0.5f
     private const val SPRING_MIX = 0.85f
@@ -429,9 +424,6 @@ object WeaponAnimations {
 
     private class Clock {
         var owner: Player? = null
-        var gripRelax = 1f
-        var gripSlide = 0f
-        var gripRelaxNanos = 0L
         var blockPush = 0f
         var blockPushNanos = 0L
         var springReady = false
@@ -540,8 +532,6 @@ object WeaponAnimations {
         fun idleKey(): String? = idleStackKey
 
         fun sprintAmount(): Float = sprintAmt
-
-        fun idleGripOffset(): Float? = idleTable?.takeIf { idleAmt > 0.5f && it.ready[GRIP] > 0f }?.gripOffset
 
         fun idleActive(): Boolean = idleAmt > 0.01f
 
@@ -1246,10 +1236,6 @@ object WeaponAnimations {
     private val wristQuat = Quaternionf()
     private val gripPoint = Vector3f()
     private val gripShaft = Vector3f()
-    private val gripTo = Vector3f()
-    private val gripEuler = Vector3f()
-    private val gripQuat = Quaternionf()
-    private val gripDir = Vector3f(0f, GRIP_Y, GRIP_Z).normalize()
     private val itemQuat = Quaternionf()
     private val ITEM_FRAME = Quaternionf()
         .rotationX(Math.toRadians(-90.0).toFloat())
@@ -1393,54 +1379,6 @@ object WeaponAnimations {
         }
         guardBlocks(state, main, s, yaw, out, if (guardKey != null) trailSpan(guardKey)?.second else null)
         val offShoulder = -mainShoulder
-        val gripWeight = out[GRIP].coerceIn(0f, 1f)
-        val gripOffset = clock.idleGripOffset() ?: pose?.gripOffset ?: 7f
-        val offX = off.xRot
-        val offY = off.yRot
-        val offZ = off.zRot
-        val gripFits = { slide: Float, relax: Float ->
-            off.xRot = offX
-            off.yRot = offY
-            off.zRot = offZ
-            applyGrip(main, off, s, yaw, out[HEAD_A], out[HEAD_Y], gripWeight * relax, (gripOffset + slide).coerceAtLeast(minOf(GRIP_MIN_OFFSET, gripOffset)))
-            !armInsideBody(off, offShoulder, yaw)
-        }
-        var slideGoal = 0f
-        var relaxGoal = 1f
-        if (!gripFits(0f, 1f)) {
-            var found = false
-            for (i in 1..GRIP_SLIDE_STEPS) {
-                val d = i * GRIP_SLIDE_STEP
-                if (gripFits(d, 1f)) {
-                    slideGoal = d
-                    found = true
-                    break
-                }
-                if (gripFits(-d, 1f)) {
-                    slideGoal = -d
-                    found = true
-                    break
-                }
-            }
-            if (!found) {
-                relaxGoal = if (!gripFits(0f, 0f)) 0f else {
-                    var lo = 0f
-                    var hi = 1f
-                    repeat(GRIP_BISECT) {
-                        val mid = (lo + hi) * 0.5f
-                        if (gripFits(0f, mid)) lo = mid else hi = mid
-                    }
-                    lo
-                }
-            }
-        }
-        val now = System.nanoTime()
-        val dt = if (clock.gripRelaxNanos == 0L) 1f else ((now - clock.gripRelaxNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
-        clock.gripRelaxNanos = now
-        val blend = MathX.expApproach(dt, GRIP_RELAX_TAU)
-        clock.gripRelax += (relaxGoal - clock.gripRelax) * blend
-        clock.gripSlide += (slideGoal - clock.gripSlide) * blend
-        gripFits(clock.gripSlide, clock.gripRelax)
         keepOutOfBody(off, offShoulder, yaw)
         RigLegs.submitClip(
             state.id, if (swinging) 1f - moving else 0f, -s * out[HIPS_Y], out[ROOT_F], out[ROOT_S], out[ROOT_H],
@@ -1611,31 +1549,6 @@ object WeaponAnimations {
             part.xRot -= CLIP_STEP
             part.yRot += outward
         }
-    }
-
-    private fun applyGrip(main: ModelPart, off: ModelPart, side: Float, yaw: Float, headA: Float, headY: Float, weight: Float, offset: Float) {
-        if (weight <= 0.001f) return
-        armQuat.rotationZYX(main.zRot, main.yRot, main.xRot)
-        gripPoint.set(0f, GRIP_Y, GRIP_Z).rotate(armQuat).add(main.x, main.y, main.z)
-        val cosA = cos(headA)
-        gripShaft.set(side * sin(headY) * cosA, sin(headA), -cos(headY) * cosA).rotateY(yaw)
-        gripTo.set(gripPoint).sub(off.x, off.y, off.z)
-        val b = gripTo.dot(gripShaft)
-        val disc = b * b - (gripTo.lengthSquared() - GRIP_LEN_SQ)
-        val along = if (disc >= 0f) {
-            val r = sqrt(disc)
-            val near = -b - r
-            val far = -b + r
-            if (abs(near - offset) < abs(far - offset)) near else far
-        } else {
-            -b
-        }
-        gripTo.fma(along, gripShaft).normalize()
-        gripQuat.rotationTo(gripDir, gripTo)
-        gripQuat.getEulerAnglesZYX(gripEuler)
-        off.xRot += (gripEuler.x - off.xRot) * weight
-        off.yRot += (gripEuler.y - off.yRot) * weight
-        off.zRot += (gripEuler.z - off.zRot) * weight
     }
 
     private fun applyArm(part: ModelPart, yawSign: Float, rollSign: Float, yaw: Float, pitch: Float, across: Float, abduct: Float) {
