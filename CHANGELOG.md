@@ -53,6 +53,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The main menu figure keeps your skin instead of falling back to the default.
 - Auto attack and quick spells no longer fire without a weapon in hand.
 - Buffs and debuffs are read from the tab Status Effects list, so debuffs show.
+- The vanilla action bar no longer shows through when it carries the vitals bar.
 
 ## 1.5.0 - 2026-10-09
 

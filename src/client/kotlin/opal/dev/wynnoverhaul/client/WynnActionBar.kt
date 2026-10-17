@@ -117,6 +117,7 @@ object WynnActionBar {
     }
 
     private fun isPersistentComposite(raw: String): Boolean {
+        if (WynnVitalsTracker.hasSegment(raw)) return true
         val parsed = WynnLevelTracker.findLevel(raw) ?: return false
         val known = WynnLevelTracker.level
         val profession = if (WynnLevelTracker.professionFresh()) WynnLevelTracker.professionLevel else null
