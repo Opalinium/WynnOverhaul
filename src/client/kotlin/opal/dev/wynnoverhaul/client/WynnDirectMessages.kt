@@ -114,11 +114,6 @@ object WynnDirectMessages {
         if (pm != null) {
             val nickname = looksLikeNickname(message, pm)
             PlayerLookup.verify(pm.partner, isKnownPlayer(pm.partner)) { real -> if (real || nickname) record(pm) }
-            return
-        }
-        if (System.currentTimeMillis() < guildCaptureUntil) {
-            val tokens = TOKEN_PATTERN.findAll(raw).map { it.value }.toSet()
-            guildTokens = guildTokens + tokens
         }
     }
 
@@ -154,7 +149,10 @@ object WynnDirectMessages {
 
     private fun allow(message: Component): Boolean {
         if (System.currentTimeMillis() >= guildCaptureUntil) return true
-        return parse(message.string) != null
+        if (ChatKinds.classify(message) != ChatKinds.Kind.SYSTEM) return true
+        guildTokens = guildTokens + TOKEN_PATTERN.findAll(message.string).map { it.value }
+        ChatSysPanel.add(message, false)
+        return false
     }
 
     private fun onCommand(command: String) {
@@ -253,21 +251,26 @@ object WynnDirectMessages {
         return out
     }
 
+    private fun inChannel(channel: WynnChatChannels.Channel, content: Component): Boolean {
+        if (channel == WynnChatChannels.Channel.ALL) return true
+        if (!WynnChatChannels.isFromServer(content) || WynnChatChannels.isOwnNotice(content)) return true
+        return ChatKinds.channelOf(ChatKinds.classify(content)) == channel
+    }
+
     fun applyView(open: Boolean) {
         val client = Minecraft.getInstance()
         val chat = client.gui.hud.chat
         val target = WynnChatChannels.directTarget
-        if (open && target == null && WynnChatChannels.current == WynnChatChannels.Channel.SYSTEM) {
-            chat.setVisibleMessageFilter { message ->
-                NotificationLog.isNotification(message.content()) || ChatKinds.classify(message.content()) == ChatKinds.Kind.SYSTEM
-            }
+        if (open && target == null && WynnOverhaulGate.onWynncraft) {
+            val channel = WynnChatChannels.current
+            chat.setVisibleMessageFilter { message -> inChannel(channel, message.content()) }
         } else if (open && target != null && WynnOverhaulConfig.current.chatConversationView) {
             chat.setVisibleMessageFilter { message ->
                 val pm = parse(message.content().string)
-                pm != null && pm.partner.equals(target, ignoreCase = true) && !NotificationLog.isNotification(message.content())
+                pm != null && pm.partner.equals(target, ignoreCase = true)
             }
         } else {
-            chat.setVisibleMessageFilter { message -> !NotificationLog.isNotification(message.content()) }
+            chat.setVisibleMessageFilter { true }
         }
         chat.rescaleChat()
     }

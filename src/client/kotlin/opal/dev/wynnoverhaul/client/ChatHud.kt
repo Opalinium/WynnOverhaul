@@ -3,6 +3,7 @@ package opal.dev.wynnoverhaul.client
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.components.ChatComponent
 import kotlin.math.min
 
 object ChatHud {
@@ -74,6 +75,14 @@ object ChatHud {
         val window = Minecraft.getInstance().window
         val bounds = HudLayoutManager.bounds(ID, window.guiScaledWidth, window.guiScaledHeight)
         return (bounds[3] - (window.guiScaledHeight - VANILLA_BOTTOM)).toFloat()
+    }
+
+    @JvmStatic
+    fun chatBounds(guiW: Int, guiH: Int): IntArray {
+        if (active()) return HudLayoutManager.bounds(ID, guiW, guiH)
+        val options = Minecraft.getInstance().options
+        val width = (ChatComponent.getWidth(options.chatWidth().get()) * options.chatScale().get()).toInt()
+        return intArrayOf(0, 0, width + 4, guiH - VANILLA_BOTTOM)
     }
 
     @JvmStatic

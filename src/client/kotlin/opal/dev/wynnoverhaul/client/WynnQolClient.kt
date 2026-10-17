@@ -22,6 +22,7 @@ class WynnQolClient : ClientModInitializer {
         PinBoard.register()
         Pings.register()
         ChatActivity.register()
+        ChatSysPanel.register()
         PartyBuffTracker.register()
         WynnBuffTracker.register()
         WynnLevelTracker.register()

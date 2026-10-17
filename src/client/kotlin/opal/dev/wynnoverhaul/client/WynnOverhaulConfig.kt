@@ -209,7 +209,7 @@ data class WynnOverhaulConfig(
 
     var customHudEnabled: Boolean = false,
 
-    var chatChannel: String = "all",
+    var chatTab: String = "all",
 
     var mountRegistry: MutableMap<String, StoredMount>? = null,
 ) {

@@ -33,6 +33,15 @@ object ChatKinds {
         return Kind.SYSTEM
     }
 
+    fun channelOf(kind: Kind): WynnChatChannels.Channel? = when (kind) {
+        Kind.PUBLIC, Kind.SHOUT -> WynnChatChannels.Channel.GLOBAL
+        Kind.PARTY -> WynnChatChannels.Channel.PARTY
+        Kind.GUILD -> WynnChatChannels.Channel.GUILD
+        Kind.PRIVATE, Kind.PETS, Kind.DIALOGUE, Kind.SYSTEM -> null
+    }
+
+    fun isSystemLog(kind: Kind): Boolean = kind == Kind.SYSTEM || kind == Kind.PETS || kind == Kind.DIALOGUE
+
     fun isChat(kind: Kind): Boolean = kind != Kind.SYSTEM && kind != Kind.DIALOGUE
 
     fun fromSelf(message: Component, name: String): Boolean {

@@ -10,7 +10,7 @@ object ChatDirectPanel {
     private const val PANEL_W = 190
     private const val ROW_H = 12
     private const val PAD = 4
-    private const val ANCHOR_GAP = 22
+    private const val ANCHOR_GAP = 17
     private const val KEY_ENTER = 257
     private const val KEY_KP_ENTER = 335
     private const val KEY_TAB = 258

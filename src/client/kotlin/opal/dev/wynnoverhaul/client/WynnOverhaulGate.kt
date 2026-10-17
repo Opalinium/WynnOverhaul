@@ -63,6 +63,7 @@ object WynnOverhaulGate {
             DiscoveryTracker.clear()
             XaeroHook.clear()
             ChatActivity.clearAll()
+            ChatSysPanel.clear()
             PinBoard.clearKind(PinBoard.Kind.PING)
             PinBoard.clearKind(PinBoard.Kind.RECEIVED)
         }

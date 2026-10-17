@@ -58,20 +58,16 @@ object ChatActivity {
     private fun countUnread(message: Component) {
         if (!WynnOverhaulGate.onWynncraft) return
         val kind = ChatKinds.classify(message)
-        val channel = when (kind) {
-            ChatKinds.Kind.PARTY -> WynnChatChannels.Channel.PARTY
-            ChatKinds.Kind.GUILD -> WynnChatChannels.Channel.GUILD
-            ChatKinds.Kind.SYSTEM -> WynnChatChannels.Channel.SYSTEM
-            else -> return
-        }
+        val channel = ChatKinds.channelOf(kind) ?: return
         val client = Minecraft.getInstance()
-        if (kind != ChatKinds.Kind.SYSTEM && ChatKinds.fromSelf(message, client.player?.gameProfile?.name.orEmpty())) return
+        if (ChatKinds.fromSelf(message, client.player?.gameProfile?.name.orEmpty())) return
         bump(channel)
     }
 
     fun bump(channel: WynnChatChannels.Channel) {
         val client = Minecraft.getInstance()
-        val viewing = client.gui.screen() is ChatScreen && WynnChatChannels.directTarget == null && WynnChatChannels.current == channel
+        val viewing = client.gui.screen() is ChatScreen && WynnChatChannels.directTarget == null &&
+            (WynnChatChannels.current == channel || WynnChatChannels.current == WynnChatChannels.Channel.ALL)
         if (!viewing) unread[channel] = (unread[channel] ?: 0) + 1
     }
 

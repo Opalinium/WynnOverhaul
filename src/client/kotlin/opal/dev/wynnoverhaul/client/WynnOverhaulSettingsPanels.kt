@@ -1224,7 +1224,7 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Mention sound", "Plays a short chime when a message mentions you.", config.chatMentionSound) { config.chatMentionSound = it }
             slider(
                 "Chat history (messages)", 100.0, 2000.0, 0, config.chatHistoryLimit.toDouble(),
-                "How many messages the chat remembers for scrolling, the SYS channel and its notification history. Vanilla keeps 100.",
+                "How many messages the chat and the system popout remember for scrolling. Vanilla keeps 100.",
             ) { config.chatHistoryLimit = it.toInt() }
 
             header("Ping")

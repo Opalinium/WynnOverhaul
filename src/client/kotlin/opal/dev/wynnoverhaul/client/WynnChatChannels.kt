@@ -13,9 +13,9 @@ import net.minecraft.network.chat.Component
 object WynnChatChannels {
     enum class Channel(val id: String, val label: String, val color: ChatFormatting, val command: String?) {
         ALL("all", "ALL", ChatFormatting.WHITE, null),
+        GLOBAL("global", "GLOBAL", ChatFormatting.WHITE, null),
         PARTY("party", "PARTY", ChatFormatting.YELLOW, "p"),
         GUILD("guild", "GUILD", ChatFormatting.AQUA, "g"),
-        SYSTEM("system", "SYS", ChatFormatting.GRAY, null),
     }
 
     @Volatile
@@ -31,9 +31,12 @@ object WynnChatChannels {
         private set
 
     fun register() {
-        current = Channel.entries.firstOrNull { it.id == WynnOverhaulConfig.current.chatChannel } ?: Channel.ALL
+        current = Channel.entries.firstOrNull { it.id == WynnOverhaulConfig.current.chatTab } ?: Channel.ALL
         ClientSendMessageEvents.ALLOW_CHAT.register { message -> route(message) }
-        ClientReceiveMessageEvents.GAME.register { message, _ -> matchIncoming(message) }
+        ClientReceiveMessageEvents.GAME.register { message, overlay ->
+            if (!overlay) noteFromServer(message)
+            matchIncoming(message)
+        }
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             dispatcher.register(
                 ClientCommands.literal("wct")
@@ -46,7 +49,7 @@ object WynnChatChannels {
                                 val action = StringArgumentType.getString(ctx, "action").lowercase()
                                 val channel = Channel.entries.firstOrNull { it.id == action }
                                 if (channel == null) {
-                                    printChat("Unknown action! Usage: /wct <all|party|guild>", ChatFormatting.RED)
+                                    printChat("Unknown action! Usage: /wct <all|global|party|guild>", ChatFormatting.RED)
                                     0
                                 } else {
                                     select(channel)
@@ -55,14 +58,14 @@ object WynnChatChannels {
                             },
                     )
                     .executes { _ ->
-                        printChat("Chat channel: ${current.label}. Usage: /wct <all|party|guild>", ChatFormatting.GRAY)
+                        printChat("Chat channel: ${current.label}. Usage: /wct <all|global|party|guild>", ChatFormatting.GRAY)
                         1
                     },
             )
             dispatcher.register(
                 ClientCommands.literal("a").then(
                     ClientCommands.argument("msg", StringArgumentType.greedyString()).executes { ctx ->
-                        overrideNext(Channel.ALL)
+                        overrideNext(Channel.GLOBAL)
                         Minecraft.getInstance().connection?.sendChat(StringArgumentType.getString(ctx, "msg"))
                         1
                     },
@@ -92,7 +95,7 @@ object WynnChatChannels {
             if (directAuto && !WynnDirectMessages.smartWindowOpen(target)) clearDirect()
             return
         }
-        if (!config.chatSmartReply || current != Channel.ALL || !WynnOverhaulGate.onWynncraft) return
+        if (!config.chatSmartReply || current.command != null || !WynnOverhaulGate.onWynncraft) return
         val smart = WynnDirectMessages.smartTarget() ?: return
         selectDirect(smart, auto = true)
     }
@@ -102,8 +105,7 @@ object WynnChatChannels {
         directAuto = false
         current = channel
         ChatActivity.clear(channel)
-        if (channel == Channel.SYSTEM) return
-        WynnOverhaulConfig.current.chatChannel = channel.id
+        WynnOverhaulConfig.current.chatTab = channel.id
         WynnOverhaulConfig.current.save()
         printChat(
             Component.literal("You are now in the ").append(Component.literal(channel.label).withStyle(channel.color)),
@@ -167,9 +169,31 @@ object WynnChatChannels {
         printChat(Component.literal(text).withStyle(color))
     }
 
+    private val serverMessages = ArrayDeque<Component>()
+    private val serverIndex = java.util.IdentityHashMap<Component, Boolean>()
+
+    private fun noteFromServer(message: Component) {
+        synchronized(serverMessages) {
+            serverMessages.addLast(message)
+            serverIndex[message] = true
+            val limit = WynnOverhaulConfig.current.chatHistoryLimit + SERVER_MEMORY_MARGIN
+            while (serverMessages.size > limit) serverIndex.remove(serverMessages.removeFirst())
+        }
+    }
+
+    fun isFromServer(message: Component): Boolean = synchronized(serverMessages) { serverIndex.containsKey(message) }
+
+    private val ownNotices = ArrayDeque<Component>()
+
     private fun printChat(text: Component) {
+        synchronized(ownNotices) {
+            ownNotices.addLast(text)
+            while (ownNotices.size > 20) ownNotices.removeFirst()
+        }
         Minecraft.getInstance().player?.sendSystemMessage(text)
     }
+
+    fun isOwnNotice(message: Component): Boolean = synchronized(ownNotices) { ownNotices.any { it === message } }
 
     private val CLEAN_CODES = Regex("(?i)§[0-9A-FK-OR]")
     private val NON_ASCII = Regex("""[^\x20-\x7E]+""")
@@ -177,11 +201,12 @@ object WynnChatChannels {
 
     private val OVERRIDE_PATTERNS: List<Pair<Regex, String?>> = listOf(
 
-        Regex("""(?s)Type the item name or type\s*'cancel'\s*to\s*cancel:""") to "all",
-        Regex("""(?s)Type the price in emeralds or formatted\s*\(e\.g\s*'10eb',\s*'10stx\s*5eb'\)\s*or type\s*'cancel'\s*to cancel:""") to "all",
-        Regex("""Party Finder: Type in chat the description you want to use for your party \(max 140 characters or cancel\):""") to "all",
+        Regex("""(?s)Type the item name or type\s*'cancel'\s*to\s*cancel:""") to "global",
+        Regex("""(?s)Type the price in emeralds or formatted\s*\(e\.g\s*'10eb',\s*'10stx\s*5eb'\)\s*or type\s*'cancel'\s*to cancel:""") to "global",
+        Regex("""Party Finder: Type in chat the description you want to use for your party \(max 140 characters or cancel\):""") to "global",
         Regex("""You moved and your chat input was canceled\.""") to null,
     )
 
     private const val CHAIN_WINDOW_MS = 100L
+    private const val SERVER_MEMORY_MARGIN = 200
 }
