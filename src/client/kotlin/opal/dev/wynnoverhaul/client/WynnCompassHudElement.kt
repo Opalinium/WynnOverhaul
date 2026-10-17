@@ -53,7 +53,10 @@ class WynnCompassHudElement : HudElement {
 
         val region = WynnRegionBarTracker.active?.name.orEmpty()
         val markerLine = nearest?.let { "${it.label}  ${it.distance.toInt()}m" }.orEmpty()
-        var contentW = MIN_W
+        val coords = "${player.blockX}, ${player.blockY}, ${player.blockZ}"
+        val world = WynnWorldTracker.current()
+        val place = world.orEmpty()
+        var contentW = maxOf(MIN_W, font.width(coords) + font.width(place) + FOOTER_GAP + PAD * 2)
         if (region.isNotEmpty()) contentW = maxOf(contentW, font.width(region) + PAD * 2)
         if (markerLine.isNotEmpty()) contentW = maxOf(contentW, font.width(markerLine) + PAD * 2)
         val (boxW, boxH) = HudLayoutManager.stableSize(ID, contentW, CONTENT_H)
@@ -88,6 +91,10 @@ class WynnCompassHudElement : HudElement {
         if (markerLine.isNotEmpty()) {
             graphics.text(font, markerLine, ox + (boxW - font.width(markerLine)) / 2, stripY + MARKER_LANE_H + LABEL_H + MARKER_GAP, OwTheme.TEXT_DIM, true)
         }
+
+        val footerY = oy + PAD + NAME_H + MARKER_LANE_H + LABEL_H + MARKER_GAP + font.lineHeight + FOOTER_TOP
+        graphics.text(font, coords, ox + PAD, footerY, OwTheme.TEXT_FAINT, true)
+        if (place.isNotEmpty()) graphics.text(font, place, ox + boxW - PAD - font.width(place), footerY, OwTheme.TEXT_FAINT, true)
 
         if (scaled) graphics.pose().popMatrix()
     }
@@ -162,7 +169,9 @@ class WynnCompassHudElement : HudElement {
     private companion object {
         const val ID = "compass"
         const val MIN_W = 200
-        const val CONTENT_H = 48
+        const val CONTENT_H = 58
+        const val FOOTER_TOP = 2
+        const val FOOTER_GAP = 16
         const val PAD = 3
         const val NAME_H = 11
         const val MARKER_LANE_H = 7

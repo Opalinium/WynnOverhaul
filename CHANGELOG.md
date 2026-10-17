@@ -30,6 +30,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - A multiplayer server list with search, ping status, icons, add, edit, delete, reorder and direct connect, plus an Authme accounts button.
 - Your last level, class and equipment appear on the main menu figure, with armor and weapon models taken from the Wynncraft resource pack.
 - A toast appears when you complete a raid.
+- The compass has a footer with your coordinates and the Wynncraft world.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
