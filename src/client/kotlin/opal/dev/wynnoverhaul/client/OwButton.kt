@@ -23,21 +23,22 @@ class OwButton(
     private val onPress: () -> Unit,
 ) : AbstractWidget(x, y, width, height, label), ModifiedMark {
     override var modified = false
+    private val hoverFade = HoverFade()
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val active = enabled()
         val hovered = isHovered && active
         val border = when {
             !active -> OwTheme.TILE_BORDER
-            hovered -> OwTheme.BORDER_BRIGHT
             accent -> OwTheme.ACCENT
             else -> OwTheme.HAIRLINE
         }
         val fade = getAlpha()
+        val lift = hoverFade.step(hovered)
         val pressed = hovered && Minecraft.getInstance().mouseHandler.isLeftPressed
         OwShape.raised(
             graphics, x, y, width, height, OwTheme.TILE_BG, border,
-            hovered = hovered, pressed = pressed, glow = if (accent && active) OwTheme.ACCENT else 0, fade = fade,
+            hovered = hovered, pressed = pressed, glow = if (accent && active) OwTheme.ACCENT else 0, fade = fade, hover = lift,
         )
         val nudge = if (pressed) 1 else 0
         val color = HudStyle.alpha(
@@ -91,12 +92,16 @@ class OwButton(
     }
 
     override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {
-        if (enabled()) onPress()
+        if (enabled()) {
+            UiSounds.click()
+            onPress()
+        }
     }
 
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
         if (!active || !visible || !enabled()) return false
         if (!isMouseOver(event.x(), event.y())) return false
+        UiSounds.click()
         onPress()
         return true
     }

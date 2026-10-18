@@ -206,6 +206,8 @@ data class WynnOverhaulConfig(
     var customMenusEnabled: Boolean = true,
     var customLoadingEnabled: Boolean = true,
     var customTooltipsEnabled: Boolean = true,
+    var uiSoundsEnabled: Boolean = true,
+    var uiSoundVolume: Double = 1.0,
     var titleLoadoutEnabled: Boolean = true,
     var titleSceneIndex: Int = 0,
 
@@ -268,6 +270,7 @@ data class WynnOverhaulConfig(
 
     fun sanitize(): WynnOverhaulConfig {
         maxCps = maxCps.coerceIn(1.0, 12.0)
+        uiSoundVolume = uiSoundVolume.coerceIn(0.0, 1.0)
         dpsWindowSeconds = dpsWindowSeconds.coerceIn(1, 30)
         hitFeedbackIntensity = hitFeedbackIntensity.coerceIn(0, 200)
         lowHealthThreshold = lowHealthThreshold.coerceIn(5, 80)

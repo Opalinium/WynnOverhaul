@@ -908,6 +908,10 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Item tooltip cards", "Draws tooltips as cards with a frame and glow in the colour of the item name, and a rule under the title.", config.customTooltipsEnabled) {
                 config.customTooltipsEnabled = it
             }
+            checkbox("Menu sounds", "Replaces the vanilla button click with a stone and chain click, and adds a soft tick on hover, a page turn when a menu opens and a lock sound when loading finishes.", config.uiSoundsEnabled) {
+                config.uiSoundsEnabled = it
+            }
+            slider("Menu sound volume", 0.0, 1.0, config.uiSoundVolume, "Scales the menu click, hover and open sounds.") { config.uiSoundVolume = it }
             checkbox("Custom loading screens", "Restyles the connecting, world switching, terrain loading and resource reload screens with an animated backdrop, rotating tips and a fade into the game. Takes effect the next time a loading screen opens.", config.customLoadingEnabled) {
                 config.customLoadingEnabled = it
             }

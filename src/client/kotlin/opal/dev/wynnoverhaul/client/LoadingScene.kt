@@ -81,7 +81,10 @@ object LoadingScene {
         }
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             val loading = enabled() && matches(client.gui.screen())
-            if (wasLoading && !loading && client.player != null) revealStart = System.nanoTime()
+            if (wasLoading && !loading && client.player != null) {
+                revealStart = System.nanoTime()
+                UiSounds.reveal()
+            }
             wasLoading = loading
         }
     }

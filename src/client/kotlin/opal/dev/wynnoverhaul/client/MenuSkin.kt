@@ -46,6 +46,7 @@ object MenuSkin {
         val accent: Boolean = false,
         val subtle: Boolean = false,
     ) {
+        val hoverFade = HoverFade()
         fun contains(mx: Double, my: Double): Boolean = mx >= x && mx < x + w && my >= y && my < y + h
     }
 
@@ -108,7 +109,7 @@ object MenuSkin {
                 val current = states[screen]
                 if (current == null || current.token !== token || event.button() != 0) return@register true
                 val hit = current.slots.firstOrNull { it.action != null && it.contains(event.x(), event.y()) } ?: return@register true
-                Minecraft.getInstance().soundManager.play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1f, 1f))
+                if (!UiSounds.click()) Minecraft.getInstance().soundManager.play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1f, 1f))
                 hit.action?.invoke()
                 false
             }
@@ -338,9 +339,9 @@ object MenuSkin {
                 continue
             }
             val leaving = state.kind == Kind.PAUSE && s.widget != null && (text.contains("Disconnect", true) || text.contains("Save and Quit", true) || text.contains("Quit", true))
+            val lift = s.hoverFade.step(hovered)
             val border = when {
                 !active -> OwTheme.TILE_BORDER
-                hovered -> OwTheme.BORDER_BRIGHT
                 s.accent -> OwTheme.ACCENT
                 leaving -> OwTheme.BAD
                 else -> OwTheme.HAIRLINE
@@ -352,7 +353,7 @@ object MenuSkin {
                 leaving -> OwTheme.BAD
                 else -> 0
             }
-            OwShape.raised(graphics, s.x, s.y, s.w, s.h, OwTheme.TILE_BG or OPAQUE, border, cut = if (s.h >= PLAY_H) 3 else 2, hovered = hovered, pressed = pressed, glow = glow)
+            OwShape.raised(graphics, s.x, s.y, s.w, s.h, OwTheme.TILE_BG or OPAQUE, border, cut = if (s.h >= PLAY_H) 3 else 2, hovered = hovered, pressed = pressed, glow = glow, hover = lift)
             val color = when {
                 !active -> OwTheme.TEXT_FAINT
                 s.accent -> OwTheme.ACCENT

@@ -1,7 +1,26 @@
 package opal.dev.wynnoverhaul.client
 
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import kotlin.math.exp
 import kotlin.math.sin
+
+class HoverFade(private val rate: Float = 16f) {
+    private var value = 0f
+    private var last = System.nanoTime()
+    private var wasHovered = false
+
+    fun step(hovered: Boolean): Float {
+        if (hovered && !wasHovered) UiSounds.hover()
+        wasHovered = hovered
+        val now = System.nanoTime()
+        val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        last = now
+        val target = if (hovered) 1f else 0f
+        value += (target - value) * (1f - exp(-dt * rate))
+        if (kotlin.math.abs(target - value) < 0.01f) value = target
+        return value
+    }
+}
 
 class OwFade(private val durationNanos: Long = DEFAULT_NANOS) {
     private var start = System.nanoTime()

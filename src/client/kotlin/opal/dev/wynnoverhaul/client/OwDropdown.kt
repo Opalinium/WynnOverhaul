@@ -18,12 +18,12 @@ class OwDropdown(
     private val onSelect: (String) -> Unit,
 ) : AbstractWidget(x, y, width, height, Component.literal(prefix)), ModifiedMark {
     override var modified = false
+    private val hoverFade = HoverFade()
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val hovered = isHovered
         val fade = getAlpha()
-        val border = if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE
-        OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, border, hovered = hovered, fade = fade)
+        OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, OwTheme.HAIRLINE, hovered = hovered, fade = fade, hover = hoverFade.step(hovered))
         val font = Minecraft.getInstance().font
         val current = options.firstOrNull { it.id == selected() }?.label.orEmpty()
         val text = if (prefix.isEmpty()) current else "$prefix: $current"
@@ -45,6 +45,7 @@ class OwDropdown(
     }
 
     private fun openList() {
+        UiSounds.click()
         OwDropdownOverlay.open(x, y, width, height, options, selected(), { visible }, onSelect)
     }
 

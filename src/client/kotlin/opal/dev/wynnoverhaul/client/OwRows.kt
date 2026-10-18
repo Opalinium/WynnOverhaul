@@ -29,6 +29,7 @@ class OwListRow(
 
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
         if (!active || !visible || !isMouseOver(event.x(), event.y())) return false
+        UiSounds.click()
         onPress()
         return true
     }

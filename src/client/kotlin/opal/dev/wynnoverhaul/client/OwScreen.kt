@@ -16,6 +16,7 @@ abstract class OwScreen(
     protected val parent: Screen?,
 ) : Screen(title) {
     private val fade = OwFade()
+    private val initialised = java.util.concurrent.atomic.AtomicBoolean(false)
 
     protected open val panelWidth: Int get() = (width * 0.7).toInt().coerceIn(320, 520)
     protected open val panelHeight: Int get() = (height * 0.82).toInt().coerceIn(240, 420)
@@ -34,6 +35,7 @@ abstract class OwScreen(
 
     override fun init() {
         OwDropdownOverlay.close()
+        if (initialised.compareAndSet(false, true)) UiSounds.open()
         addRenderableOnly(Renderable { graphics, _, _, _ -> drawChrome(graphics) })
         if (parent != null) {
             addRenderableWidget(
@@ -76,6 +78,7 @@ abstract class OwScreen(
     }
 
     override fun onClose() {
+        UiSounds.close()
         val p = parent
         if (p != null) Minecraft.getInstance().setScreenAndShow(p) else Minecraft.getInstance().gui.setScreen(null)
     }

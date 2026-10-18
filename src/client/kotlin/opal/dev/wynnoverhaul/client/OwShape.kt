@@ -95,14 +95,17 @@ object OwShape {
         glow: Int = 0,
         fade: Float = 1f,
         shadow: Boolean = true,
+        hover: Float = -1f,
     ) {
         if (w <= 2 || h <= 2) return
         val c = clampCut(cut, w, h)
+        val lift = if (hover >= 0f) hover else if (hovered) 1f else 0f
+        val edge = if (hover >= 0f) lerp(border, OwTheme.BORDER_BRIGHT, hover) else border
         if (shadow && !pressed) shadow(g, x, y, w, h, c, 2, fade)
-        val top = if (pressed) HudStyle.darken(fill, 0.3f) else HudStyle.mix(fill, WARM, if (hovered) 0.2f else 0.1f)
+        val top = if (pressed) HudStyle.darken(fill, 0.3f) else HudStyle.mix(fill, WARM, 0.1f + 0.1f * lift)
         val bottom = if (pressed) HudStyle.lighten(fill, 0.04f) else HudStyle.darken(fill, 0.32f)
         gradient(g, x, y, w, h, c, HudStyle.alpha(top, fade), HudStyle.alpha(bottom, fade))
-        if (glow != 0) g.fillGradient(x + 1, y + h / 2, x + w - 1, y + h - 1, HudStyle.alpha(glow, 0f), HudStyle.alpha(glow, if (hovered) 0.3f * fade else 0.16f * fade))
+        if (glow != 0) g.fillGradient(x + 1, y + h / 2, x + w - 1, y + h - 1, HudStyle.alpha(glow, 0f), HudStyle.alpha(glow, (0.16f + 0.14f * lift) * fade))
         if (pressed) {
             g.fill(x + c, y + 1, x + w - c, y + 2, HudStyle.alpha(SHADE, fade))
             g.fill(x + 1, y + c, x + 2, y + h - c, HudStyle.alpha(0x30000000, fade))
@@ -110,7 +113,7 @@ object OwShape {
             g.fill(x + c, y + 1, x + w - c, y + 2, HudStyle.alpha(HIGHLIGHT, fade))
             g.fill(x + c, y + h - 2, x + w - c, y + h - 1, HudStyle.alpha(SHADE, fade))
         }
-        frame(g, x, y, w, h, c, HudStyle.alpha(border, fade))
+        frame(g, x, y, w, h, c, HudStyle.alpha(edge, fade))
     }
 
     fun well(g: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, cut: Int = 1, fill: Int = OwTheme.TILE_BG, border: Int = WELL_EDGE) {

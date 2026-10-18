@@ -33,6 +33,7 @@ class OwCheckbox(
     }
 
     override fun onClick(event: MouseButtonEvent, doubleClick: Boolean) {
+        UiSounds.click()
         checked = !checked
         onChange(checked)
     }
@@ -40,6 +41,7 @@ class OwCheckbox(
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
         if (!active || !visible) return false
         if (!isMouseOver(event.x(), event.y())) return false
+        UiSounds.click()
         checked = !checked
         onChange(checked)
         return true

@@ -9,6 +9,7 @@
     "TitleSplashMixin",
     "TitleNotificationsMixin",
     "SkinButtonMixin",
+    "ButtonSoundMixin",
     "ClientTextTooltipAccessor",
     "TooltipCardMixin",
     "TooltipBackgroundMixin",
