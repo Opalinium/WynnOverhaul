@@ -92,7 +92,7 @@ object ChatSysPanel {
     fun render(g: GuiGraphicsExtractor, font: Font, barTop: Int, guiW: Int, guiH: Int, mouseX: Int, mouseY: Int) {
         if (!open) return
         place(guiW, guiH, barTop)
-        HudStyle.plate(g, left, top, WIDTH, HEIGHT, OwTheme.ACCENT)
+        OwShape.panel(g, left, top, WIDTH, HEIGHT, glass = true, cut = 3)
         val title = "SYSTEM"
         g.text(font, title, left + PAD + 2, top + 4, OwTheme.ACCENT, true)
         val count = entries.size.toString()

@@ -41,12 +41,14 @@ class OwSlider(
     }
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        graphics.fill(x, y, x + width, y + height, OwTheme.TILE_BG)
-        val fillWidth = (width * value).toInt().coerceIn(0, width)
+        OwShape.well(graphics, x, y, width, height, 1, OwTheme.TILE_BG, if (isHovered) OwTheme.BORDER_BRIGHT else OwShape.WELL_EDGE)
+        val fillWidth = ((width - 2) * value).toInt().coerceIn(0, width - 2)
         if (fillWidth > 0) {
-            graphics.fill(x, y, x + fillWidth, y + height, if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM)
+            val body = if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM
+            graphics.fillGradient(x + 1, y + 1, x + 1 + fillWidth, y + height - 1, HudStyle.lighten(body, 0.12f), HudStyle.darken(body, 0.35f))
+            graphics.fill(x + 1, y + 1, x + 1 + fillWidth, y + 2, OwShape.HIGHLIGHT)
+            graphics.fill(x + fillWidth, y + 1, x + 1 + fillWidth, y + height - 1, HudStyle.lighten(body, 0.5f))
         }
-        graphics.outline(x, y, width, height, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
         val font = Minecraft.getInstance().font
         val text = truncateToWidth(font, message.string, width - 6)
         graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2, OwTheme.TEXT)

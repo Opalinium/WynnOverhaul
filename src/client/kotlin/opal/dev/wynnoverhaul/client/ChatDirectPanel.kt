@@ -63,7 +63,7 @@ object ChatDirectPanel {
         height = rowCount * ROW_H + PAD * 2
         left = input.x
         top = input.y - ANCHOR_GAP - height
-        HudStyle.plate(g, left, top, width, height, OwTheme.ACCENT)
+        OwShape.panel(g, left, top, width, height, glass = true, cut = 3)
 
         if (rows.isEmpty()) {
             g.text(font, "No players match", left + PAD + 2, top + PAD + 2, OwTheme.TEXT_DIM, true)

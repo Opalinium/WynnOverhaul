@@ -191,14 +191,17 @@ abstract class WynnOverhaulSideScreen(
     protected fun drawControl(graphics: GuiGraphicsExtractor, c: Control, hovered: Boolean) {
         val r = c.rect
         val active = hovered && c.enabled
-        graphics.fill(r.x, r.y, r.x + r.w, r.y + r.h, if (c.accent && c.enabled) OwTheme.ACCENT_DIM else if (active) OwTheme.TILE_HOVER else TILE_BG)
         val border = when {
             !c.enabled -> OwTheme.TILE_BORDER
             active -> OwTheme.BORDER_BRIGHT
             c.accent -> OwTheme.ACCENT
             else -> OwTheme.HAIRLINE
         }
-        graphics.outline(r.x, r.y, r.w, r.h, border)
+        val pressed = active && Minecraft.getInstance().mouseHandler.isLeftPressed
+        OwShape.raised(
+            graphics, r.x, r.y, r.w, r.h, if (c.accent && c.enabled) OwTheme.ACCENT_DIM else TILE_BG, border,
+            hovered = active, pressed = pressed, glow = if (c.accent && c.enabled) OwTheme.ACCENT else 0, shadow = r.h >= 14,
+        )
         val color = if (c.enabled) c.tint else OwTheme.TEXT_FAINT
         graphics.centeredText(font, truncateToWidth(font, c.label, r.w - 4), r.x + r.w / 2, r.y + (r.h - 8) / 2, color)
     }

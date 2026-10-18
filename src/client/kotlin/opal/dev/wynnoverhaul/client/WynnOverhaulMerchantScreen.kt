@@ -249,8 +249,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
     private fun covers(mx: Int, my: Int): Boolean = mx >= listLeft && mx < listRight && my >= listTop && my < listBottom
 
     private fun drawRow(graphics: GuiGraphicsExtractor, rect: Rect, offer: Offer, hovered: Boolean) {
-        graphics.fill(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, if (hovered) OwTheme.TILE_HOVER else TILE_BG)
-        graphics.outline(rect.x, rect.y, rect.w, rect.h, if (hovered) HOVER_BORDER else OwTheme.HAIRLINE)
+        OwShape.raised(graphics, rect.x, rect.y, rect.w, rect.h, TILE_BG, if (hovered) HOVER_BORDER else OwTheme.HAIRLINE, cut = 1, hovered = hovered, shadow = false)
         val icon = Rect(rect.x + 3, rect.y + (rect.h - TILE) / 2, TILE, TILE)
         drawTile(graphics, icon, offer.stack, false)
         val textX = icon.x + TILE + 6
@@ -274,7 +273,7 @@ class WynnOverhaulMerchantScreen(menu: AbstractContainerMenu) :
         val maxScroll = contentH - viewH
         val thumbY = listTop + (viewH - thumbH) * scroll / maxScroll
         graphics.fill(x, listTop, x + 2, listBottom, OwTheme.TILE_BORDER)
-        graphics.fill(x, thumbY, x + 2, thumbY + thumbH, OwTheme.HAIRLINE)
+        OwShape.thumb(graphics, x, thumbY, 2, thumbH)
     }
 
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {

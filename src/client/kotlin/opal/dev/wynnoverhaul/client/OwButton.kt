@@ -27,7 +27,6 @@ class OwButton(
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val active = enabled()
         val hovered = isHovered && active
-        val fill = if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG
         val border = when {
             !active -> OwTheme.TILE_BORDER
             hovered -> OwTheme.BORDER_BRIGHT
@@ -35,11 +34,12 @@ class OwButton(
             else -> OwTheme.HAIRLINE
         }
         val fade = getAlpha()
-        graphics.fill(x, y, x + width, y + height, HudStyle.alpha(fill, fade))
-        graphics.fill(x, y, x + width, y + 1, HudStyle.alpha(border, fade))
-        graphics.fill(x, y + height - 1, x + width, y + height, HudStyle.alpha(border, fade))
-        graphics.fill(x, y, x + 1, y + height, HudStyle.alpha(border, fade))
-        graphics.fill(x + width - 1, y, x + width, y + height, HudStyle.alpha(border, fade))
+        val pressed = hovered && Minecraft.getInstance().mouseHandler.isLeftPressed
+        OwShape.raised(
+            graphics, x, y, width, height, OwTheme.TILE_BG, border,
+            hovered = hovered, pressed = pressed, glow = if (accent && active) OwTheme.ACCENT else 0, fade = fade,
+        )
+        val nudge = if (pressed) 1 else 0
         val color = HudStyle.alpha(
             when {
                 !active -> OwTheme.TEXT_FAINT
@@ -74,9 +74,9 @@ class OwButton(
             } else {
                 graphics.item(icon, x + ICON_PAD, y + (height - ICON_SIZE) / 2)
             }
-            graphics.text(font, text, x + ICON_PAD + iconW, y + (height - 8) / 2, color)
+            graphics.text(font, text, x + ICON_PAD + iconW, y + (height - 8) / 2 + nudge, color)
         } else {
-            graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2, color)
+            graphics.centeredText(font, text, x + width / 2, y + (height - 8) / 2 + nudge, color)
         }
         if (modified) drawModifiedMark(graphics, x, y, width, height)
     }

@@ -46,8 +46,7 @@ abstract class OwScreen(
         val left = panelLeft
         val top = panelTop
         OwTheme.drawPage(graphics, left, top, panelWidth, panelHeight)
-        graphics.fill(left, top + OwTheme.TITLE_BAR_H - 1, left + panelWidth, top + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)
-        graphics.centeredText(Minecraft.getInstance().font, title.string.uppercase(), left + panelWidth / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
+        OwShape.titleBand(graphics, Minecraft.getInstance().font, left, top, panelWidth, title.string)
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {

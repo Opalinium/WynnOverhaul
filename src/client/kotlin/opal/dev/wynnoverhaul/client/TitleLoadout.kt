@@ -192,11 +192,7 @@ object TitleLoadout {
         val h = 8 + 11 + (if (detail.isEmpty()) 0 else 11) + 4 + ICON + 8
         val x = width - 16 - w
         val y = 16
-        graphics.fill(x, y, x + w, y + h, 0xB00C0906.toInt())
-        graphics.fill(x, y, x + w, y + 1, OwTheme.HAIRLINE)
-        graphics.fill(x, y + h - 1, x + w, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x, y, x + 1, y + h, OwTheme.HAIRLINE)
-        graphics.fill(x + w - 1, y, x + w, y + h, OwTheme.HAIRLINE)
+        OwShape.panel(graphics, x, y, w, h, glass = true, cut = 3)
         var ty = y + 8
         graphics.text(font, title, x + 8, ty, OwTheme.ACCENT, true)
         ty += 11
@@ -207,7 +203,7 @@ object TitleLoadout {
         ty += 4
         var ix = x + 8 + (w - 16 - iconsW) / 2
         for ((_, stack) in entries) {
-            graphics.fill(ix, ty, ix + ICON, ty + ICON, 0x40000000)
+            OwShape.well(graphics, ix, ty, ICON, ICON, 1, 0x90100C08.toInt())
             graphics.item(stack, ix + 1, ty + 1)
             ix += ICON + GAP
         }

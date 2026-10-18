@@ -31,6 +31,7 @@ object MenuSkin {
     private const val PLAY_H = 34
     private const val LINK_H = 16
     private const val BRANDING_CLEARANCE = 22
+    private const val SHADOW_STRIPS = 6
 
     private enum class Kind { TITLE, PAUSE }
 
@@ -64,6 +65,16 @@ object MenuSkin {
     @JvmStatic
     fun hidesTitleBranding(): Boolean =
         WynnOverhaulConfig.current.customMenusEnabled && Minecraft.getInstance().gui.screen() is TitleScreen
+
+    @JvmStatic
+    fun clip(graphics: GuiGraphicsExtractor, widget: AbstractWidget): Boolean {
+        if (OwPanelList.clip(graphics, widget)) return true
+        if (states.isEmpty()) return false
+        val screen = Minecraft.getInstance().gui.screen() ?: return false
+        val slot = states[screen]?.slots?.firstOrNull { it.widget === widget } ?: return false
+        graphics.enableScissor(slot.x, slot.y, slot.x + slot.w, slot.y + slot.h)
+        return true
+    }
 
     fun register() {
         ScreenEvents.AFTER_INIT.register { _, screen, width, height ->
@@ -270,8 +281,11 @@ object MenuSkin {
         if (state.kind == Kind.TITLE) {
             TitleScene.draw(graphics, width, height, state.panelW)
             TitleLoadout.drawCard(graphics, width, height)
-            graphics.fill(0, 0, state.panelW, height, OwTheme.PAGE_WASH)
-            graphics.fill(state.panelW - 1, 0, state.panelW, height, OwTheme.HAIRLINE)
+            graphics.fillGradient(0, 0, state.panelW, height, 0xF019130C.toInt(), 0xF00A0806.toInt())
+            graphics.fillGradient(0, 0, state.panelW, height / 3, 0x16D4AF37, 0x00D4AF37)
+            for (i in 0 until SHADOW_STRIPS) graphics.fill(state.panelW + 1 + i, 0, state.panelW + 2 + i, height, (0x2C - i * 6) shl 24)
+            graphics.fill(state.panelW - 1, 0, state.panelW, height, OwShape.OUTLINE)
+            graphics.fill(state.panelW - 2, 0, state.panelW - 1, height, OwTheme.HAIRLINE)
             graphics.fill(state.panelW, 0, state.panelW + 1, height, 0x40D4AF37)
             val scale = min(2.4f, (state.panelW - PAD * 2).toFloat() / font.width(state.headline))
             val textW = font.width(state.headline) * scale
@@ -281,7 +295,7 @@ object MenuSkin {
             graphics.text(font, state.headline, 0, 0, OwTheme.ACCENT, true)
             graphics.pose().popMatrix()
             val ruleY = PAD + 6 + (9 * scale).toInt() + 8
-            graphics.fill(PAD + 20, ruleY, state.panelW - PAD - 20, ruleY + 1, OwTheme.ACCENT_DIM)
+            OwShape.ornamentRule(graphics, PAD + 20, ruleY, state.panelW - PAD * 2 - 40, OwTheme.ACCENT_DIM)
             val sub = "Minecraft ${net.minecraft.SharedConstants.getCurrentVersion().name()}"
             graphics.centeredText(font, sub, state.panelW / 2, ruleY + 8, OwTheme.TEXT_FAINT)
             val label = TitleScene.currentName
@@ -296,8 +310,7 @@ object MenuSkin {
             }
         } else {
             OwTheme.drawPage(graphics, state.panelX, state.panelY, state.panelW, state.panelH)
-            graphics.fill(state.panelX, state.panelY + OwTheme.TITLE_BAR_H - 1, state.panelX + state.panelW, state.panelY + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)
-            graphics.centeredText(font, state.headline, state.panelX + state.panelW / 2, state.panelY + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
+            OwShape.titleBand(graphics, font, state.panelX, state.panelY, state.panelW, state.headline)
         }
     }
 
@@ -324,7 +337,6 @@ object MenuSkin {
                 }
                 continue
             }
-            val fill = (if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG) or OPAQUE
             val leaving = state.kind == Kind.PAUSE && s.widget != null && (text.contains("Disconnect", true) || text.contains("Save and Quit", true) || text.contains("Quit", true))
             val border = when {
                 !active -> OwTheme.TILE_BORDER
@@ -333,11 +345,14 @@ object MenuSkin {
                 leaving -> OwTheme.BAD
                 else -> OwTheme.HAIRLINE
             }
-            graphics.fill(s.x, s.y, s.x + s.w, s.y + s.h, fill)
-            graphics.fill(s.x, s.y, s.x + s.w, s.y + 1, border)
-            graphics.fill(s.x, s.y + s.h - 1, s.x + s.w, s.y + s.h, border)
-            graphics.fill(s.x, s.y, s.x + 1, s.y + s.h, border)
-            graphics.fill(s.x + s.w - 1, s.y, s.x + s.w, s.y + s.h, border)
+            val pressed = hovered && Minecraft.getInstance().mouseHandler.isLeftPressed
+            val glow = when {
+                !active -> 0
+                s.accent -> OwTheme.ACCENT
+                leaving -> OwTheme.BAD
+                else -> 0
+            }
+            OwShape.raised(graphics, s.x, s.y, s.w, s.h, OwTheme.TILE_BG or OPAQUE, border, cut = if (s.h >= PLAY_H) 3 else 2, hovered = hovered, pressed = pressed, glow = glow)
             val color = when {
                 !active -> OwTheme.TEXT_FAINT
                 s.accent -> OwTheme.ACCENT
@@ -345,7 +360,7 @@ object MenuSkin {
                 else -> OwTheme.TEXT
             }
             val shown = if (s.w < SMALL_MAX) glyph(text) else truncateToWidth(font, text, s.w - 8)
-            graphics.centeredText(font, shown, s.x + s.w / 2, s.y + (s.h - 8) / 2, color)
+            graphics.centeredText(font, shown, s.x + s.w / 2, s.y + (s.h - 8) / 2 + if (pressed) 1 else 0, color)
         }
     }
 

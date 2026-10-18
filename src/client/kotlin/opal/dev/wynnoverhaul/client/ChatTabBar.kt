@@ -37,9 +37,13 @@ object ChatTabBar {
         PAD * 2 + font.width(tab.label) + if (tab.badge > 0) GAP + font.width(badgeText(tab.badge)) else 0
 
     private fun drawTab(g: GuiGraphicsExtractor, font: Font, tab: Tab, x: Int, y: Int, w: Int, hovered: Boolean) {
-        if (tab.active) g.fill(x, y, x + w, y + HEIGHT, HudStyle.alpha(tab.accent, 0.22f))
-        else if (hovered) g.fill(x, y, x + w, y + HEIGHT, HOVER_WASH)
-        if (tab.active) g.fill(x, y + HEIGHT - 1, x + w, y + HEIGHT, tab.accent)
+        if (tab.active) {
+            g.fillGradient(x, y, x + w, y + HEIGHT, HudStyle.alpha(tab.accent, 0.1f), HudStyle.alpha(tab.accent, 0.34f))
+            g.fill(x, y, x + w, y + 1, OwShape.HIGHLIGHT)
+        } else if (hovered) {
+            g.fillGradient(x, y, x + w, y + HEIGHT, 0x00FFFFFF, HOVER_WASH)
+        }
+        if (tab.active) g.fill(x, y + HEIGHT - 2, x + w, y + HEIGHT, tab.accent)
         val color = if (tab.active) HudStyle.lighten(tab.accent, 0.25f) else if (hovered) OwTheme.TEXT else OwTheme.TEXT_DIM
         val textY = y + (HEIGHT - 8) / 2
         g.text(font, tab.label, x + PAD, textY, color, true)
@@ -49,8 +53,9 @@ object ChatTabBar {
     private fun drawGroup(g: GuiGraphicsExtractor, font: Font, tabs: List<Tab>, startX: Int, y: Int, mouseX: Int, mouseY: Int): Int {
         val widths = tabs.map { width(font, it) }
         val total = widths.sum()
-        g.fill(startX, y, startX + total, y + HEIGHT, HudStyle.GLASS)
-        g.outline(startX, y, total, HEIGHT, HudStyle.TRACK_EDGE)
+        OwShape.shadow(g, startX, y, total, HEIGHT, 1, 2)
+        OwShape.gradient(g, startX, y, total, HEIGHT, 1, HudStyle.lighten(HudStyle.GLASS, 0.08f), HudStyle.darken(HudStyle.GLASS, 0.2f))
+        OwShape.frame(g, startX, y, total, HEIGHT, 1, HudStyle.TRACK_EDGE)
         var x = startX
         for ((index, tab) in tabs.withIndex()) {
             val w = widths[index]

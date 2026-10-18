@@ -402,12 +402,6 @@ object HudLayoutManager {
     const val GRID_SNAP_RADIUS = 3
 
     fun drawLockGlyph(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, locked: Boolean, hovered: Boolean) {
-        val sprite = if (locked) {
-            if (hovered) OwTheme.CHECKBOX_SELECTED_HOVER_SPRITE else OwTheme.CHECKBOX_SELECTED_SPRITE
-        } else {
-            if (hovered) OwTheme.CHECKBOX_HOVER_SPRITE else OwTheme.CHECKBOX_SPRITE
-        }
-        val tint = if (locked) OwTheme.ACCENT else OwTheme.SPRITE_TINT_DISABLED
-        OwTheme.drawTintedSprite(graphics, sprite, x, y, w, h, tint)
+        OwShape.checkbox(graphics, x, y, w, h, locked, hovered)
     }
 }

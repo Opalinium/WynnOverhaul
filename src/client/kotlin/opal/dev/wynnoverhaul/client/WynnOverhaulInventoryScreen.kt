@@ -1094,8 +1094,11 @@ class WynnOverhaulInventoryScreen(
         val stack = slotStack(row.menuSlot)
         if (stack.isEmpty) return
         val rarity = WynnItemRarity.of(stack)
-        graphics.fill(row.x, row.y, row.x + row.w, row.y + ROW_H, if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG)
-        if (rarity != null) graphics.fill(row.x, row.y, row.x + 2, row.y + ROW_H, 0xFF000000.toInt() or rarity.colorRgb)
+        OwShape.raised(graphics, row.x, row.y, row.w, ROW_H, OwTheme.TILE_BG, if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.TILE_BORDER, cut = 1, hovered = hovered, shadow = false)
+        if (rarity != null) {
+            val tint = 0xFF000000.toInt() or rarity.colorRgb
+            graphics.fillGradient(row.x + 1, row.y + 1, row.x + 3, row.y + ROW_H - 1, HudStyle.lighten(tint, 0.25f), HudStyle.darken(tint, 0.3f))
+        }
         graphics.item(stack, row.x + 4, row.y + (ROW_H - 16) / 2)
         val name = stripCodes(plainName(stack))
         val nameColor = rarity?.colorRgb ?: OwTheme.TEXT
@@ -1156,11 +1159,7 @@ class WynnOverhaulInventoryScreen(
         pouchPY = pt
         pouchPW = cols * TILE_STEP + 8
         pouchPH = 4 + CAPTION_H + rows * TILE_STEP + 4
-        graphics.fill(pouchPX, pouchPY, pouchPX + pouchPW, pouchPY + pouchPH, GLASS_BG)
-        graphics.fill(pouchPX, pouchPY, pouchPX + pouchPW, pouchPY + 1, OwTheme.HAIRLINE)
-        graphics.fill(pouchPX, pouchPY + pouchPH - 1, pouchPX + pouchPW, pouchPY + pouchPH, OwTheme.HAIRLINE)
-        graphics.fill(pouchPX, pouchPY, pouchPX + 1, pouchPY + pouchPH, OwTheme.HAIRLINE)
-        graphics.fill(pouchPX + pouchPW - 1, pouchPY, pouchPX + pouchPW, pouchPY + pouchPH, OwTheme.HAIRLINE)
+        OwTheme.glassPanel(graphics, pouchPX, pouchPY, pouchPW, pouchPH)
         graphics.text(font, label, px, pt + 4, OwTheme.ACCENT)
         var i = 0
         for (row in 0 until rows) {
@@ -1187,12 +1186,7 @@ class WynnOverhaulInventoryScreen(
         val left = px - 4
         val w = cols * TILE_STEP + 8
         val h = 4 + CAPTION_H + rows * TILE_STEP + 4
-        val line = withAlpha(OwTheme.HAIRLINE, strength)
-        graphics.fill(left, pt, left + w, pt + h, withAlpha(GLASS_BG, strength))
-        graphics.fill(left, pt, left + w, pt + 1, line)
-        graphics.fill(left, pt + h - 1, left + w, pt + h, line)
-        graphics.fill(left, pt, left + 1, pt + h, line)
-        graphics.fill(left + w - 1, pt, left + w, pt + h, line)
+        OwShape.panel(graphics, left, pt, w, h, glass = true, cut = 3, fade = strength)
         val label = if (kind == PouchInterceptor.PouchKind.EMERALD) "EMERALD POUCH" else "INGREDIENT POUCH"
         graphics.text(font, label, px, pt + 4, withAlpha(OwTheme.ACCENT, strength))
         OwSkeleton.bars(graphics, px, pt + 4 + CAPTION_H, cols * TILE_STEP - 2, rows, TILE, TILE_STEP - TILE, strength)
@@ -1724,8 +1718,7 @@ class WynnOverhaulInventoryScreen(
         } else {
             top + header.detailTop + shownLines.size * JOURNAL_DETAIL_LINE_H + JOURNAL_CARD_PAD
         }
-        graphics.fill(gx, cardTop, gx + gw, cardBottom, CHAR_CARD_BG)
-        graphics.outline(gx, cardTop, gw, cardBottom - cardTop, OwTheme.HAIRLINE)
+        OwShape.well(graphics, gx, cardTop, gw, cardBottom - cardTop, 2, CHAR_CARD_BG)
         for ((i, line) in shownLines.withIndex()) {
             drawJournalDetailLine(graphics, line, gx + JOURNAL_CARD_PAD, top + header.detailTop + i * JOURNAL_DETAIL_LINE_H, gw - JOURNAL_CARD_PAD * 2, i)
         }
@@ -1754,9 +1747,9 @@ class WynnOverhaulInventoryScreen(
             hovered -> OwTheme.PANEL_RAISED
             else -> OwTheme.TILE_BG
         }
-        graphics.fill(x, y, x + w - 2, y + rowH, bg)
-        graphics.outline(x, y, w - 2, rowH, if (selected) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
-        graphics.fill(x + 1, y + 1, x + 3, y + rowH - 1, if (selected || hovered) typeColor else OwTheme.ACCENT_DIM)
+        OwShape.raised(graphics, x, y, w - 2, rowH, bg, if (selected) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE, cut = 1, hovered = hovered, glow = if (selected) typeColor else 0, shadow = false)
+        val bar = if (selected || hovered) typeColor else OwTheme.ACCENT_DIM
+        graphics.fillGradient(x + 2, y + 2, x + 4, y + rowH - 2, HudStyle.lighten(bar, 0.3f), HudStyle.darken(bar, 0.3f))
         graphics.item(a.icon, x + 5, y + 1)
         val prefix = if (a.trackingState == ActivityTrackingState.TRACKED) "* " else ""
         val name = trimToWidth("$prefix${a.name}", w - 26 - 14)
@@ -2138,8 +2131,7 @@ class WynnOverhaulInventoryScreen(
     }
 
     private fun drawCharCard(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
-        graphics.fill(x, y, x + w, y + h, CHAR_CARD_BG)
-        graphics.outline(x, y, w, h, OwTheme.HAIRLINE)
+        OwShape.well(graphics, x, y, w, h, 2, CHAR_CARD_BG)
     }
 
     private fun drawCharHoverAndTooltip(graphics: GuiGraphicsExtractor, layout: Layout) {

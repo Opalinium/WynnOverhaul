@@ -1,9 +1,21 @@
 package opal.dev.wynnoverhaul.client
 
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.AbstractWidget
 
 class OwPanelList(private val addWidget: (AbstractWidget) -> Unit) {
     private var scrollPanel: OwScrollPanel? = null
+
+    companion object {
+        private val clips = java.util.WeakHashMap<AbstractWidget, OwScrollPanel>()
+
+        @JvmStatic
+        fun clip(graphics: GuiGraphicsExtractor, widget: AbstractWidget): Boolean {
+            val panel = clips[widget] ?: return false
+            graphics.enableScissor(panel.x, panel.y, panel.x + panel.width, panel.y + panel.height)
+            return true
+        }
+    }
 
     fun install(rows: List<Pair<AbstractWidget, Int>>, x: Int, y: Int, width: Int, height: Int) {
         val panel = OwScrollPanel(x, y, width, height)
@@ -25,7 +37,10 @@ class OwPanelList(private val addWidget: (AbstractWidget) -> Unit) {
             }
         }
         addWidget(panel)
-        rows.forEach { addWidget(it.first) }
+        rows.forEach {
+            clips[it.first] = panel
+            addWidget(it.first)
+        }
     }
 
     fun handleMouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {

@@ -145,8 +145,7 @@ class HudDesignerScreen(private val parentScreen: Screen?) : Screen(Component.li
         if (!helpOpen || helpFade <= 0.02f) return
         val lines = helpLines()
         val r = helpRect(lines)
-        graphics.fill(r[0], r[1], r[2], r[3], HudStyle.alpha(0xEE100C08.toInt(), helpFade))
-        graphics.outline(r[0], r[1], r[2] - r[0], r[3] - r[1], HudStyle.alpha(OwTheme.BORDER_BRIGHT, helpFade))
+        OwShape.panel(graphics, r[0], r[1], r[2] - r[0], r[3] - r[1], cut = 3, accent = OwTheme.ACCENT, fade = helpFade)
         var ty = r[1] + HELP_PAD
         for (line in lines) {
             graphics.text(font, line, r[0] + HELP_PAD, ty, HudStyle.alpha(OwTheme.TEXT_DIM, helpFade))

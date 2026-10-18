@@ -11,6 +11,7 @@ object ItemTiles {
     private const val GLOW_TOP = 0x6E000000
     private const val GLOW_BOTTOM = 0x1C000000
     private const val SHINE = 0x30FFFFFF
+    private const val RIM = 0x48000000
     private const val HOVER_WASH = 0x24FFFFFF
     private const val BADGE_BACK = 0xC0000000.toInt()
 
@@ -18,16 +19,18 @@ object ItemTiles {
         val rarity = if (stack.isEmpty) null else WynnItemRarity.of(stack)
         val rgb = rarity?.colorRgb
         if (rgb == null) {
-            graphics.fill(x, y, x + TILE, y + TILE, TILE_BG_EMPTY)
+            OwShape.well(graphics, x, y, TILE, TILE, 1, TILE_BG_EMPTY, OwTheme.TILE_BORDER)
         } else {
-            graphics.fillGradient(x, y, x + TILE, y + TILE, GLOW_TOP or rgb, GLOW_BOTTOM or rgb)
-            graphics.fill(x + 1, y + 1, x + TILE - 1, y + 2, SHINE)
+            OwShape.fill(graphics, x, y, TILE, TILE, 1, TILE_BG_EMPTY)
+            graphics.fillGradient(x + 1, y + 1, x + TILE - 1, y + TILE - 1, GLOW_TOP or rgb, GLOW_BOTTOM or rgb)
+            graphics.fillGradient(x + 1, y + 1, x + TILE - 1, y + 6, 0x50000000, 0x00000000)
+            graphics.fill(x + 2, y + 1, x + TILE - 2, y + 2, SHINE)
+            graphics.fill(x + 2, y + TILE - 2, x + TILE - 2, y + TILE - 1, RIM or rgb)
         }
-        if (hovered) graphics.fill(x, y, x + TILE, y + TILE, HOVER_WASH)
+        if (hovered) OwShape.fill(graphics, x, y, TILE, TILE, 1, HOVER_WASH)
         item(graphics, font, x, y, stack, rarity, locked)
-        val border = if (rgb == null) OwTheme.TILE_BORDER else 0xFF000000.toInt() or rgb
-        graphics.outline(x, y, TILE, TILE, border)
-        if (hovered) graphics.outline(x - 1, y - 1, TILE + 2, TILE + 2, HOVER_BORDER)
+        if (rgb != null) OwShape.frame(graphics, x, y, TILE, TILE, 1, 0xFF000000.toInt() or rgb)
+        if (hovered) OwShape.frame(graphics, x - 1, y - 1, TILE + 2, TILE + 2, 1, HOVER_BORDER)
     }
 
     fun loose(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int, stack: ItemStack, hovered: Boolean, locked: Boolean = false) {

@@ -551,7 +551,7 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
         val maxScroll = f.bankContentH - viewH
         val thumbY = f.bankTop + (viewH - thumbH) * bankScroll / maxScroll
         graphics.fill(x, f.bankTop, x + 2, f.bankBottom, OwTheme.TILE_BORDER)
-        graphics.fill(x, thumbY, x + 2, thumbY + thumbH, OwTheme.HAIRLINE)
+        OwShape.thumb(graphics, x, thumbY, 2, thumbH)
     }
 
     private fun drawFooters(graphics: GuiGraphicsExtractor, f: Frame, hover: Entry?, storage: String) {

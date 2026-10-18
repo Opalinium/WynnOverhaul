@@ -9,6 +9,7 @@
     "TitleSplashMixin",
     "TitleNotificationsMixin",
     "SkinButtonMixin",
+    "MenuWidgetClipMixin",
     "SkinSliderMixin",
     "SkinCheckboxMixin",
     "SkinListMixin",

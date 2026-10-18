@@ -58,13 +58,8 @@ class WynnOverhaulWeaponAnimationScreen(parent: Screen? = null) : OwScreen(Compo
             val font = Minecraft.getInstance().font
             val hovered = isHovered
             val border = if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE
-            graphics.fill(x, y, x + width, y + height, if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG)
-            graphics.fill(x, y, x + width, y + 1, border)
-            graphics.fill(x, y + height - 1, x + width, y + height, border)
-            graphics.fill(x, y, x + 1, y + height, border)
-            graphics.fill(x + width - 1, y, x + width, y + height, border)
-
-            graphics.fill(x + PREVIEW_PAD, y + PREVIEW_PAD, x + PREVIEW_PAD + PREVIEW_BOX, y + PREVIEW_PAD + PREVIEW_BOX, OwTheme.PANEL)
+            OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, border, hovered = hovered)
+            OwShape.well(graphics, x + PREVIEW_PAD, y + PREVIEW_PAD, PREVIEW_BOX, PREVIEW_BOX, 1, OwTheme.PANEL)
             graphics.pose().pushMatrix()
             graphics.pose().translate((x + PREVIEW_PAD + PREVIEW_BOX / 2).toFloat(), (y + height / 2).toFloat())
             graphics.pose().scale(ICON_SCALE)
@@ -87,7 +82,7 @@ class WynnOverhaulWeaponAnimationScreen(parent: Screen? = null) : OwScreen(Compo
 
             val removeLeft = x + width - REMOVE_W
             val removeHot = mouseX >= removeLeft && mouseX < x + width && mouseY >= y && mouseY < y + height
-            graphics.fill(removeLeft, y + 1, x + width - 1, y + height - 1, if (removeHot) OwTheme.BAD else OwTheme.PANEL_ALT)
+            OwShape.raised(graphics, removeLeft, y + 2, REMOVE_W - 2, height - 4, if (removeHot) OwTheme.BAD else OwTheme.PANEL_ALT, if (removeHot) OwTheme.BAD else OwTheme.HAIRLINE, cut = 1, hovered = removeHot, shadow = false)
             graphics.centeredText(font, "X", removeLeft + REMOVE_W / 2, y + (height - 8) / 2, OwTheme.TEXT)
         }
 

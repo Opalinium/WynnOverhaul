@@ -22,8 +22,8 @@ class OwTextField(
     }
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        graphics.fill(x, y, x + width, y + height, OwTheme.TILE_BG)
-        graphics.outline(x, y, width, height, if (isFocused) OwTheme.ACCENT else OwTheme.HAIRLINE)
+        OwShape.well(graphics, x, y, width, height, 1, OwTheme.TILE_BG, if (isFocused) OwTheme.ACCENT else OwShape.WELL_EDGE)
+        if (isFocused) graphics.outline(x - 1, y - 1, width + 2, height + 2, HudStyle.alpha(OwTheme.ACCENT, 0.22f))
         super.extractWidgetRenderState(graphics, mouseX, mouseY, partialTick)
         if (clearable && value.isNotEmpty()) {
             val hovered = mouseX >= x + width - CLEAR_W && mouseX < x + width && mouseY >= y && mouseY < y + height

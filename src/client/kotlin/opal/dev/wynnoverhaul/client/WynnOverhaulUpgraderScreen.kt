@@ -125,8 +125,7 @@ class WynnOverhaulUpgraderScreen(menu: AbstractContainerMenu) :
 
     private fun drawCard(graphics: GuiGraphicsExtractor, rect: Rect, option: Option, hovered: Boolean, textW: Int) {
         val active = option.enabled
-        graphics.fill(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h, if (hovered && active) OwTheme.TILE_HOVER else TILE_BG)
-        graphics.outline(rect.x, rect.y, rect.w, rect.h, if (hovered && active) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
+        OwShape.raised(graphics, rect.x, rect.y, rect.w, rect.h, TILE_BG, if (hovered && active) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE, cut = 1, hovered = hovered && active, shadow = false)
         val iconY = rect.y + if (active) CARD_PAD else (rect.h - TILE) / 2
         val iconRect = Rect(rect.x + CARD_PAD, iconY, TILE, TILE)
         if (rect.h >= TILE + 2) drawTile(graphics, iconRect, option.stack, false)

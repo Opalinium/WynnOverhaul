@@ -32,6 +32,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - A toast appears when you complete a raid.
 - The compass has a footer with your coordinates and the Wynncraft world.
 - Players in a guild war show in their own panel, read from the War scoreboard section.
+- Menu buttons, panels and inputs have more depth: raised buttons that lift on hover, recessed fields, beveled panels and an engraved title band.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.
@@ -55,6 +56,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Buffs and debuffs are read from the tab Status Effects list, so debuffs show.
 - The vanilla action bar no longer shows through when it carries the vitals bar.
 - Bank deposits stop retrying when the server refuses to merge a stack, and the refusal is remembered.
+- The Mod Menu update badge no longer spills out of the pause menu, and settings rows no longer draw outside their panel.
 
 ## 1.5.0 - 2026-10-09
 

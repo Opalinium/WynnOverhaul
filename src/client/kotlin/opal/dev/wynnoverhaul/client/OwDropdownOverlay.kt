@@ -62,8 +62,10 @@ object OwDropdownOverlay {
         val w = listWidth()
         val h = listHeight()
         val y0 = listY(screenH)
-        graphics.fill(anchorX, y0, anchorX + w, y0 + h, LIST_BG)
-        graphics.outline(anchorX, y0, w, h, OwTheme.BORDER_BRIGHT)
+        OwShape.shadow(graphics, anchorX, y0, w, h, 1, 3)
+        OwShape.fill(graphics, anchorX, y0, w, h, 1, LIST_BG)
+        graphics.fillGradient(anchorX + 1, y0 + 1, anchorX + w - 1, y0 + 8, 0x30000000, 0x00000000)
+        OwShape.frame(graphics, anchorX, y0, w, h, 1, OwTheme.BORDER_BRIGHT)
         val rows = visibleRows()
         for (row in 0 until rows) {
             val index = row + scroll
@@ -71,7 +73,10 @@ object OwDropdownOverlay {
             val option = options[index]
             val ry = y0 + 1 + row * ROW_H
             val hovered = mouseX >= anchorX && mouseX < anchorX + w - SCROLL_GUTTER && mouseY >= ry && mouseY < ry + ROW_H
-            if (hovered) graphics.fill(anchorX + 1, ry, anchorX + w - 1, ry + ROW_H, OwTheme.TILE_HOVER)
+            if (hovered) {
+                graphics.fillGradient(anchorX + 1, ry, anchorX + w - 1, ry + ROW_H, HudStyle.lighten(OwTheme.TILE_HOVER, 0.1f), HudStyle.darken(OwTheme.TILE_HOVER, 0.15f))
+                graphics.fill(anchorX + 1, ry, anchorX + 3, ry + ROW_H, OwTheme.ACCENT)
+            }
             val selected = option.id == selectedId
             graphics.text(font, truncateToWidth(font, option.label, w - PAD * 2 - SCROLL_GUTTER), anchorX + PAD, ry + (ROW_H - 8) / 2, if (selected) OwTheme.ACCENT else OwTheme.TEXT)
         }

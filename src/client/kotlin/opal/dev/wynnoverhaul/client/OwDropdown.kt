@@ -22,9 +22,8 @@ class OwDropdown(
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val hovered = isHovered
         val fade = getAlpha()
-        graphics.fill(x, y, x + width, y + height, HudStyle.alpha(if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG, fade))
         val border = if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE
-        graphics.outline(x, y, width, height, HudStyle.alpha(border, fade))
+        OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, border, hovered = hovered, fade = fade)
         val font = Minecraft.getInstance().font
         val current = options.firstOrNull { it.id == selected() }?.label.orEmpty()
         val text = if (prefix.isEmpty()) current else "$prefix: $current"

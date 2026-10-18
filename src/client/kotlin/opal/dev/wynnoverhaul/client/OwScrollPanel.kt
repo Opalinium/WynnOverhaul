@@ -27,8 +27,7 @@ class OwScrollPanel(
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         onReposition?.invoke()
-        graphics.fill(x, y, x + width, y + height, OwTheme.TILE_BG)
-        graphics.outline(x, y, width, height, OwTheme.HAIRLINE)
+        OwShape.well(graphics, x, y, width, height, 2)
         extractScrollbar(graphics, mouseX, mouseY)
     }
 

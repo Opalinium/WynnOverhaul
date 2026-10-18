@@ -1,8 +1,6 @@
 package opal.dev.wynnoverhaul.client
 
 import net.minecraft.client.gui.GuiGraphicsExtractor
-import net.minecraft.client.renderer.RenderPipelines
-import net.minecraft.resources.Identifier
 
 object OwTheme {
     const val BG_DIM = 0x50120D08.toInt()
@@ -24,13 +22,7 @@ object OwTheme {
     const val TILE_BG = 0xF0161412.toInt()
     const val TILE_HOVER = 0xF0221D17.toInt()
     const val TILE_BORDER = 0xFF3A2E1C.toInt()
-    const val TILE_NEW = 0xFF6FAE5E.toInt()
 
-    const val GLASS = 0xA812100D.toInt()
-    const val PANEL_SHADOW = 0x38000000
-    const val PANEL_SHEEN_TOP = 0x1CD4AF37
-    const val PANEL_SHEEN_BOTTOM = 0x00D4AF37
-    private const val CORNER = 6
 
     const val ROW_H = 22
     const val PAD = 12
@@ -39,61 +31,16 @@ object OwTheme {
     const val SCROLLBAR_W = 6
     const val SCROLL_RATE = 30
 
-    val CHECKBOX_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox")
-    val CHECKBOX_HOVER_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox_highlighted")
-    val CHECKBOX_SELECTED_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox_selected")
-    val CHECKBOX_SELECTED_HOVER_SPRITE: Identifier = Identifier.withDefaultNamespace("widget/checkbox_selected_highlighted")
-
-    const val SPRITE_TINT = 0xFFD8B979.toInt()
-    const val SPRITE_TINT_DISABLED = 0xFF6B6154.toInt()
-
-    fun drawTintedSprite(graphics: GuiGraphicsExtractor, sprite: Identifier, x: Int, y: Int, w: Int, h: Int, tint: Int = SPRITE_TINT) {
-        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, w, h, tint)
-    }
-
     fun hudPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, alpha: Int = 255) {
         if (!WynnOverhaulConfig.current.hudPanelsEnabled) return
         HudStyle.plate(graphics, x, y, w, h, ACCENT, alpha / 255f)
     }
 
     fun drawPage(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
-        graphics.fill(x, y, x + w, y + h, PAGE_WASH)
-        graphics.fill(x, y, x + w, y + 1, HAIRLINE)
-        graphics.fill(x, y + h - 1, x + w, y + h, HAIRLINE)
-        graphics.fill(x, y, x + 1, y + h, HAIRLINE)
-        graphics.fill(x + w - 1, y, x + w, y + h, HAIRLINE)
+        OwShape.panel(graphics, x, y, w, h)
     }
 
     fun glassPanel(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int) {
-        graphics.fill(x + 2, y + 3, x + w + 2, y + h + 3, PANEL_SHADOW)
-        graphics.fill(x, y, x + w, y + h, GLASS)
-        graphics.fillGradient(x + 1, y + 1, x + w - 1, y + 16, PANEL_SHEEN_TOP, PANEL_SHEEN_BOTTOM)
-        graphics.fill(x, y, x + w, y + 1, HAIRLINE)
-        graphics.fill(x, y + h - 1, x + w, y + h, HAIRLINE)
-        graphics.fill(x, y, x + 1, y + h, HAIRLINE)
-        graphics.fill(x + w - 1, y, x + w, y + h, HAIRLINE)
-        graphics.fill(x, y, x + CORNER, y + 1, ACCENT_DIM)
-        graphics.fill(x, y, x + 1, y + CORNER, ACCENT_DIM)
-        graphics.fill(x + w - CORNER, y, x + w, y + 1, ACCENT_DIM)
-        graphics.fill(x + w - 1, y, x + w, y + CORNER, ACCENT_DIM)
-        graphics.fill(x, y + h - 1, x + CORNER, y + h, ACCENT_DIM)
-        graphics.fill(x, y + h - CORNER, x + 1, y + h, ACCENT_DIM)
-        graphics.fill(x + w - CORNER, y + h - 1, x + w, y + h, ACCENT_DIM)
-        graphics.fill(x + w - 1, y + h - CORNER, x + w, y + h, ACCENT_DIM)
+        OwShape.panel(graphics, x, y, w, h, glass = true, cut = 3)
     }
-
-    fun drawTile(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, borderArgb: Int, isNew: Boolean = false) {
-        graphics.fill(x, y, x + size, y + size, TILE_BG)
-        graphics.fill(x, y, x + size, y + 1, borderArgb)
-        graphics.fill(x, y + size - 1, x + size, y + size, borderArgb)
-        graphics.fill(x, y, x + 1, y + size, borderArgb)
-        graphics.fill(x + size - 1, y, x + size, y + size, borderArgb)
-        if (isNew) {
-            graphics.fill(x - 1, y - 1, x + size + 1, y, TILE_NEW)
-            graphics.fill(x - 1, y + size, x + size + 1, y + size + 1, TILE_NEW)
-            graphics.fill(x - 1, y, x, y + size, TILE_NEW)
-            graphics.fill(x + size, y, x + size + 1, y + size, TILE_NEW)
-        }
-    }
-
 }

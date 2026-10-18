@@ -19,9 +19,9 @@ class OwListRow(
 ) : AbstractWidget(x, y, width, height, Component.literal(label)) {
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val font = Minecraft.getInstance().font
-        graphics.fill(x, y, x + width, y + height, if (isHovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG)
-        graphics.outline(x, y, width, height, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
-        graphics.fill(x + 1, y + 1, x + 3, y + height - 1, if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM)
+        OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE, cut = 1, hovered = isHovered, shadow = false)
+        val bar = if (isHovered) OwTheme.ACCENT else OwTheme.ACCENT_DIM
+        graphics.fillGradient(x + 2, y + 2, x + 4, y + height - 2, HudStyle.lighten(bar, 0.3f), HudStyle.darken(bar, 0.3f))
         val badgeW = font.width(badge)
         graphics.text(font, truncateToWidth(font, message.string, width - badgeW - 22), x + 9, y + (height - 8) / 2, OwTheme.TEXT)
         graphics.text(font, badge, x + width - badgeW - 7, y + (height - 8) / 2, badgeColor)
@@ -82,7 +82,7 @@ class OwLinkRow(
         val textColor = if (isHovered) OwTheme.TEXT else color
         graphics.text(font, shown, x + 2, y + (height - 8) / 2, textColor)
         if (header) {
-            graphics.fill(x, y + height - 1, x + width, y + height, OwTheme.HAIRLINE)
+            OwShape.groove(graphics, x, y + height - 3, width)
         } else if (isHovered) {
             graphics.fill(x + 2, y + height - 2, x + 2 + font.width(shown), y + height - 1, textColor)
         }

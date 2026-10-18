@@ -259,8 +259,7 @@ private class ServerRows(x: Int, y: Int, width: Int, height: Int, private val sc
 
     override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
         val font = Minecraft.getInstance().font
-        graphics.fill(x, y, x + width, y + height, OwTheme.PANEL_ALT or 0xFF000000.toInt())
-        graphics.outline(x, y, width, height, OwTheme.HAIRLINE)
+        OwShape.well(graphics, x, y, width, height, 2, OwTheme.PANEL_ALT or 0xFF000000.toInt())
         if (indices.isEmpty()) {
             val text = if (screen.serverCount() == 0) "No servers yet. Add one or use Direct Connect." else "No servers match your search."
             graphics.centeredText(font, text, x + width / 2, y + height / 2 - 4, OwTheme.TEXT_DIM)
@@ -277,7 +276,7 @@ private class ServerRows(x: Int, y: Int, width: Int, height: Int, private val sc
         if (total > height) {
             val barH = max(16, height * height / total)
             val barY = y + ((height - barH) * (scroll / (total - height))).toInt()
-            graphics.fill(x + width - 4, barY, x + width - 1, barY + barH, OwTheme.ACCENT_DIM)
+            OwShape.thumb(graphics, x + width - 4, barY, 3, barH)
         }
     }
 
@@ -285,8 +284,12 @@ private class ServerRows(x: Int, y: Int, width: Int, height: Int, private val sc
         val data = screen.server(index)
         val hovered = mouseX >= x && mouseX < x + width - 6 && mouseY >= max(ry, y) && mouseY < min(ry + ROW_H, y + height) && mouseY >= ry
         val selected = index == screen.selectedIndex()
-        graphics.fill(x + 1, ry, x + width - 1, ry + ROW_H - 2, if (selected) 0xFF2E2413.toInt() else if (hovered) OwTheme.TILE_HOVER or 0xFF000000.toInt() else OwTheme.TILE_BG or 0xFF000000.toInt())
-        graphics.outline(x + 1, ry, width - 2, ROW_H - 2, if (selected) OwTheme.ACCENT else if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.TILE_BORDER)
+        OwShape.raised(
+            graphics, x + 1, ry, width - 2, ROW_H - 2,
+            if (selected) 0xFF2E2413.toInt() else OwTheme.TILE_BG or 0xFF000000.toInt(),
+            if (selected) OwTheme.ACCENT else if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.TILE_BORDER,
+            cut = 1, hovered = hovered, glow = if (selected) OwTheme.ACCENT else 0, shadow = false,
+        )
         val icon = icon(data)
         val ix = x + 8
         val iy = ry + (ROW_H - 2 - ICON) / 2

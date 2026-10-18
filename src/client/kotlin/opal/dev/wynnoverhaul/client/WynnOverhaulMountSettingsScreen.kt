@@ -127,8 +127,7 @@ class WynnOverhaulMountSettingsScreen(private val menu: AbstractContainerMenu) :
         layoutShortcuts(panelH)
 
         OwTheme.drawPage(graphics, left, top, w, panelH)
-        graphics.fill(left, top + OwTheme.TITLE_BAR_H - 1, left + w, top + OwTheme.TITLE_BAR_H, OwTheme.HAIRLINE)
-        graphics.centeredText(font, title.string.uppercase(), left + w / 2, top + (OwTheme.TITLE_BAR_H - 8) / 2, OwTheme.TEXT)
+        OwShape.titleBand(graphics, font, left, top, w, title.string)
 
         val viewTop = bodyTop(panelH)
         val viewH = bodyViewH(panelH)
@@ -142,8 +141,7 @@ class WynnOverhaulMountSettingsScreen(private val menu: AbstractContainerMenu) :
             OwSkeleton.bars(graphics, x, y, innerW, 4, 18, 6)
         }
         for (banner in info) {
-            graphics.fill(x, y, x + innerW, y + INFO_H, OwTheme.TILE_BG)
-            graphics.outline(x, y, innerW, INFO_H, OwTheme.HAIRLINE)
+            OwShape.well(graphics, x, y, innerW, INFO_H, 1)
             graphics.centeredText(font, truncateToWidth(font, banner.title, innerW - 8), x + innerW / 2, y + (INFO_H - 8) / 2, OwTheme.TEXT_DIM)
             y += INFO_H + CARD_GAP
         }
@@ -171,8 +169,7 @@ class WynnOverhaulMountSettingsScreen(private val menu: AbstractContainerMenu) :
     private var hoveredSlot = -1
 
     private fun drawCard(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, card: Card, hovered: Boolean) {
-        graphics.fill(x, y, x + w, y + card.h, if (hovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG)
-        graphics.outline(x, y, w, card.h, if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE)
+        OwShape.raised(graphics, x, y, w, card.h, OwTheme.TILE_BG, if (hovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE, hovered = hovered)
         val inner = w - CARD_PAD * 2
         val cx = x + CARD_PAD
         var cy = y + CARD_PAD
@@ -191,12 +188,10 @@ class WynnOverhaulMountSettingsScreen(private val menu: AbstractContainerMenu) :
                 val px = cx + pill.x
                 val py = cy + pill.y
                 if (pill.option.active) {
-                    graphics.fill(px, py, px + pill.w, py + PILL_H, OwTheme.ACCENT_DIM)
-                    graphics.outline(px, py, pill.w, PILL_H, OwTheme.BORDER_BRIGHT)
+                    OwShape.raised(graphics, px, py, pill.w, PILL_H, OwTheme.ACCENT_DIM, OwTheme.BORDER_BRIGHT, cut = 1, glow = OwTheme.ACCENT, shadow = false)
                     graphics.text(font, pill.option.label, px + PILL_PAD, py + (PILL_H - 8) / 2, OwTheme.TEXT)
                 } else {
-                    graphics.fill(px, py, px + pill.w, py + PILL_H, OwTheme.PANEL)
-                    graphics.outline(px, py, pill.w, PILL_H, OwTheme.TILE_BORDER)
+                    OwShape.well(graphics, px, py, pill.w, PILL_H, 1, OwTheme.PANEL, OwTheme.TILE_BORDER)
                     graphics.text(font, pill.option.label, px + PILL_PAD, py + (PILL_H - 8) / 2, OwTheme.TEXT_FAINT)
                 }
             }

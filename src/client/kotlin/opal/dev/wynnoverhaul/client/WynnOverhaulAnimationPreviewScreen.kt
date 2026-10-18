@@ -106,8 +106,7 @@ class WynnOverhaulAnimationPreviewScreen(parent: Screen? = null) : OwScreen(Comp
         val y1 = contentTop
         val x2 = viewLeft + viewWidth
         val y2 = contentBottom
-        graphics.fill(x1, y1, x2, y2, OwTheme.PANEL)
-        graphics.outline(x1, y1, x2 - x1, y2 - y1, OwTheme.HAIRLINE)
+        OwShape.well(graphics, x1, y1, x2 - x1, y2 - y1, 2, OwTheme.PANEL)
         val player = Minecraft.getInstance().player ?: return
         val size = (min(x2 - x1, y2 - y1) * ENTITY_SHARE).toInt()
         drawFigure(graphics, player, x1 + 1, y1 + 1, x2 - 1, y2 - 1, size)
@@ -181,8 +180,7 @@ class WynnOverhaulAnimationPreviewScreen(parent: Screen? = null) : OwScreen(Comp
         override fun extractWidgetRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
             val font = Minecraft.getInstance().font
             val border = if (isHovered) OwTheme.BORDER_BRIGHT else OwTheme.HAIRLINE
-            graphics.fill(x, y, x + width, y + height, if (isHovered) OwTheme.TILE_HOVER else OwTheme.TILE_BG)
-            graphics.outline(x, y, width, height, border)
+            OwShape.raised(graphics, x, y, width, height, OwTheme.TILE_BG, border, hovered = isHovered)
             graphics.text(font, "<", x + 7, y + (height - 8) / 2, OwTheme.TEXT_DIM)
             graphics.text(font, ">", x + width - 7 - font.width(">"), y + (height - 8) / 2, OwTheme.TEXT_DIM)
             val text = truncateToWidth(font, "$title: ${value()}", width - ARROW_W * 2)
