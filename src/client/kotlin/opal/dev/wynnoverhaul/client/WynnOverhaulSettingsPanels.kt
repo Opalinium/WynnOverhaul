@@ -905,6 +905,9 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Custom title and pause menus", "Restyles the main menu and the game menu in the WynnOverhaul layout. Takes effect the next time the menu opens.", config.customMenusEnabled) {
                 config.customMenusEnabled = it
             }
+            checkbox("Item tooltip cards", "Draws tooltips as cards with a frame and glow in the colour of the item name, and a rule under the title.", config.customTooltipsEnabled) {
+                config.customTooltipsEnabled = it
+            }
             checkbox("Custom loading screens", "Restyles the connecting, world switching, terrain loading and resource reload screens with an animated backdrop, rotating tips and a fade into the game. Takes effect the next time a loading screen opens.", config.customLoadingEnabled) {
                 config.customLoadingEnabled = it
             }

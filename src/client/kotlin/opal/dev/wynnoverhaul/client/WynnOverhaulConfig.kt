@@ -205,6 +205,7 @@ data class WynnOverhaulConfig(
     var customMountMenuEnabled: Boolean = true,
     var customMenusEnabled: Boolean = true,
     var customLoadingEnabled: Boolean = true,
+    var customTooltipsEnabled: Boolean = true,
     var titleLoadoutEnabled: Boolean = true,
     var titleSceneIndex: Int = 0,
 
