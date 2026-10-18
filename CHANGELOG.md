@@ -35,6 +35,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Menu buttons, panels and inputs have more depth: raised buttons that lift on hover, recessed fields, beveled panels and an engraved title band.
 - Loading screens for connecting, switching worlds, loading terrain and reloading resources, with an animated backdrop, rotating tips and a fade into the game. The Mojang red screen no longer shows when loading finishes.
 - Item tooltips are drawn as cards with a frame and glow in the color of the item name.
+- A Forged chat style with gradient lines, a gold edge and a recessed input bar. It is the new default.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

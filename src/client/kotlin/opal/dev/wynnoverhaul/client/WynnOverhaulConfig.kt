@@ -143,7 +143,7 @@ data class WynnOverhaulConfig(
     var spellBarStyle: String = "ROWS",
     var shiftDragQuickMove: Boolean = true,
     var chatHudEnabled: Boolean = true,
-    var chatStyle: String = "CLASSIC",
+    var chatStyle: String = "FORGED",
     var chatSmartReply: Boolean = true,
     var chatConversationView: Boolean = true,
     var questCompletionToastEnabled: Boolean = false,

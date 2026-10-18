@@ -12,8 +12,9 @@ object ChatHud {
     const val GLASS = "GLASS"
     const val FADE = "FADE"
     const val MINIMAL = "MINIMAL"
+    const val FORGED = "FORGED"
 
-    val STYLES = listOf(CLASSIC, GLASS, FADE, MINIMAL)
+    val STYLES = listOf(CLASSIC, FORGED, GLASS, FADE, MINIMAL)
 
     private const val VANILLA_BOTTOM = 40
     private const val VANILLA_INPUT_GAP = 28
@@ -24,6 +25,7 @@ object ChatHud {
     private var lastSignature = 0L
 
     fun label(style: String): String = when (style) {
+        FORGED -> "Forged"
         GLASS -> "Glass"
         FADE -> "Fade band"
         MINIMAL -> "No backdrop"
@@ -111,7 +113,10 @@ object ChatHud {
         val y0 = inputY(guiH) - 2
         val x1 = inputX() + inputWidth() - 2
         val y1 = y0 + 12
-        if (style() == GLASS || style() == FADE) {
+        if (style() == FORGED) {
+            OwShape.well(g, x0, y0, x1 - x0, y1 - y0, 1, OwTheme.TILE_BG, OwTheme.ACCENT_DIM)
+            HudStyle.diamond(g, x0 + 4, y0 + (y1 - y0) / 2, 1, OwTheme.ACCENT)
+        } else if (style() == GLASS || style() == FADE) {
             HudStyle.plate(g, x0, y0, x1 - x0, y1 - y0, OwTheme.ACCENT)
         } else {
             g.fill(x0, y0, x1, y1, color)
@@ -126,6 +131,19 @@ object ChatHud {
         if ((color and 0xFFFFFF) != 0) return false
         val a = (color ushr 24) / 255f
         when (style) {
+            FORGED -> {
+                val sliceW = (x1 - x0).toFloat() / FADE_SLICES
+                for (i in 0 until FADE_SLICES) {
+                    val t = (i + 0.5f) / FADE_SLICES
+                    val alpha = min(1f, a * 2f) * (1f - 0.8f * t * t)
+                    val sx0 = x0 + (i * sliceW).toInt()
+                    val sx1 = x0 + ((i + 1) * sliceW).toInt()
+                    g.fillGradient(sx0, y0, sx1, y1, HudStyle.alpha(0xFF1E1710.toInt(), alpha), HudStyle.alpha(0xFF0C0906.toInt(), alpha))
+                }
+                g.fill(x0, y1 - 1, x1, y1, HudStyle.alpha(0xFF000000.toInt(), min(1f, a * 1.4f)))
+                g.fill(x0, y0, x0 + 2, y1, HudStyle.alpha(OwTheme.ACCENT_DIM, min(1f, a * 2.2f)))
+                g.fill(x0 + 2, y0, x0 + 3, y1, HudStyle.alpha(OwShape.HIGHLIGHT, min(1f, a * 2f)))
+            }
             GLASS -> {
                 g.fill(x0, y0, x1, y1, HudStyle.alpha(HudStyle.GLASS, min(1f, a * 1.9f)))
                 g.fill(x0, y0, x0 + 1, y1, HudStyle.alpha(OwTheme.ACCENT_DIM, min(1f, a * 2.2f)))
