@@ -33,6 +33,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The compass has a footer with your coordinates and the Wynncraft world.
 - Players in a guild war show in their own panel, read from the War scoreboard section.
 - Menu buttons, panels and inputs have more depth: raised buttons that lift on hover, recessed fields, beveled panels and an engraved title band.
+- Loading screens for connecting, switching worlds, loading terrain and reloading resources, with an animated backdrop, rotating tips and a fade into the game. The Mojang red screen no longer shows when loading finishes.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

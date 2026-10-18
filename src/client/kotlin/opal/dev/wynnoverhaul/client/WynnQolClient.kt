@@ -40,6 +40,7 @@ class WynnQolClient : ClientModInitializer {
         CharacterInfo.register()
         MountSettingsInterceptor.register()
         MenuSkin.register()
+        LoadingScene.register()
         OptionsInterceptor.register()
         CustomContainerInterceptor.register()
         WynnQuestCompletionTracker.register()
@@ -65,6 +66,10 @@ class WynnQolClient : ClientModInitializer {
                 DamageNumbers.draw(graphics)
                 LootBeams.draw(graphics)
             },
+        )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "loading_reveal"),
+            LoadingScene.revealElement,
         )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "mount_feeder"),
