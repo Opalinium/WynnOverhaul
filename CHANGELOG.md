@@ -49,6 +49,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Each chat channel shows only its own messages, and All shows everything. SYS is a popout panel.
 - The greatsword rests on the shoulder at idle, and strokes are authored from waypoints in place of mirrored copies.
 - The spine and pelvis bend, the walk and sprint were reworked, and every stroke has legwork.
+- Classic toasts are glass cards that slide in with a countdown line.
 
 ### Fixed
 - The augmented Item Identifier opens in the workbench layout.

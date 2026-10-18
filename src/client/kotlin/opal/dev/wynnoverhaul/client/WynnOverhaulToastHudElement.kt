@@ -75,7 +75,7 @@ class WynnOverhaulToastHudElement : HudElement {
         val subtitleText = if (detail.isBlank()) subtitle else "$subtitle  ·  $detail"
         val (floorW, floorH) = HudLayoutManager.boxSize(ID)
         val boxW = max((floorW / textScale).toInt(), max(font.width(title), font.width(subtitleText)) + PAD * 2)
-        val boxH = max((floorH / textScale).toInt(), LINE_HEIGHT * 2 + PAD * 2)
+        val boxH = max((floorH / textScale).toInt(), LINE_HEIGHT * 2 + PAD * 2 + 4)
 
         val configured = HudLayoutManager.bounds(ID, guiW, guiH)
         val centerX = (configured[0] + configured[2]) / 2f
@@ -83,16 +83,27 @@ class WynnOverhaulToastHudElement : HudElement {
         val drawnW = boxW * total
         val drawnH = boxH * total
         val originX = (centerX - drawnW / 2f).coerceIn(0f, (guiW - drawnW).coerceAtLeast(0f))
-        val originY = (centerY - drawnH / 2f).coerceIn(0f, (guiH - drawnH).coerceAtLeast(0f))
+        val slide = (1f - HudStyle.smoothstep((fraction / FADE_IN_END).coerceIn(0f, 1f))) * -SLIDE_PX * total
+        val originY = (centerY - drawnH / 2f).coerceIn(0f, (guiH - drawnH).coerceAtLeast(0f)) + slide
+        val fade = alpha / 255f
+        val tint = 0xFF000000.toInt() or (colorArgb and 0xFFFFFF)
 
         val pose = graphics.pose()
         pose.pushMatrix()
         pose.translate(originX, originY)
         pose.scale(total)
-        HudStyle.plate(graphics, 0, 0, boxW, boxH, colorArgb, alpha / 255f)
-        HudStyle.fadeRule(graphics, 4, 2, boxW - 8, HudStyle.withAlpha(colorArgb, alpha), leftSolid = true)
-        graphics.text(font, title, (boxW - font.width(title)) / 2, PAD, HudStyle.withAlpha(colorArgb, alpha), true)
-        graphics.text(font, subtitleText, (boxW - font.width(subtitleText)) / 2, PAD + LINE_HEIGHT, HudStyle.withAlpha(OwTheme.TEXT, alpha), true)
+        OwShape.panel(graphics, 0, 0, boxW, boxH, glass = true, cut = 3, accent = tint, fade = fade)
+        graphics.fillGradient(2, 3, boxW - 2, boxH / 2, HudStyle.alpha(tint, 0.16f * fade), 0x00000000)
+        val titleW = font.width(title)
+        val titleX = (boxW - titleW) / 2
+        graphics.text(font, title, titleX, PAD, HudStyle.withAlpha(tint, alpha), true)
+        HudStyle.diamond(graphics, titleX - 7, PAD + 4, 2, HudStyle.withAlpha(tint, alpha))
+        HudStyle.diamond(graphics, titleX + titleW + 6, PAD + 4, 2, HudStyle.withAlpha(tint, alpha))
+        HudStyle.fadeRule(graphics, 10, PAD + LINE_HEIGHT - 1, titleX - 20, HudStyle.alpha(tint, 0.5f * fade), leftSolid = false)
+        HudStyle.fadeRule(graphics, titleX + titleW + 14, PAD + LINE_HEIGHT - 1, boxW - titleX - titleW - 24, HudStyle.alpha(tint, 0.5f * fade), leftSolid = true)
+        graphics.text(font, subtitleText, (boxW - font.width(subtitleText)) / 2, PAD + LINE_HEIGHT + 2, HudStyle.withAlpha(OwTheme.TEXT, alpha), true)
+        val remaining = ((boxW - 12) * (1f - fraction)).toInt()
+        graphics.fill(6, boxH - 4, 6 + remaining, boxH - 3, HudStyle.alpha(tint, 0.7f * fade))
         pose.popMatrix()
     }
 
@@ -207,6 +218,7 @@ class WynnOverhaulToastHudElement : HudElement {
         const val LINE_HEIGHT = 11
         const val FADE_IN_END = 0.08f
         const val FADE_OUT_START = 0.85f
+        const val SLIDE_PX = 10f
 
         const val SOULS_FADE_IN_END = 0.22f
         const val SOULS_FADE_OUT_START = 0.68f
