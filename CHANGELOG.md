@@ -54,6 +54,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Auto attack and quick spells no longer fire without a weapon in hand.
 - Buffs and debuffs are read from the tab Status Effects list, so debuffs show.
 - The vanilla action bar no longer shows through when it carries the vitals bar.
+- Bank deposits stop retrying when the server refuses to merge a stack, and the refusal is remembered.
 
 ## 1.5.0 - 2026-10-09
 

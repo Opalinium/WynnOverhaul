@@ -160,6 +160,15 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
         if (BankSession.shouldAutoScan(storage)) BankSession.startScan(page)
         BankSession.arrived(page)
         if (stableTicks < STABLE_TICKS_REQUIRED) return
+        verifyMerge(storage, page)
+        if (!menu.carried.isEmpty && (BankSession.navTarget != null || BankSession.pending != null)) {
+            val spot = firstFreeInventorySlot()
+            if (spot != null) {
+                send(spot, 0, ContainerInput.PICKUP)
+                stableTicks = 0
+                return
+            }
+        }
         if (BankSession.expired() || BankSession.attempts > MAX_ATTEMPTS) {
             BankSession.cancel()
             warn("Could not change page")
@@ -249,7 +258,28 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
     private fun canMerge(source: ItemStack, target: ItemStack): Boolean =
         !target.isEmpty && target.count < target.maxStackSize && ItemStack.isSameItemSameComponents(source, target)
 
+    private class MergeCheck(val storage: String, val page: Int, val bankSlot: Int, val inventorySlot: Int, val sourceCount: Int, val targetCount: Int, val kind: String)
+
+    private val refusedMerges = HashSet<Triple<String, Int, Int>>()
+
+    private fun kindOf(stack: ItemStack): String = "${stack.item}|${stack.hoverName.string}"
+    private var mergeCheck: MergeCheck? = null
+
+    private fun verifyMerge(storage: String, page: Int) {
+        val check = mergeCheck ?: return
+        if (check.storage != storage || check.page != page) return
+        mergeCheck = null
+        val source = stackAt(check.inventorySlot)
+        val target = stackAt(check.bankSlot)
+        val moved = source.isEmpty || source.count < check.sourceCount || target.count > check.targetCount
+        if (!moved) {
+            refusedMerges.add(Triple(storage, page, check.bankSlot))
+            refusedKinds.add(check.kind)
+        }
+    }
+
     private fun mergeDeposit(inventorySlot: Int, bankSlot: Int) {
+        mergeCheck = MergeCheck(storageName(), currentPage(), bankSlot, inventorySlot, stackAt(inventorySlot).count, stackAt(bankSlot).count, kindOf(stackAt(inventorySlot)))
         send(inventorySlot, 0, ContainerInput.PICKUP)
         send(bankSlot, 0, ContainerInput.PICKUP)
         if (menu.carried.isEmpty) return
@@ -258,14 +288,15 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
     }
 
     private fun findMergeTarget(storage: String, stack: ItemStack): Pair<Int, Int>? {
+        if (kindOf(stack) in refusedKinds) return null
         val page = currentPage()
-        val live = (0 until BANK_SLOTS).firstOrNull { canMerge(stack, stackAt(it)) }
+        val live = (0 until BANK_SLOTS).firstOrNull { canMerge(stack, stackAt(it)) && Triple(storage, page, it) !in refusedMerges }
         if (live != null) return page to live
         var best: Pair<Int, Int>? = null
         var bestCost = Int.MAX_VALUE
         for ((p, data) in BankSession.pagesOf(storage)) {
             if (p == page) continue
-            val slot = data.stacks.indexOfFirst { canMerge(stack, it) }
+            val slot = data.stacks.withIndex().indexOfFirst { (i, it) -> canMerge(stack, it) && Triple(storage, p, i) !in refusedMerges }
             if (slot < 0) continue
             val cost = navCost(page, p)
             if (cost < bestCost) {
@@ -676,6 +707,8 @@ class WynnOverhaulBankScreen(menu: AbstractContainerMenu) : WynnOverhaulSideScre
     }
 
     companion object {
+        private val refusedKinds = HashSet<String>()
+
         private const val KEY_ESCAPE = 256
         private const val BANK_SLOTS = 45
         private const val QUICK_SLOT = 46
