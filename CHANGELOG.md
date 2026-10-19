@@ -4,6 +4,8 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 
 ## Unreleased
 
+## 1.6.0 - 2026-10-18
+
 ### Added
 - A Greatsword moveset with its own stance and strokes.
 - The party panel shows health bars, colored names, dead and offline states and distances, with your own name in gold.
