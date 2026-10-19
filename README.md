@@ -37,8 +37,17 @@
 - The HUD hides during cutscenes, over the debug screen and while the player list is open.
 - Six hotbar styles: Classic, Glass, Tiles, Arc, Radial and Cross.
 - Chat restyle with channel buttons and a direct message panel.
-- Quest, level-up, discovery and location toasts.
+- Quest, level-up, discovery, location and raid toasts.
+- A party panel with health bars and a guild war panel, pinned waypoints with a list, selectable low health effects, and a ping hotkey that shares spots with your party.
+- Chat mention highlights, a reply hotkey, unread counts, a SYS channel for system messages and a Forged chat style.
+- Letterbox bars while an NPC is talking.
 - Every element can be moved and resized in the HUD designer.
+
+### Menus
+- A title screen with five scenes (Campfire, Snowed In, Aurora, Downpour and Dusk Dunes) that shows your character and has a Play Wynncraft button, and a restyled pause menu.
+- A tabbed options screen, a multiplayer server list and loading screens.
+- Raised buttons, recessed fields and beveled panels across the custom menus, with menu sounds.
+- Item tooltips drawn as cards framed in the color of the item name.
 
 ### Entity tracker
 - Rules match by name (contains, equals or regex) or base type, each with its own colour, range and through-walls setting.
@@ -64,7 +73,8 @@
 - Custom screens for the bank, loot chests, the Item Upgrader, powders, ascension, the identifier, selling, repair and merchants, each with its own toggle.
 - Identified stats show their roll as a percentage from red to aqua.
 - Loot beams over dropped items.
-- Tooltip that compares an item to what you have equipped.
+- Tooltip that compares an item to what you have equipped, including accessories, with stat differences.
+- Search filters for items and journal activities, slot locks and a settings search.
 - Price checks through wynnventory.
 - Rare item alerts, shift-drag to move items, and a hotbar overscroll lock.
 - Prefixes on party and friend nametags.
@@ -107,6 +117,9 @@ All keybinds can be changed under Options > Controls.
 | Toggle Souls Camera | Switches the orbit camera on or off |
 | Recenter Souls Camera | Resets the camera behind you |
 | Register Weapon for Animations | Assigns an animation style to the weapon you're holding |
+| Ping Looked-At Spot | Marks the spot you are looking at and shares it with your party |
+| Cycle Main Waypoint | Switches which pinned waypoint is the main target |
+| Reply to Last Whisper | Starts a reply to the last player who whispered you |
 
 ### Configuration
 
