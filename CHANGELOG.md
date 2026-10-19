@@ -37,6 +37,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - Item tooltips are drawn as cards with a frame and glow in the color of the item name.
 - A Forged chat style with gradient lines, a gold edge and a recessed input bar. It is the new default.
 - Menu sounds: a stone and chain click, a soft tick on hover, a page turn when a menu opens and a lock sound when loading finishes, with a volume slider.
+- Black bars slide in from the top and bottom of the screen while an NPC is talking.
 
 ### Changed
 - Less work per frame in the HUD, scoreboard parsing, item tooltips and entity scans, and the quest and wiki data load in the background after you join.

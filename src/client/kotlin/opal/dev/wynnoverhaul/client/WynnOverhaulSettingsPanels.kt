@@ -908,6 +908,9 @@ class WynnOverhaulSettingsPanels(private val host: Host) {
             checkbox("Item tooltip cards", "Draws tooltips as cards with a frame and glow in the colour of the item name, and a rule under the title.", config.customTooltipsEnabled) {
                 config.customTooltipsEnabled = it
             }
+            checkbox("Dialogue letterbox", "Slides black bars in from the top and bottom of the screen while an NPC is talking and removes them when the conversation ends. Needs the custom HUD.", config.dialogueLetterboxEnabled) {
+                config.dialogueLetterboxEnabled = it
+            }
             checkbox("Menu sounds", "Replaces the vanilla button click with a stone and chain click, and adds a soft tick on hover, a page turn when a menu opens and a lock sound when loading finishes.", config.uiSoundsEnabled) {
                 config.uiSoundsEnabled = it
             }

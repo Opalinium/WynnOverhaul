@@ -67,6 +67,10 @@ class WynnQolClient : ClientModInitializer {
                 LootBeams.draw(graphics)
             },
         )
+        HudElementRegistry.addFirst(
+            Identifier.fromNamespaceAndPath("wynnoverhaul", "dialogue_letterbox"),
+            DialogueLetterbox.element,
+        )
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath("wynnoverhaul", "loading_reveal"),
             LoadingScene.revealElement,

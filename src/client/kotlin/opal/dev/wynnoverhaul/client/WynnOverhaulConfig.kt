@@ -207,6 +207,7 @@ data class WynnOverhaulConfig(
     var customLoadingEnabled: Boolean = true,
     var customTooltipsEnabled: Boolean = true,
     var uiSoundsEnabled: Boolean = true,
+    var dialogueLetterboxEnabled: Boolean = true,
     var uiSoundVolume: Double = 1.0,
     var titleLoadoutEnabled: Boolean = true,
     var titleSceneIndex: Int = 0,
