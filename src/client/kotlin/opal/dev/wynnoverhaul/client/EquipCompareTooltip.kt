@@ -88,7 +88,8 @@ object EquipCompareTooltip {
     private fun resolveTargets(player: Player, stack: ItemStack): List<Target> {
         val code = WynnGearKind.frameCode(stack)
         if (code != null) {
-            val matched = equippedCandidates(player).filter { WynnGearKind.frameCode(it.stack) == code }
+            val kind = WynnGearKind.of(stack)
+            val matched = equippedCandidates(player).filter { WynnGearKind.frameCode(it.stack) == code && (kind == null || WynnGearKind.of(it.stack) == kind) }
             if (matched.isNotEmpty()) return matched
         }
         val kind = WynnGearKind.of(stack) ?: return emptyList()

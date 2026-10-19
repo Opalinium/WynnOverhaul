@@ -62,6 +62,7 @@ All notable changes are listed here. Versions follow Semantic Versioning.
 - The vanilla action bar no longer shows through when it carries the vitals bar.
 - Bank deposits stop retrying when the server refuses to merge a stack, and the refusal is remembered.
 - The Mod Menu update badge no longer spills out of the pause menu, and settings rows no longer draw outside their panel.
+- Necklaces and other accessories compare and are detected again.
 
 ## 1.5.0 - 2026-10-09
 
